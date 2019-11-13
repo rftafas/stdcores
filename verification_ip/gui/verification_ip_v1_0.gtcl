@@ -1,0 +1,4 @@
+# This file is automatically written.  Do not modify.
+proc gen_USERPARAMETER_packet_random_ENABLEMENT {packet } {expr $packet == true}
+proc gen_USERPARAMETER_packet_size_max_ENABLEMENT {packet } {expr $packet == true}
+proc gen_USERPARAMETER_packet_size_min_ENABLEMENT {packet } {expr $packet == true}
