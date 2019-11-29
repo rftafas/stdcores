@@ -42,7 +42,7 @@ architecture behavioral of spi_slave is
   signal output_sr    : std_logic_vector(7 downto 0);
   signal spi_rxdata_s : std_logic_vector(7 downto 0);
   signal spi_txdata_s : std_logic_vector(7 downto 0);
-  
+
   signal input_sr : std_logic_vector(7 downto 0);
 
 begin
