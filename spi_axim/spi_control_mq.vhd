@@ -64,6 +64,8 @@ entity spi_control_mq is
       spi_txdata_o : out std_logic_vector(7 downto 0);
       spi_rxdata_i : in  std_logic_vector(7 downto 0);
       --SPI main registers
+      hbn_o        : out std_logic;
+
       irq_i        : in  std_logic_vector(7 downto 0)
     );
 end spi_control_mq;
@@ -168,6 +170,8 @@ architecture behavioral of spi_control_mq is
           when DPD_c         =>
             tmp := act_st;
           when HBN_c         =>
+            tmp := act_st;
+          when IRQR_c =>
             tmp := act_st;
           when others        =>
             tmp := wait_forever_st;
@@ -282,20 +286,35 @@ begin
     variable buffer_v  : std_logic_vector(spi_txdata_o'range);
     variable addr_v    : std_logic_vector(spi_rxdata_i'range);
   begin
-    if mclk_i = '1' and mclk_i'event then
+    if rst_i = '1' then
+      spi_mq       <= idle_st;
+      command_v    := (others=>'0');
+      addr_v       := (others=>'0');
+      aux_cnt      := 0;
+      spi_txen_o   <= '0';
+      spi_txdata_o <= (others=>'0');
+      buffer_v     := (others=>'0');
+    elsif mclk_i = '1' and mclk_i'event then
       if spi_busy_i = '0' then
-        spi_mq    <= idle_st;
-        command_v := (others=>'0');
-        addr_v    := (others=>'0');
-
+        spi_mq       <= idle_st;
+        command_v    := (others=>'0');
+        addr_v       := (others=>'0');
+        aux_cnt      := 0;
+        spi_txen_o   <= '0';
+        spi_txdata_o <= (others=>'0');
+        buffer_v     := (others=>'0');
       else
         case spi_mq is
           when idle_st  =>
             command_v := (others=>'0');
             spi_mq    <= next_state(command_v, spi_mq);
-
+            command_v    := (others=>'0');
+            addr_v       := (others=>'0');
+            aux_cnt      := 0;
+            spi_txen_o   <= '0';
+            spi_txdata_o <= (others=>'0');
+            buffer_v     := (others=>'0');
           when wait_command_st  =>
-            aux_cnt := 0;
             spi_mq  <= next_state(command_v, spi_mq);
             if spi_rxen_i = '1' then
               command_v := spi_rxdata_i;
@@ -313,9 +332,15 @@ begin
                 spi_mq     <= next_state(command_v, spi_mq);
                 addr_v     := buffer_v(addr_v'range);
                 bus_addr_o <= addr_v;
+                aux_cnt    := 0;
               end if;
 
             end if;
+
+          when ack_st =>
+            spi_mq    <= next_state(command_v, spi_mq);
+            spi_txen_o   <= '1';
+            spi_txdata_o <= x"AC";
 
           when write_st =>
             bus_data_o  <= buffer_v(bus_data_o'range);
@@ -330,7 +355,9 @@ begin
             if bus_done_i = '1' then
               bus_read_o <= '0';
               spi_mq    <= next_state(command_v, spi_mq);
-              buffer_v(bus_data_i'range) := bus_data_i;
+              buffer__v(bus_data_i'range) := bus_data_i;
+              spi_txen_o   <= '1';
+              spi_txdata_o <= buffer_v(buffer_v'high downto buffer_v'high-7);
             end if;
 
           when inc_addr_st =>
@@ -339,24 +366,87 @@ begin
             bus_addr_o <= addr_v;
 
           when wait4spi_st =>
+
             if spi_rxen_i = '1' then
               aux_cnt  := aux_cnt + 1;
               for j in 1 to 8 loop
                 buffer_v := buffer_v(buffer_size-2 downto 0) & '1';
               end loop;
               buffer_v(7 downto 0) := spi_rxdata_i;
-
-              if aux_cnt = data_word_size then
-                spi_mq   <= next_state(command_v, spi_mq);
+              spi_txen_o   <= '1';
+              spi_txdata_o <= buffer_v(buffer_v'high downto buffer_v'high-7);
+              --decide next state
+              if next_state(command_v, spi_mq) = write_st then
+                if aux_cnt = data_word_size then
+                  spi_mq   <= next_state(command_v, spi_mq);
+                end if;
+              elsif next_state(command_v, spi_mq) = read_st then
+                if aux_cnt = data_word_size-1 then
+                  spi_mq   <= next_state(command_v, spi_mq);
+                end if;
               end if;
-
+            else
+              spi_txen_o <= '0';
             end if;
+
+          when act_st =>
+            case command is
+              when EDIO_c        =>
+                spi_txen_o   <= '1';
+                spi_txdata_o <= x"AC";
+
+              when EQIO_c        =>
+              spi_txen_o   <= '1';
+              spi_txdata_o <= x"AC";
+
+              when RSTIO_c       =>
+              spi_txen_o   <= '1';
+              spi_txdata_o <= x"AC";
+
+              when RDMR_c        =>
+              spi_txen_o   <= '1';
+              spi_txdata_o <= x"AC";
+
+              when WRMR_c        =>
+              spi_txen_o   <= '1';
+              spi_txdata_o <= x"AC";
+
+              when RDID_c        =>
+              spi_txen_o   <= '1';
+              spi_txdata_o <= x"AC";
+
+              when RUID_c        =>
+              spi_txen_o   <= '1';
+              spi_txdata_o <= x"AC";
+
+              when WRSN_c        =>
+
+              when RDSN_c        =>
+                spi_txen_o   <= '1';
+                spi_txdata_o <= x"AC";
+
+              when DPD_c         =>
+              spi_txen_o   <= '1';
+              spi_txdata_o <= x"AC";
+
+              when HBN_c         =>
+                hbn_o  <= '1';
+
+              when IRQR_c =>
+                spi_txen_o   <=   '1';
+                spi_txdata_o <= irq_i;
+
+              when others        =>
+                spi_txen_o   <=   '1';
+                spi_txdata_o <= x"FF";
+            end case;
 
           when wait_forever_st =>
             --wait for SPI deassert its BUSY as we do not accept anything from here.
 
           when others   =>
             spi_mq  <= next_state(command_v, spi_mq);
+
 
         end case;
       end if;
