@@ -1,6 +1,8 @@
 library ieee;
 	use ieee.std_logic_1164.all;
 	use ieee.numeric_std.all;
+library expert;
+	use expert.std_logic_expert.all;
 library stdblocks;
 	use stdblocks.sync_lib.all;
 
@@ -15,7 +17,7 @@ entity api_axi_master is
 		-- Width of User Write Address Bus
 	);
 	port (
-		M_AXI_RESETN : in std_logic;
+		M_AXI_RESET : in std_logic;
 		M_AXI_ACLK	 : in std_logic;
 		--internal bus
     bus_addr_i    : in  std_logic_vector(ADDR_BYTE_NUM*8-1 downto 0);
@@ -70,7 +72,7 @@ begin
 	--TRANSACTION ID
 	M_AXI_AWID <= to_std_logic_vector(ID_VALUE,ID_WIDTH);
 	M_AXI_ARID <= to_std_logic_vector(ID_VALUE,ID_WIDTH);
-	M_AXI_BID	 <= to_std_logic_vector(ID_VALUE,ID_WIDTH);
+	--M_AXI_BID  <= to_std_logic_vector(ID_VALUE,ID_WIDTH);
 	--Strobe for byte access, not used
 	M_AXI_WSTRB	  <= (others => '1');
 	M_AXI_ARPROT	<= "000";
@@ -81,14 +83,20 @@ begin
 	----------------------------------
 	control_p : process(M_AXI_ACLK)
 	begin
-	  if (M_AXI_ARESETN = '0') then
+	  if (M_AXI_RESET = '1') then
 	    -- reset condition
 	    -- All the signals are ed default values under reset condition
-	    mst_exec_state           <= IDLE;
-	    compare_done             <= '0';
-	    start_single_burst_write <= '0';
-	    start_single_burst_read  <= '0';
-	    error                    <= '0';
+	    mst_exec_state <= IDLE;
+	    bus_error_o    <= '0';
+	    M_AXI_RREADY   <= '0';
+	    M_AXI_BREADY   <= '0';
+	    M_AXI_ARVALID  <= '0';
+	    M_AXI_AWVALID  <= '0';
+	    M_AXI_WVALID   <= '0';
+	    M_AXI_ARADDR   <= (others=>'0');
+	    bus_data_o     <= (others=>'0');
+	    M_AXI_WDATA    <= (others=>'0');
+	    M_AXI_WLAST	   <= '0';
 	  elsif (rising_edge (M_AXI_ACLK)) then
 	    -- state transition
 	    case (mst_exec_state) is
@@ -102,6 +110,7 @@ begin
 	          M_AXI_WVALID   <= '1';
 	          M_AXI_WDATA    <= bus_data_i;
 	          M_AXI_BREADY   <= '1';
+	          M_AXI_WLAST	 <= '1';
 	        elsif bus_read_i = '1' then
 	          mst_exec_state <= INIT_READ;
 						M_AXI_ARVALID  <= '1';
@@ -114,6 +123,7 @@ begin
 						M_AXI_AWVALID  <= '0';
 	          M_AXI_AWADDR   <= (others => '0');
 	          M_AXI_WVALID   <= '0';
+	          M_AXI_WLAST	 <= '0';
 	          M_AXI_WDATA    <= (others => '0');
 	          M_AXI_BREADY   <= '1';
 						--read signals clear
@@ -127,7 +137,7 @@ begin
 	        if M_AXI_BVALID = '1' and M_AXI_BRESP(1) = '0' then
 	          mst_exec_state <= BUS_DONE;
 						M_AXI_BREADY   <= '0';
-					elsif BRESP(1) = '1' then
+					elsif M_AXI_BRESP(1) = '1' then
 						mst_exec_state <= BUS_DONE;
 						M_AXI_BREADY   <= '0';
 						bus_error_o    <= '1';
@@ -140,6 +150,7 @@ begin
 	        end if;
 	        if M_AXI_WREADY = '1' then
 	          M_AXI_WVALID  <= '0';
+	          M_AXI_WLAST	<= '0';
 	        end if;
 
 	      when INIT_READ =>

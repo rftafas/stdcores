@@ -47,7 +47,7 @@ architecture behavioral of spi_slave is
 
 begin
 
-  data_cnt_p : process(spck_i)
+  data_cnt_p : process(spcs_i, spck_i)
   begin
     if spcs_i = '1' then
       data_en <= "00000001";
@@ -58,7 +58,7 @@ begin
   tx_en <= data_en(0);
   rx_en <= data_en(7);
 
-  input_latch_p : process(spck_i)
+  input_latch_p : process(spcs_i, spck_i)
   begin
     if spck_i = CPOL then
       if spcs_i = '0' then
@@ -86,7 +86,7 @@ begin
     end if;
   end process;
 
-  output_sr_p : process(spck_i)
+  output_sr_p : process(tx_en,spck_i)
   begin
     if spck_i = CPOL and spck_i'event then
       if tx_en = '1' then
@@ -102,7 +102,7 @@ begin
     if tx_en = '1' then
       output_sr(7) <= spi_txdata_s(7);
     elsif spck_i = CPOL then
-      output_sr(7) <= spi_txdata_s(6);
+      output_sr(7) <= output_sr(6);
     end if;
   end process;
   miso_o <= output_sr(7);

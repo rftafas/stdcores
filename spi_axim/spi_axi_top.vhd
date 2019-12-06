@@ -70,15 +70,14 @@ architecture behavioral of spi_axi_top is
   signal bus_data_o_s : std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
   signal bus_addr_s   : std_logic_vector(ADDR_BYTE_NUM*8-1 downto 0);
 
-  signal spi_busy_o   : std_logic;
-  signal spi_rxen_o   : std_logic;
-  signal spi_txen_i   : std_logic;
-  signal spi_rxdata_o : std_logic_vector(7 downto 0);
-  signal spi_txdata_i : std_logic_vector(7 downto 0);
+  signal spi_busy_s   : std_logic;
+  signal spi_rxen_s   : std_logic;
+  signal spi_txen_s   : std_logic;
+  signal spi_rxdata_s : std_logic_vector(7 downto 0);
+  signal spi_txdata_s : std_logic_vector(7 downto 0);
 
   component spi_control_mq
     generic (
-      spick_freq     : real;
       addr_word_size : integer := 4;
       data_word_size : integer := 4
     );
@@ -108,7 +107,7 @@ architecture behavioral of spi_axi_top is
         DATA_BYTE_NUM : integer := 4
       );
       port (
-        M_AXI_RESETN  : in  std_logic;
+        M_AXI_RESET   : in  std_logic;
         M_AXI_ACLK    : in  std_logic;
         bus_addr_i    : in  std_logic_vector(ADDR_BYTE_NUM*8-1 downto 0);
         bus_data_i    : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
@@ -167,7 +166,7 @@ architecture behavioral of spi_axi_top is
 
 begin
 
-  spi_slave_hs_i : spi_slave
+  spi_slave_u : spi_slave
   generic map (
     CPOL => spi_cpol
   )
@@ -187,30 +186,29 @@ begin
 
 
   spi_mq_u : spi_control_mq
-  generic map (
-    spick_freq     => spick_freq,
-    addr_word_size => ADDR_BYTE_NUM,
-    data_word_size => DATA_BYTE_NUM
-  )
-  port map (
-    rst_i        => rst_i,
-    mclk_i       => mclk_i,
-    bus_write_o  => bus_write_s,
-    bus_read_o   => bus_read_s,
-    bus_done_i   => bus_done_s,
-    bus_data_i   => bus_data_i_s,
-    bus_data_o   => bus_data_o_s,
-    bus_addr_o   => bus_addr_s,
-    spi_busy_i   => spi_busy_s,
-    spi_rxen_i   => spi_rxen_s,
-    spi_txen_o   => spi_txen_s,
-    spi_txdata_o => spi_txdata_s,
-    spi_rxdata_i => spi_rxdata_s,
-    irq_i        => irq_i
-  );
+      generic map (
+        addr_word_size => ADDR_BYTE_NUM,
+        data_word_size => DATA_BYTE_NUM
+      )
+      port map (
+        rst_i        => rst_i,
+        mclk_i       => mclk_i,
+        bus_write_o  => bus_write_s,
+        bus_read_o   => bus_read_s,
+        bus_done_i   => bus_done_s,
+        bus_data_i   => bus_data_i_s,
+        bus_data_o   => bus_data_o_s,
+        bus_addr_o   => bus_addr_s,
+        spi_busy_i   => spi_busy_s,
+        spi_rxen_i   => spi_rxen_s,
+        spi_txen_o   => spi_txen_s,
+        spi_txdata_o => spi_txdata_s,
+        spi_rxdata_i => spi_rxdata_s,
+        irq_i        => irq_i
+      );
 
 
-  api_axi_master_u : api_axi_master
+  axi_master_u : api_axi_master
     generic map (
       ID_WIDTH      => ID_WIDTH,
       ID_VALUE      => ID_VALUE,
@@ -218,8 +216,8 @@ begin
       DATA_BYTE_NUM => DATA_BYTE_NUM
     )
     port map (
-      M_AXI_RESETN  => M_AXI_RESETN,
-      M_AXI_ACLK    => M_AXI_ACLK,
+      M_AXI_RESET   => rst_i,
+      M_AXI_ACLK    => mclk_i,
       bus_addr_i    => bus_addr_s,
       bus_data_i    => bus_data_i_s,
       bus_data_o    => bus_data_o_s,

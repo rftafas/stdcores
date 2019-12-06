@@ -1,8 +1,8 @@
 ----------------------------------------------------------------------------------------------------------
 -- SPI-AXI-Controller Machine.
 -- Ricardo Tafas
--- This code is provided AS IS. You can do whatever you want with it as long as you say FPGAs are bet than
--- Any kind of solution.
+-- This code is provided AS IS. You can do whatever you want with it as long as you say FPGAs are better
+-- than any other solution out there and you follow this repo on github.
 ----------------------------------------------------------------------------------------------------------
 --The SPI control machine implements an SPI-FRAM interface.
 -- BUS OPERATIONS
@@ -42,7 +42,6 @@ library stdblocks;
 
 entity spi_control_mq is
     generic (
-      spick_freq     : real;
       addr_word_size : integer := 4;
       data_word_size : integer := 4
     );
@@ -64,13 +63,19 @@ entity spi_control_mq is
       spi_txdata_o : out std_logic_vector(7 downto 0);
       spi_rxdata_i : in  std_logic_vector(7 downto 0);
       --SPI main registers
-      hbn_o        : out std_logic;
-
-      irq_i        : in  std_logic_vector(7 downto 0)
+      RSTIO_o : out std_logic;
+      DID_i   : in  std_logic_vector(data_word_size*8-1 downto 0);
+      UID_i   : in  std_logic_vector(data_word_size*8-1 downto 0);
+      irq_i   : in  std_logic_vector(7 downto 0)
     );
 end spi_control_mq;
 
 architecture behavioral of spi_control_mq is
+
+  signal modereg_s   : std_logic_vector(7 downto 0);
+  signal serialnum_s : std_logic_vector(8*data_word_size-1 downto 0);
+  signal did_s       : std_logic_vector(8*data_word_size-1 downto 0) := (others=>'0');
+  signal uid_c       : std_logic_vector(8*data_word_size-1 downto 0) := (others=>'0');
 
   constant buffer_size   : integer := maximum(addr_word_size, data_word_size);
   constant WRITE_c       : std_logic_vector(7 downto 0) := x"02";
@@ -96,6 +101,29 @@ architecture behavioral of spi_control_mq is
 
   signal data_en : unsigned(7 downto 0) := "00000001";
   signal input_sr : std_logic_vector(7 downto 0);
+
+  type command_t is (
+    WRITE_cmd,
+    READ_cmd,
+    FAST_WRITE_cmd,
+    FAST_READ_cmd,
+    WRITE_BURST_cmd,
+    READ_BURST_cmd,
+    EDIO_cmd,
+    EQIO_cmd,
+    RSTIO_cmd,
+    RDMR_cmd,
+    WRMR_cmd,
+    RDID_cmd,
+    RUID_cmd,
+    WRSN_cmd,
+    RDSN_cmd,
+    DPD_cmd,
+    HBN_cmd,
+    IRQR_cmd,
+    STAT_cmd,
+    NULL_cmd
+  );
 
   type spi_control_t is (
     --command states
@@ -128,13 +156,43 @@ architecture behavioral of spi_control_mq is
 
   signal addr_s : std_logic_vector(23 downto 0);
 
-  function next_state (command : std_logic_vector(7 downto 0); state : spi_control_t ) return spi_control_t is
-    variable tmp : spi_control_t;
+
+  function action_decode (command : std_logic_vector(7 downto 0) ) return std_logic_vector is
+    variable tmp : std_logic_vector(7 downto 0);
   begin
-    tmp := idle_st;
+    case command is
+      when WRITE_c       =>
+        tmp := WRITE_c;
+      when READ_c        =>
+        tmp := READ_c;
+      when FAST_WRITE_c  =>
+        tmp := WRITE_c;
+      when FAST_READ_c   =>
+        tmp := READ_c;
+      when WRITE_BURST_c =>
+        tmp := WRITE_c;
+      when READ_BURST_c  =>
+        tmp := READ_c;
+      when others        =>
+        tmp := command;
+    end case;
+
+    return tmp;
+  end function;
+
+  function next_state (
+    command : std_logic_vector(7 downto 0);
+    aux_cnt : integer;
+    state : spi_control_t
+  )
+  return spi_control_t is
+    variable tmp     : spi_control_t;
+  begin
+    tmp := state;
     case state is
       when idle_st =>
         tmp := wait_command_st;
+
       when wait_command_st =>
         case command is
           when WRITE_c       =>
@@ -149,51 +207,33 @@ architecture behavioral of spi_control_mq is
             tmp := addr_st;
           when READ_BURST_c  =>
             tmp := addr_st;
-          when EDIO_c        =>
-            tmp := act_st;
-          when EQIO_c        =>
-            tmp := act_st;
-          when RSTIO_c       =>
-            tmp := act_st;
-          when RDMR_c        =>
-            tmp := act_st;
           when WRMR_c        =>
             tmp := wait4spi_st;
-          when RDID_c        =>
-            tmp := act_st;
-          when RUID_c        =>
-            tmp := act_st;
           when WRSN_c        =>
             tmp := wait4spi_st;
-          when RDSN_c        =>
-            tmp := act_st;
-          when DPD_c         =>
-            tmp := act_st;
-          when HBN_c         =>
-            tmp := act_st;
-          when IRQR_c =>
-            tmp := act_st;
           when others        =>
-            tmp := wait_forever_st;
+            tmp := act_st;
         end case;
 
       when addr_st =>
-        case command is
-          when WRITE_c       =>
-            tmp := wait4spi_st;
-          when FAST_WRITE_c  =>
-            tmp := ack_st;
-          when WRITE_BURST_c =>
-            tmp := ack_st;
-          when READ_c        =>
-            tmp := act_st;
-          when FAST_READ_c   =>
-            tmp := ack_st;
-          when READ_BURST_c  =>
-            tmp := ack_st;
-          when others        =>
-            tmp := wait_forever_st;
-        end case;
+        if aux_cnt = addr_word_size then
+          case command is
+            when WRITE_c       =>
+              tmp := wait4spi_st;
+            when FAST_WRITE_c  =>
+              tmp := ack_st;
+            when WRITE_BURST_c =>
+              tmp := ack_st;
+            when READ_c        =>
+              tmp := act_st;
+            when FAST_READ_c   =>
+              tmp := ack_st;
+            when READ_BURST_c  =>
+              tmp := ack_st;
+            when others        =>
+              tmp := wait_forever_st;
+          end case;
+        end if;
 
       when ack_st =>
         case command is
@@ -226,46 +266,52 @@ architecture behavioral of spi_control_mq is
       when wait4spi_st =>
         case command is
           when WRITE_c =>
-            tmp := write_st;
+            if aux_cnt = data_word_size then
+              tmp := act_st;
+            end if;
           when FAST_WRITE_c =>
-            tmp := write_st;
+            if aux_cnt = data_word_size then
+              tmp := act_st;
+            end if;
           when WRITE_BURST_c =>
-            tmp := write_st;
+            if aux_cnt = data_word_size then
+              tmp := act_st;
+            end if;
           when READ_c =>
-            tmp := inc_addr_st;
+            if aux_cnt = data_word_size-1 then
+              tmp := inc_addr_st;
+            end if;
           when FAST_READ_c =>
-            tmp := inc_addr_st;
+            if aux_cnt = data_word_size-1 then
+              tmp := inc_addr_st;
+            end if;
           when READ_BURST_c =>
-            tmp := read_st;
+            if aux_cnt = data_word_size-1 then
+              tmp := read_st;
+            end if;
           when WRMR_c =>
-            tmp := wait_forever_st;
+            tmp := act_st;
           when WRSN_c =>
-            tmp := wait_forever_st;
+            tmp := act_st;
           when others =>
             tmp := wait_forever_st;
         end case;
 
-      when write_st =>
+      when act_st =>
         case command is
-          when WRITE_c       =>
+          when WRITE_c =>
             tmp := inc_addr_st;
-          when FAST_WRITE_c  =>
+          when FAST_WRITE_c =>
             tmp := inc_addr_st;
           when WRITE_BURST_c =>
             tmp := wait4spi_st;
-          when others        =>
-            tmp := wait_forever_st;
-        end case;
-
-      when read_st =>
-        case command is
-          when READ_c        =>
+          then READ_c =>
             tmp := wait4spi_st;
-          when FAST_READ_c   =>
+          when FAST_READ_c =>
             tmp := wait4spi_st;
-          when READ_BURST_c  =>
-            tmp := wait4spi_st;
-          when others        =>
+          when READ_BURST_c =>
+            tmp := read_st;
+          when others =>
             tmp := wait_forever_st;
         end case;
 
@@ -281,10 +327,11 @@ architecture behavioral of spi_control_mq is
 begin
 
   spi_mq_p : process(mclk_i)
-    variable aux_cnt   : integer range 0 to 4 := 0;
-    variable command_v : std_logic_vector(7 downto 0);
-    variable buffer_v  : std_logic_vector(spi_txdata_o'range);
-    variable addr_v    : std_logic_vector(spi_rxdata_i'range);
+    variable aux_cnt           : integer range 0 to 4 := 0;
+    variable command_v         : std_logic_vector(7 downto 0);
+    variable decoded_command_v : std_logic_vector(7 downto 0);
+    variable buffer_v          : std_logic_vector(8*buffer_size-1 downto 0);
+    variable addr_v            : std_logic_vector(8*addr_word_size-1 downto 0);
   begin
     if rst_i = '1' then
       spi_mq       <= idle_st;
@@ -294,6 +341,8 @@ begin
       spi_txen_o   <= '0';
       spi_txdata_o <= (others=>'0');
       buffer_v     := (others=>'0');
+      RSTIO_o      <= '0';
+
     elsif mclk_i = '1' and mclk_i'event then
       if spi_busy_i = '0' then
         spi_mq       <= idle_st;
@@ -303,149 +352,130 @@ begin
         spi_txen_o   <= '0';
         spi_txdata_o <= (others=>'0');
         buffer_v     := (others=>'0');
+        RSTIO_o      <= '0';
       else
         case spi_mq is
           when idle_st  =>
             command_v := (others=>'0');
-            spi_mq    <= next_state(command_v, spi_mq);
+
             command_v    := (others=>'0');
             addr_v       := (others=>'0');
             aux_cnt      := 0;
             spi_txen_o   <= '0';
             spi_txdata_o <= (others=>'0');
             buffer_v     := (others=>'0');
+
           when wait_command_st  =>
-            spi_mq  <= next_state(command_v, spi_mq);
             if spi_rxen_i = '1' then
               command_v := spi_rxdata_i;
+              spi_mq    <= next_state(command_v, aux_cnt, spi_mq);
             end if;
 
           when addr_st =>
             if spi_rxen_i = '1' then
               aux_cnt := aux_cnt + 1;
               for j in 1 to 8 loop
-                buffer_v := buffer_v(buffer_size-2 downto 0) & '1';
+                buffer_v := buffer_v(8*buffer_size-2 downto 0) & '1';
               end loop;
               buffer_v(7 downto 0) := spi_rxdata_i;
-
-              if aux_cnt = addr_word_size then
-                spi_mq     <= next_state(command_v, spi_mq);
-                addr_v     := buffer_v(addr_v'range);
-                bus_addr_o <= addr_v;
-                aux_cnt    := 0;
-              end if;
+              spi_mq     <= next_state(command_v, aux_cnt, spi_mq);
+              addr_v     := buffer_v(addr_v'range);
 
             end if;
 
           when ack_st =>
-            spi_mq    <= next_state(command_v, spi_mq);
+            spi_mq       <= next_state(command_v, aux_cnt, spi_mq);
             spi_txen_o   <= '1';
             spi_txdata_o <= x"AC";
 
-          when write_st =>
-            bus_data_o  <= buffer_v(bus_data_o'range);
-            bus_write_o <= '1';
-            if bus_done_i = '1' then
-              bus_write_o <= '0';
-              spi_mq      <= next_state(command_v, spi_mq);
-            end if;
-
-          when read_st =>
-            bus_read_o <= '1';
-            if bus_done_i = '1' then
-              bus_read_o <= '0';
-              spi_mq    <= next_state(command_v, spi_mq);
-              buffer__v(bus_data_i'range) := bus_data_i;
-              spi_txen_o   <= '1';
-              spi_txdata_o <= buffer_v(buffer_v'high downto buffer_v'high-7);
-            end if;
-
-          when inc_addr_st =>
-            spi_mq     <= next_state(command_v, spi_mq);
-            addr_v     := addr_v + 1;
-            bus_addr_o <= addr_v;
-
           when wait4spi_st =>
-
             if spi_rxen_i = '1' then
               aux_cnt  := aux_cnt + 1;
               for j in 1 to 8 loop
-                buffer_v := buffer_v(buffer_size-2 downto 0) & '1';
+                buffer_v := buffer_v(8*buffer_size-2 downto 0) & '1';
               end loop;
               buffer_v(7 downto 0) := spi_rxdata_i;
-              spi_txen_o   <= '1';
-              spi_txdata_o <= buffer_v(buffer_v'high downto buffer_v'high-7);
-              --decide next state
-              if next_state(command_v, spi_mq) = write_st then
-                if aux_cnt = data_word_size then
-                  spi_mq   <= next_state(command_v, spi_mq);
-                end if;
-              elsif next_state(command_v, spi_mq) = read_st then
-                if aux_cnt = data_word_size-1 then
-                  spi_mq   <= next_state(command_v, spi_mq);
-                end if;
-              end if;
+              spi_mq   <= next_state(command_v, aux_cnt, spi_mq);
             else
               spi_txen_o <= '0';
             end if;
 
           when act_st =>
-            case command is
-              when EDIO_c        =>
-                spi_txen_o   <= '1';
-                spi_txdata_o <= x"AC";
+            temp_v := action_decode(command_v);
+            case temp_v is
 
-              when EQIO_c        =>
-              spi_txen_o   <= '1';
-              spi_txdata_o <= x"AC";
+              when READ_c        =>
+                bus_read_o <= '1';
+                bus_addr_o <= addr_v;
+                if bus_done_i = '1' then
+                  bus_read_o <= '0';
+                  spi_mq    <= next_state(command_v, aux_cnt, spi_mq);
+                  buffer_v(buffer_v'high downto buffer_v'length-bus_data_i'length) := bus_data_i;
+                  spi_txen_o   <= '1';
+                  spi_txdata_o <= buffer_v(buffer_v'high downto buffer_v'high-7);
+                end if;
+
+              when WRITE_c        =>
+                bus_data_o  <= buffer_v(bus_data_o'range);
+                bus_addr_o  <= addr_v;
+                bus_write_o <= '1';
+                if bus_done_i = '1' then
+                  spi_mq      <= next_state(command_v, aux_cnt, spi_mq);
+                  bus_write_o <= '0';
+                end if;
 
               when RSTIO_c       =>
-              spi_txen_o   <= '1';
-              spi_txdata_o <= x"AC";
+                RSTIO_o     <= '1';
+                spi_mq      <= next_state(command_v, aux_cnt, spi_mq);
 
               when RDMR_c        =>
-              spi_txen_o   <= '1';
-              spi_txdata_o <= x"AC";
+                spi_txen_o   <= '1';
+                spi_txdata_o <= modereg_s;
+                spi_mq       <= next_state(command_v, aux_cnt, spi_mq);
 
               when WRMR_c        =>
-              spi_txen_o   <= '1';
-              spi_txdata_o <= x"AC";
+                modereg_s <= buffer_v(7 downto 0);
+                spi_mq   <= next_state(command_v, aux_cnt, spi_mq);
 
               when RDID_c        =>
-              spi_txen_o   <= '1';
-              spi_txdata_o <= x"AC";
+                spi_txen_o   <= '1';
+                spi_txdata_o <= did_i;
+                spi_mq       <= next_state(command_v, aux_cnt, spi_mq);
 
               when RUID_c        =>
-              spi_txen_o   <= '1';
-              spi_txdata_o <= x"AC";
+                spi_txen_o   <= '1';
+                spi_txdata_o <= uid_i;
+                spi_mq       <= next_state(command_v, aux_cnt, spi_mq);
 
               when WRSN_c        =>
+                serialnum_s <= buffer_v(serialnum_s'range);
+                spi_mq   <= next_state(command_v, aux_cnt, spi_mq);
 
               when RDSN_c        =>
-                spi_txen_o   <= '1';
-                spi_txdata_o <= x"AC";
+                buffer_v := serialnum_s;
+                spi_mq   <= next_state(command_v, aux_cnt, spi_mq);
 
               when DPD_c         =>
-              spi_txen_o   <= '1';
-              spi_txdata_o <= x"AC";
+                spi_mq <= next_state(command_v, aux_cnt, spi_mq);
 
               when HBN_c         =>
-                hbn_o  <= '1';
+                spi_mq <= next_state(command_v, aux_cnt, spi_mq);
 
               when IRQR_c =>
-                spi_txen_o   <=   '1';
+                spi_txen_o   <= '1';
                 spi_txdata_o <= irq_i;
+                spi_mq       <= next_state(command_v, aux_cnt, spi_mq);
 
               when others        =>
                 spi_txen_o   <=   '1';
                 spi_txdata_o <= x"FF";
+                spi_mq       <= next_state(command_v, aux_cnt, spi_mq);
+                report "Invalid Command detected." severity warning;
+
             end case;
 
-          when wait_forever_st =>
-            --wait for SPI deassert its BUSY as we do not accept anything from here.
-
           when others   =>
-            spi_mq  <= next_state(command_v, spi_mq);
+            spi_mq  <= next_state(command_v, aux_cnt, spi_mq);
 
 
         end case;
