@@ -59,7 +59,7 @@ architecture simulation of SPI_AXI_TOP_TB is
     );
   end component spi_axi_top;
 
-  constant  spi_cpol      : std_logic := '1';
+  constant  spi_cpol      : std_logic := '0';
   constant  ID_WIDTH      : integer := 1;
   constant  ID_VALUE      : integer := 0;
   constant  ADDR_BYTE_NUM : integer := 4;
@@ -108,7 +108,7 @@ architecture simulation of SPI_AXI_TOP_TB is
   constant spi_half_period : time := spi_period;
 
   type data_vector_t is array (NATURAL RANGE <>) of std_logic_vector(7 downto 0);
-  signal RDSN_c        : data_vector_t(5 downto 0) := (x"C3", others => x"00");
+  signal RDSN_c        : data_vector_t(4 downto 0) := (x"C3", others => x"00");
 
 
   signal WRITE_c       : std_logic_vector(7 downto 0) := x"02";
@@ -130,7 +130,7 @@ architecture simulation of SPI_AXI_TOP_TB is
   signal IRQR_c        : std_logic_vector(7 downto 0) := x"A4";
   signal STAT_c        : std_logic_vector(7 downto 0) := x"A5";
 
-  signal spi_rxdata_s    : data_vector_t(1023 downto 0);
+  signal spi_rxdata_s    : data_vector_t(15 downto 0);
   signal spi_rxdata_en   : std_logic;
 
 
@@ -163,7 +163,7 @@ begin
 
   --clock e reset
   mclk_i <= not mclk_i after 10 ns;
-  rst_i  <= '1', '0' after 20 ns;
+  rst_i  <= '1', '0' after 30 ns;
 
   process
   begin

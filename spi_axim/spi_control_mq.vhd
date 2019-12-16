@@ -291,6 +291,18 @@ architecture behavioral of spi_control_mq is
             if aux_cnt = data_word_size-1 then
               tmp := read_st;
             end if;
+          when RDSN_c =>
+            if aux_cnt = data_word_size-1 then
+              tmp := read_st;
+            end if;
+          when RUID_c =>
+            if aux_cnt = data_word_size-1 then
+              tmp := read_st;
+            end if;
+          when RDID_c =>
+            if aux_cnt = data_word_size-1 then
+              tmp := read_st;
+            end if;
           when WRMR_c =>
             tmp := act_st;
           when WRSN_c =>
@@ -313,6 +325,12 @@ architecture behavioral of spi_control_mq is
             tmp := wait4spi_st;
           when READ_BURST_c =>
             tmp := read_st;
+          when RDSN_c =>
+            tmp := wait4spi_st;
+          when RUID_c =>
+            tmp := wait4spi_st;
+          when RDID_c =>
+            tmp := wait4spi_st;
           when others =>
             tmp := wait_forever_st;
         end case;
@@ -326,9 +344,12 @@ architecture behavioral of spi_control_mq is
 
   signal get_addr_s : boolean;
 
+  signal buffer_s : std_logic_vector(8*buffer_size-1 downto 0);
+  signal aux_cnt_s : integer;
+
 begin
 
-  spi_mq_p : process(mclk_i)
+  spi_mq_p : process(mclk_i,rst_i)
     variable aux_cnt           : integer range 0 to 4 := 0;
     variable command_v         : std_logic_vector(7 downto 0);
     variable decoded_command_v : std_logic_vector(7 downto 0);
@@ -342,7 +363,7 @@ begin
       addr_v       := (others=>'0');
       aux_cnt      := 0;
       spi_txen_o   <= '0';
-      spi_txdata_o <= (others=>'0');
+      spi_txdata_o <= (others=>'1');
       buffer_v     := (others=>'0');
       RSTIO_o      <= '0';
       serialnum_s  <= (others=>'0');
@@ -353,7 +374,7 @@ begin
         addr_v       := (others=>'0');
         aux_cnt      := 0;
         spi_txen_o   <= '0';
-        spi_txdata_o <= (others=>'0');
+        spi_txdata_o <= (others=>'1');
         buffer_v     := (others=>'0');
         RSTIO_o      <= '0';
         serialnum_s  <= serial_num_i;
@@ -363,11 +384,14 @@ begin
             command_v    := (others=>'0');
             addr_v       := (others=>'0');
             aux_cnt      := 0;
-            spi_txen_o   <= '0';
-            spi_txdata_o <= (others=>'0');
+            spi_txen_o   <= '1';
+            spi_txdata_o <= (others=>'1');
             buffer_v     := (others=>'0');
+            spi_mq    <= next_state(command_v, aux_cnt, spi_mq);
 
           when wait_command_st  =>
+            spi_txen_o   <= '0';
+            spi_txdata_o <= (others=>'1');
             if spi_rxen_i = '1' then
               command_v := spi_rxdata_i;
               spi_mq    <= next_state(command_v, aux_cnt, spi_mq);
@@ -392,12 +416,14 @@ begin
 
           when wait4spi_st =>
             if spi_rxen_i = '1' then
-              aux_cnt  := aux_cnt + 1;
+              aux_cnt      := aux_cnt + 1;
               for j in 1 to 8 loop
                 buffer_v := buffer_v(8*buffer_size-2 downto 0) & '1';
               end loop;
               buffer_v(7 downto 0) := spi_rxdata_i;
               spi_mq   <= next_state(command_v, aux_cnt, spi_mq);
+              spi_txen_o   <= '1';
+              spi_txdata_o <= buffer_v(buffer_v'high downto buffer_v'high-7);
             else
               spi_txen_o <= '0';
             end if;
@@ -456,8 +482,10 @@ begin
                 spi_mq   <= next_state(command_v, aux_cnt, spi_mq);
 
               when RDSN_c        =>
-                buffer_v := serialnum_s;
-                spi_mq   <= next_state(command_v, aux_cnt, spi_mq);
+                buffer_v     := serialnum_s;
+                spi_txen_o   <= '1';
+                spi_txdata_o <= buffer_v(buffer_v'high downto buffer_v'high-7);
+                spi_mq       <= next_state(command_v, aux_cnt, spi_mq);
 
               when DPD_c         =>
                 spi_mq <= next_state(command_v, aux_cnt, spi_mq);
@@ -479,6 +507,8 @@ begin
             end case;
 
           when others   =>
+            spi_txen_o   <=   '0';
+            spi_txdata_o <= x"FF";
             spi_mq  <= next_state(command_v, aux_cnt, spi_mq);
 
 
@@ -486,6 +516,8 @@ begin
       end if;
       --saídas
     end if;
+    buffer_s <= buffer_v;
+    aux_cnt_s <= aux_cnt;
   end process;
 
 
