@@ -6,7 +6,7 @@ library expert;
 library stdblocks;
 	use stdblocks.sync_lib.all;
 
-entity api_axi_master is
+entity spi_axi_master is
 	generic (
 		-- Thread ID Width and value
 		ID_WIDTH	    : integer	:= 1;
@@ -58,9 +58,9 @@ entity api_axi_master is
 		M_AXI_RID	    : in  std_logic_vector(ID_WIDTH-1 downto 0);
 		M_AXI_RLAST	  : in  std_logic
 		);
-end api_axi_master;
+end spi_axi_master;
 
-architecture implementation of api_axi_master is
+architecture implementation of spi_axi_master is
 
 	 type state is (IDLE, INIT_WRITE, INIT_READ, BUS_DONE);
 	 signal mst_exec_state  : state ;

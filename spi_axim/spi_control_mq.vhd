@@ -43,7 +43,8 @@ library stdblocks;
 entity spi_control_mq is
     generic (
       addr_word_size : integer := 4;
-      data_word_size : integer := 4
+      data_word_size : integer := 4;
+      serial_num_rw  : boolean := true
     );
     port (
       --general
@@ -63,10 +64,11 @@ entity spi_control_mq is
       spi_txdata_o : out std_logic_vector(7 downto 0);
       spi_rxdata_i : in  std_logic_vector(7 downto 0);
       --SPI main registers
-      RSTIO_o : out std_logic;
-      DID_i   : in  std_logic_vector(data_word_size*8-1 downto 0);
-      UID_i   : in  std_logic_vector(data_word_size*8-1 downto 0);
-      irq_i   : in  std_logic_vector(7 downto 0)
+      RSTIO_o      : out std_logic;
+      DID_i        : in  std_logic_vector(data_word_size*8-1 downto 0);
+      UID_i        : in  std_logic_vector(data_word_size*8-1 downto 0);
+      serial_num_i : in  std_logic_vector(data_word_size*8-1 downto 0);
+      irq_i        : in  std_logic_vector(7 downto 0)
     );
 end spi_control_mq;
 
@@ -77,7 +79,7 @@ architecture behavioral of spi_control_mq is
   signal did_s       : std_logic_vector(8*data_word_size-1 downto 0) := (others=>'0');
   signal uid_c       : std_logic_vector(8*data_word_size-1 downto 0) := (others=>'0');
 
-  constant buffer_size   : integer := maximum(addr_word_size, data_word_size);
+  constant buffer_size   : integer := data_word_size;--maximum(addr_word_size, data_word_size);
   constant WRITE_c       : std_logic_vector(7 downto 0) := x"02";
   constant READ_c        : std_logic_vector(7 downto 0) := x"03";
   constant FAST_WRITE_c  : std_logic_vector(7 downto 0) := x"0A";
@@ -305,7 +307,7 @@ architecture behavioral of spi_control_mq is
             tmp := inc_addr_st;
           when WRITE_BURST_c =>
             tmp := wait4spi_st;
-          then READ_c =>
+          when READ_c =>
             tmp := wait4spi_st;
           when FAST_READ_c =>
             tmp := wait4spi_st;
@@ -330,6 +332,7 @@ begin
     variable aux_cnt           : integer range 0 to 4 := 0;
     variable command_v         : std_logic_vector(7 downto 0);
     variable decoded_command_v : std_logic_vector(7 downto 0);
+    variable temp_v            : std_logic_vector(7 downto 0);
     variable buffer_v          : std_logic_vector(8*buffer_size-1 downto 0);
     variable addr_v            : std_logic_vector(8*addr_word_size-1 downto 0);
   begin
@@ -342,7 +345,7 @@ begin
       spi_txdata_o <= (others=>'0');
       buffer_v     := (others=>'0');
       RSTIO_o      <= '0';
-
+      serialnum_s  <= (others=>'0');
     elsif mclk_i = '1' and mclk_i'event then
       if spi_busy_i = '0' then
         spi_mq       <= idle_st;
@@ -353,11 +356,10 @@ begin
         spi_txdata_o <= (others=>'0');
         buffer_v     := (others=>'0');
         RSTIO_o      <= '0';
+        serialnum_s  <= serial_num_i;
       else
         case spi_mq is
           when idle_st  =>
-            command_v := (others=>'0');
-
             command_v    := (others=>'0');
             addr_v       := (others=>'0');
             aux_cnt      := 0;
@@ -375,7 +377,7 @@ begin
             if spi_rxen_i = '1' then
               aux_cnt := aux_cnt + 1;
               for j in 1 to 8 loop
-                buffer_v := buffer_v(8*buffer_size-2 downto 0) & '1';
+                buffer_v := buffer_v(buffer_v'high-1 downto 0) & '1';
               end loop;
               buffer_v(7 downto 0) := spi_rxdata_i;
               spi_mq     <= next_state(command_v, aux_cnt, spi_mq);
@@ -439,16 +441,18 @@ begin
 
               when RDID_c        =>
                 spi_txen_o   <= '1';
-                spi_txdata_o <= did_i;
+                buffer_v     := did_i;
                 spi_mq       <= next_state(command_v, aux_cnt, spi_mq);
 
               when RUID_c        =>
                 spi_txen_o   <= '1';
-                spi_txdata_o <= uid_i;
+                buffer_v     := uid_i;
                 spi_mq       <= next_state(command_v, aux_cnt, spi_mq);
 
               when WRSN_c        =>
-                serialnum_s <= buffer_v(serialnum_s'range);
+                if serial_num_rw then
+                  serialnum_s <= buffer_v(serialnum_s'range);
+                end if;
                 spi_mq   <= next_state(command_v, aux_cnt, spi_mq);
 
               when RDSN_c        =>

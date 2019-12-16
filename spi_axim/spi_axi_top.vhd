@@ -25,6 +25,10 @@ entity spi_axi_top is
     spck_i        : in  std_logic;
     spcs_i        : in  std_logic;
     --
+    RSTIO_o      : out std_logic;
+    DID_i        : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
+    UID_i        : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
+    serial_num_i : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
     irq_i         : in  std_logic_vector(7 downto 0);
     --AXI-MM
     M_AXI_AWID    : out std_logic_vector(ID_WIDTH-1 downto 0);
@@ -79,27 +83,36 @@ architecture behavioral of spi_axi_top is
   component spi_control_mq
     generic (
       addr_word_size : integer := 4;
-      data_word_size : integer := 4
+      data_word_size : integer := 4;
+      serial_num_rw  : boolean := true
     );
     port (
+      --general
       rst_i        : in  std_logic;
       mclk_i       : in  std_logic;
+      --spi
       bus_write_o  : out std_logic;
       bus_read_o   : out std_logic;
       bus_done_i   : in  std_logic;
       bus_data_i   : in  std_logic_vector(data_word_size*8-1 downto 0);
       bus_data_o   : out std_logic_vector(data_word_size*8-1 downto 0);
       bus_addr_o   : out std_logic_vector(addr_word_size*8-1 downto 0);
+      --SPI Interface signals
       spi_busy_i   : in  std_logic;
       spi_rxen_i   : in  std_logic;
       spi_txen_o   : out std_logic;
       spi_txdata_o : out std_logic_vector(7 downto 0);
       spi_rxdata_i : in  std_logic_vector(7 downto 0);
+      --SPI main registers
+      RSTIO_o      : out std_logic;
+      DID_i        : in  std_logic_vector(data_word_size*8-1 downto 0);
+      UID_i        : in  std_logic_vector(data_word_size*8-1 downto 0);
+      serial_num_i : in  std_logic_vector(data_word_size*8-1 downto 0);
       irq_i        : in  std_logic_vector(7 downto 0)
     );
-    end component spi_control_mq;
+  end component spi_control_mq;
 
-    component api_axi_master
+    component spi_axi_master
       generic (
         ID_WIDTH      : integer := 1;
         ID_VALUE      : integer := 1;
@@ -142,7 +155,7 @@ architecture behavioral of spi_axi_top is
         M_AXI_RID     : in  std_logic_vector(ID_WIDTH-1 downto 0);
         M_AXI_RLAST   : in  std_logic
       );
-    end component api_axi_master;
+    end component spi_axi_master;
 
     component spi_slave
       generic (
@@ -204,11 +217,15 @@ begin
         spi_txen_o   => spi_txen_s,
         spi_txdata_o => spi_txdata_s,
         spi_rxdata_i => spi_rxdata_s,
+        RSTIO_o      => RSTIO_o,
+        DID_i        => DID_i,
+        UID_i        => UID_i,
+        serial_num_i => serial_num_i,
         irq_i        => irq_i
       );
 
 
-  axi_master_u : api_axi_master
+  axi_master_u : spi_axi_master
     generic map (
       ID_WIDTH      => ID_WIDTH,
       ID_VALUE      => ID_VALUE,

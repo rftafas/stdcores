@@ -58,7 +58,7 @@ begin
   tx_en <= data_en(0);
   rx_en <= data_en(7);
 
-  input_latch_p : process(spcs_i, spck_i)
+  input_latch_p : process(spcs_i, spck_i, mosi_i)
   begin
     if spck_i = CPOL then
       if spcs_i = '0' then
@@ -79,7 +79,7 @@ begin
     end if;
   end process;
 
-  txdata_latch_p : process(spi_txen_i)
+  txdata_latch_p : process(spi_txen_i, spi_txdata_i)
   begin
     if spi_txen_i = '1' then
       spi_txdata_s <= spi_txdata_i;
@@ -110,9 +110,11 @@ begin
 
   --OUTPUTS
   sync_busy_u : sync_r
+    generic map (2)
     port map ('0',mclk_i,spcs_i,spi_busy_o);
 
   sync_exen_u : sync_r
+    generic map (2)
     port map ('0',mclk_i,data_en(7),spi_rxen_s);
 
   det_rxen_u : det_up
@@ -120,6 +122,7 @@ begin
 
   data_gen : for j in 7 downto 0 generate
     sync_j : sync_r
+      generic map (2)
       port map ('0',mclk_i,spi_rxdata_s(j),spi_rxdata_o(j));
   end generate;
 
