@@ -13,7 +13,8 @@ entity spi_axi_top is
     ID_WIDTH         : integer   := 1;
     ID_VALUE         : integer   := 0;
     ADDR_BYTE_NUM    : integer   := 4;
-    DATA_BYTE_NUM    : integer   := 4
+    DATA_BYTE_NUM    : integer   := 4;
+    serial_num_rw    : boolean := true
     );
   port (
     --general
@@ -25,11 +26,12 @@ entity spi_axi_top is
     spck_i        : in  std_logic;
     spcs_i        : in  std_logic;
     --
-    RSTIO_o      : out std_logic;
-    DID_i        : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
-    UID_i        : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
-    serial_num_i : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
+    RSTIO_o       : out std_logic;
+    DID_i         : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
+    UID_i         : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
+    serial_num_i  : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
     irq_i         : in  std_logic_vector(7 downto 0);
+    irq_o         : out std_logic;
     --AXI-MM
     M_AXI_AWID    : out std_logic_vector(ID_WIDTH-1 downto 0);
     M_AXI_AWVALID : out std_logic;
@@ -65,6 +67,10 @@ end spi_axi_top;
 
 architecture behavioral of spi_axi_top is
 
+  signal irq_s       : std_logic_vector(7 downto 0);
+  signal irq_clear_s : std_logic_vector(7 downto 0);
+  signal irq_mask_s  : std_logic_vector(7 downto 0);
+
   signal spick_en : std_logic;
 
   signal bus_write_s  : std_logic;
@@ -85,32 +91,30 @@ architecture behavioral of spi_axi_top is
       addr_word_size : integer := 4;
       data_word_size : integer := 4;
       serial_num_rw  : boolean := true
-    );
+      );
     port (
-      --general
       rst_i        : in  std_logic;
       mclk_i       : in  std_logic;
-      --spi
       bus_write_o  : out std_logic;
       bus_read_o   : out std_logic;
       bus_done_i   : in  std_logic;
       bus_data_i   : in  std_logic_vector(data_word_size*8-1 downto 0);
       bus_data_o   : out std_logic_vector(data_word_size*8-1 downto 0);
       bus_addr_o   : out std_logic_vector(addr_word_size*8-1 downto 0);
-      --SPI Interface signals
       spi_busy_i   : in  std_logic;
       spi_rxen_i   : in  std_logic;
       spi_txen_o   : out std_logic;
       spi_txdata_o : out std_logic_vector(7 downto 0);
       spi_rxdata_i : in  std_logic_vector(7 downto 0);
-      --SPI main registers
       RSTIO_o      : out std_logic;
       DID_i        : in  std_logic_vector(data_word_size*8-1 downto 0);
       UID_i        : in  std_logic_vector(data_word_size*8-1 downto 0);
       serial_num_i : in  std_logic_vector(data_word_size*8-1 downto 0);
-      irq_i        : in  std_logic_vector(7 downto 0)
-    );
-  end component spi_control_mq;
+      irq_i        : in  std_logic_vector(7 downto 0);
+      irq_mask_o   : out std_logic_vector(7 downto 0);
+      irq_clear_o  : out std_logic_vector(7 downto 0)
+      );
+    end component spi_control_mq;
 
     component spi_axi_master
       generic (
@@ -176,6 +180,19 @@ architecture behavioral of spi_axi_top is
       );
     end component spi_slave;
 
+    component spi_irq_ctrl
+      port (
+        rst_i        : in  std_logic;
+        mclk_i       : in  std_logic;
+        master_irq_o : out std_logic;
+        vector_irq_o : out std_logic_vector(7 downto 0);
+        vector_irq_i : in  std_logic_vector(7 downto 0);
+        vector_clr_i : in  std_logic_vector(7 downto 0);
+        vector_msk_i : in  std_logic_vector(7 downto 0)
+      );
+    end component spi_irq_ctrl;
+
+
 
 begin
 
@@ -221,7 +238,9 @@ begin
         DID_i        => DID_i,
         UID_i        => UID_i,
         serial_num_i => serial_num_i,
-        irq_i        => irq_i
+        irq_i        => irq_s,
+        irq_mask_o   => irq_mask_s,
+        irq_clear_o  => irq_clear_s
       );
 
 
@@ -269,6 +288,16 @@ begin
       M_AXI_RLAST   => M_AXI_RLAST
     );
 
+  spi_irq_ctrl_u : spi_irq_ctrl
+    port map (
+      rst_i        => rst_i,
+      mclk_i       => mclk_i,
+      master_irq_o => irq_o,
+      vector_irq_o => irq_s,
+      vector_irq_i => irq_i,
+      vector_clr_i => irq_clear_s,
+      vector_msk_i => irq_mask_s
+    );
 
 
 

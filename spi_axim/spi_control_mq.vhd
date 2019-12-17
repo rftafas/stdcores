@@ -68,14 +68,18 @@ entity spi_control_mq is
       DID_i        : in  std_logic_vector(data_word_size*8-1 downto 0);
       UID_i        : in  std_logic_vector(data_word_size*8-1 downto 0);
       serial_num_i : in  std_logic_vector(data_word_size*8-1 downto 0);
-      irq_i        : in  std_logic_vector(7 downto 0)
+      irq_i        : in  std_logic_vector(7 downto 0);
+      irq_mask_o   : out std_logic_vector(7 downto 0);
+      irq_clear_o  : out std_logic_vector(7 downto 0)
     );
 end spi_control_mq;
 
 architecture behavioral of spi_control_mq is
 
-  signal modereg_s   : std_logic_vector(7 downto 0);
-  signal serialnum_s : std_logic_vector(8*data_word_size-1 downto 0);
+  signal modereg_s   : std_logic_vector(7 downto 0) := (others=>'0');
+  signal irq_mask_s  : std_logic_vector(7 downto 0) := (others=>'0');
+
+  signal serialnum_s : std_logic_vector(8*data_word_size-1 downto 0) := (others=>'0');
   signal did_s       : std_logic_vector(8*data_word_size-1 downto 0) := (others=>'0');
   signal uid_c       : std_logic_vector(8*data_word_size-1 downto 0) := (others=>'0');
 
@@ -97,7 +101,10 @@ architecture behavioral of spi_control_mq is
   constant RDSN_c        : std_logic_vector(7 downto 0) := x"C3";
   constant DPD_c         : std_logic_vector(7 downto 0) := x"BA";
   constant HBN_c         : std_logic_vector(7 downto 0) := x"B9";
-  constant IRQR_c        : std_logic_vector(7 downto 0) := x"A4";
+  constant IRQRD_c       : std_logic_vector(7 downto 0) := x"A2";
+  constant IRQWR_c       : std_logic_vector(7 downto 0) := x"A3";
+  constant IRQMRD_c      : std_logic_vector(7 downto 0) := x"D2";
+  constant IRQMWR_c      : std_logic_vector(7 downto 0) := x"D3";
   constant STAT_c        : std_logic_vector(7 downto 0) := x"A5";
 
 
@@ -134,20 +141,6 @@ architecture behavioral of spi_control_mq is
     write_st,
     act_st,
     inc_addr_st,
-    -- edio_st,
-    -- eqio_st,
-    -- rstio_st,
-    -- rdmr_st,
-    -- wrmr_st,
-    -- rdid_st,
-    -- ruid_st,
-    -- wrsn_st,
-    -- rdsn_st,
-    -- dpd_st,
-    -- hbn_st,
-    -- irqr_st,
-    -- stat_st,
-    --mgmt states
     idle_st,
     ack_st,
     wait4spi_st,
@@ -213,6 +206,11 @@ architecture behavioral of spi_control_mq is
             tmp := wait4spi_st;
           when WRSN_c        =>
             tmp := wait4spi_st;
+          when IRQWR_c       =>
+            tmp := wait4spi_st;
+          when IRQMWR_c      =>
+            tmp := wait4spi_st;
+
           when others        =>
             tmp := act_st;
         end case;
@@ -293,19 +291,27 @@ architecture behavioral of spi_control_mq is
             end if;
           when RDSN_c =>
             if aux_cnt = data_word_size-1 then
-              tmp := read_st;
+              tmp := wait_forever_st;
             end if;
           when RUID_c =>
             if aux_cnt = data_word_size-1 then
-              tmp := read_st;
+              tmp := wait_forever_st;
             end if;
           when RDID_c =>
             if aux_cnt = data_word_size-1 then
-              tmp := read_st;
+              tmp := wait_forever_st;
             end if;
           when WRMR_c =>
-            tmp := act_st;
+            if aux_cnt = data_word_size then
+              tmp := act_st;
+            end if;
           when WRSN_c =>
+            if aux_cnt = data_word_size then
+              tmp := act_st;
+            end if;
+          when IRQWR_c =>
+            tmp := act_st;
+          when IRQMWR_c =>
             tmp := act_st;
           when others =>
             tmp := wait_forever_st;
@@ -331,6 +337,10 @@ architecture behavioral of spi_control_mq is
             tmp := wait4spi_st;
           when RDID_c =>
             tmp := wait4spi_st;
+          when IRQRD_c =>
+            tmp := wait4spi_st;
+          when IRQMRD_c =>
+            tmp := wait4spi_st;
           when others =>
             tmp := wait_forever_st;
         end case;
@@ -346,6 +356,8 @@ architecture behavioral of spi_control_mq is
 
   signal buffer_s : std_logic_vector(8*buffer_size-1 downto 0);
   signal aux_cnt_s : integer;
+  signal command_s         : std_logic_vector(7 downto 0);
+
 
 begin
 
@@ -367,6 +379,8 @@ begin
       buffer_v     := (others=>'0');
       RSTIO_o      <= '0';
       serialnum_s  <= (others=>'0');
+      irq_mask_s   <= (others=>'0');
+      irq_clear_o  <= (others=>'0');
     elsif mclk_i = '1' and mclk_i'event then
       if spi_busy_i = '0' then
         spi_mq       <= idle_st;
@@ -377,7 +391,7 @@ begin
         spi_txdata_o <= (others=>'1');
         buffer_v     := (others=>'0');
         RSTIO_o      <= '0';
-        serialnum_s  <= serial_num_i;
+        irq_clear_o  <= (others=>'0');
       else
         case spi_mq is
           when idle_st  =>
@@ -468,11 +482,13 @@ begin
               when RDID_c        =>
                 spi_txen_o   <= '1';
                 buffer_v     := did_i;
+                spi_txdata_o <= buffer_v(buffer_v'high downto buffer_v'high-7);
                 spi_mq       <= next_state(command_v, aux_cnt, spi_mq);
 
               when RUID_c        =>
                 spi_txen_o   <= '1';
                 buffer_v     := uid_i;
+                spi_txdata_o <= buffer_v(buffer_v'high downto buffer_v'high-7);
                 spi_mq       <= next_state(command_v, aux_cnt, spi_mq);
 
               when WRSN_c        =>
@@ -482,7 +498,11 @@ begin
                 spi_mq   <= next_state(command_v, aux_cnt, spi_mq);
 
               when RDSN_c        =>
-                buffer_v     := serialnum_s;
+                if serial_num_rw then
+                  buffer_v     := serialnum_s;
+                else
+                  buffer_v     := serial_num_i;
+                end if;
                 spi_txen_o   <= '1';
                 spi_txdata_o <= buffer_v(buffer_v'high downto buffer_v'high-7);
                 spi_mq       <= next_state(command_v, aux_cnt, spi_mq);
@@ -493,10 +513,23 @@ begin
               when HBN_c         =>
                 spi_mq <= next_state(command_v, aux_cnt, spi_mq);
 
-              when IRQR_c =>
+              when IRQRD_c =>
                 spi_txen_o   <= '1';
                 spi_txdata_o <= irq_i;
                 spi_mq       <= next_state(command_v, aux_cnt, spi_mq);
+
+              when IRQWR_c =>
+                irq_clear_o <= buffer_v(7 downto 0);
+                spi_mq      <= next_state(command_v, aux_cnt, spi_mq);
+
+              when IRQMRD_c =>
+                spi_txen_o   <= '1';
+                spi_txdata_o <= irq_mask_s;
+                spi_mq       <= next_state(command_v, aux_cnt, spi_mq);
+
+              when IRQMWR_c =>
+                irq_mask_s <= buffer_v(7 downto 0);
+                spi_mq     <= next_state(command_v, aux_cnt, spi_mq);
 
               when others        =>
                 spi_txen_o   <=   '1';
@@ -508,7 +541,7 @@ begin
 
           when others   =>
             spi_txen_o   <=   '0';
-            spi_txdata_o <= x"FF";
+            --spi_txdata_o <= x"FF";
             spi_mq  <= next_state(command_v, aux_cnt, spi_mq);
 
 
@@ -518,7 +551,10 @@ begin
     end if;
     buffer_s <= buffer_v;
     aux_cnt_s <= aux_cnt;
+    command_s <= command_v;
   end process;
 
+  --Algumas saídas.
+  irq_mask_o <= irq_mask_s;
 
 end behavioral;

@@ -13,50 +13,60 @@ architecture simulation of SPI_AXI_TOP_TB is
 
   component spi_axi_top
     generic (
-      spi_cpol      : std_logic;
-      ID_WIDTH      : integer := 1;
-      ID_VALUE      : integer := 0;
-      ADDR_BYTE_NUM : integer := 4;
-      DATA_BYTE_NUM : integer := 4
-    );
+      spi_cpol         : std_logic := '0';
+      ID_WIDTH         : integer   := 1;
+      ID_VALUE         : integer   := 0;
+      ADDR_BYTE_NUM    : integer   := 4;
+      DATA_BYTE_NUM    : integer   := 4;
+      serial_num_rw    : boolean := true
+      );
     port (
+      --general
       rst_i         : in  std_logic;
       mclk_i        : in  std_logic;
+      --spi
       mosi_i        : in  std_logic;
       miso_o        : out std_logic;
       spck_i        : in  std_logic;
       spcs_i        : in  std_logic;
-      RSTIO_o      : out std_logic;
-      DID_i        : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
-      UID_i        : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
-      serial_num_i : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
+      --
+      RSTIO_o       : out std_logic;
+      DID_i         : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
+      UID_i         : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
+      serial_num_i  : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
       irq_i         : in  std_logic_vector(7 downto 0);
+      irq_o         : out std_logic;
+      --AXI-MM
       M_AXI_AWID    : out std_logic_vector(ID_WIDTH-1 downto 0);
       M_AXI_AWVALID : out std_logic;
       M_AXI_AWREADY : in  std_logic;
       M_AXI_AWADDR  : out std_logic_vector(8*ADDR_BYTE_NUM-1 downto 0);
       M_AXI_AWPROT  : out std_logic_vector(2 downto 0);
+      --write data channel
       M_AXI_WVALID  : out std_logic;
       M_AXI_WREADY  : in  std_logic;
       M_AXI_WDATA   : out std_logic_vector(8*DATA_BYTE_NUM-1 downto 0);
       M_AXI_WSTRB   : out std_logic_vector(DATA_BYTE_NUM-1 downto 0);
       M_AXI_WLAST   : out std_logic;
+      --Write Response channel
       M_AXI_BVALID  : in  std_logic;
       M_AXI_BREADY  : out std_logic;
       M_AXI_BRESP   : in  std_logic_vector(1 downto 0);
       M_AXI_BID     : in  std_logic_vector(ID_WIDTH-1 downto 0);
+      -- Read Address channel
       M_AXI_ARVALID : out std_logic;
       M_AXI_ARREADY : in  std_logic;
       M_AXI_ARADDR  : out std_logic_vector(8*ADDR_BYTE_NUM-1 downto 0);
       M_AXI_ARPROT  : out std_logic_vector(2 downto 0);
       M_AXI_ARID    : out std_logic_vector(ID_WIDTH-1 downto 0);
+      --Read data channel
       M_AXI_RVALID  : in  std_logic;
       M_AXI_RREADY  : out std_logic;
       M_AXI_RDATA   : in  std_logic_vector(8*DATA_BYTE_NUM-1 downto 0);
       M_AXI_RRESP   : in  std_logic_vector(1 downto 0);
       M_AXI_RID     : in  std_logic_vector(ID_WIDTH-1 downto 0);
       M_AXI_RLAST   : in  std_logic
-    );
+      );
   end component spi_axi_top;
 
   constant  spi_cpol      : std_logic := '0';
@@ -64,6 +74,8 @@ architecture simulation of SPI_AXI_TOP_TB is
   constant  ID_VALUE      : integer := 0;
   constant  ADDR_BYTE_NUM : integer := 4;
   constant  DATA_BYTE_NUM : integer := 4;
+  constant  serial_num_rw : boolean := true;
+
   signal    rst_i         : std_logic;
   signal    mclk_i        : std_logic := '0';
   signal    mosi_i        : std_logic;
@@ -72,10 +84,11 @@ architecture simulation of SPI_AXI_TOP_TB is
   signal    spcs_i        : std_logic;
   signal    RSTIO_o       : std_logic;
 
-  constant  DID_i         : std_logic_vector(DATA_BYTE_NUM*8-1 downto 0) := x"01234567";
-  constant  UID_i         : std_logic_vector(DATA_BYTE_NUM*8-1 downto 0) := x"89ABCDEF";
-  constant  serial_num_i  : std_logic_vector(DATA_BYTE_NUM*8-1 downto 0) := x"76543210";
-  signal    irq_i         : std_logic_vector(7 downto 0);
+  constant  DID_i         : std_logic_vector(DATA_BYTE_NUM*8-1 downto 0) := x"76543210";
+  constant  UID_i         : std_logic_vector(DATA_BYTE_NUM*8-1 downto 0) := x"AAAAAAAA";
+  constant  serial_num_i  : std_logic_vector(DATA_BYTE_NUM*8-1 downto 0) := x"00000000";
+  signal    irq_i         : std_logic_vector(7 downto 0)                 := x"86";
+  signal    irq_o         : std_logic;
 
   signal    M_AXI_AWID    : std_logic_vector(ID_WIDTH-1 downto 0);
   signal    M_AXI_AWVALID : std_logic;
@@ -109,7 +122,14 @@ architecture simulation of SPI_AXI_TOP_TB is
 
   type data_vector_t is array (NATURAL RANGE <>) of std_logic_vector(7 downto 0);
   signal RDSN_c        : data_vector_t(4 downto 0) := (x"C3", others => x"00");
+  signal WRSN_c        : data_vector_t(4 downto 0) := (x"C2", x"89", x"AB", x"CD", x"EF" );
+  signal RDID_c        : data_vector_t(4 downto 0) := (x"9F", others => x"00");
+  signal RUID_c        : data_vector_t(4 downto 0) := (x"4C", others => x"00");
 
+  signal IRQRD_c       : data_vector_t(1 downto 0) := (x"A2", x"00");
+  signal IRQWR_c       : data_vector_t(1 downto 0) := (x"A3", x"0F");
+  signal IRQMRD_c      : data_vector_t(1 downto 0) := (x"D2", x"00");
+  signal IRQMWR_c      : data_vector_t(1 downto 0) := (x"D3", x"F0");
 
   signal WRITE_c       : std_logic_vector(7 downto 0) := x"02";
   signal READ_c        : std_logic_vector(7 downto 0) := x"03";
@@ -122,12 +142,8 @@ architecture simulation of SPI_AXI_TOP_TB is
   signal RSTIO_c       : std_logic_vector(7 downto 0) := x"FF";
   signal RDMR_c        : std_logic_vector(7 downto 0) := x"05";
   signal WRMR_c        : std_logic_vector(7 downto 0) := x"01";
-  signal RDID_c        : std_logic_vector(7 downto 0) := x"9F";
-  signal RUID_c        : std_logic_vector(7 downto 0) := x"4C";
-  signal WRSN_c        : std_logic_vector(7 downto 0) := x"C2";
   signal DPD_c         : std_logic_vector(7 downto 0) := x"BA";
   signal HBN_c         : std_logic_vector(7 downto 0) := x"B9";
-  signal IRQR_c        : std_logic_vector(7 downto 0) := x"A4";
   signal STAT_c        : std_logic_vector(7 downto 0) := x"A5";
 
   signal spi_rxdata_s    : data_vector_t(15 downto 0);
@@ -172,58 +188,80 @@ begin
     mosi_i <= 'H';
     wait until rst_i = '0';
     wait until mclk_i'event and mclk_i = '1';
-    --testing commands
+    --ID TESTING
+    spi_bus(RUID_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    wait for 35 ns;
+    spi_bus(RDID_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    wait for 35 ns;
+    --SERIAL NUMBER TESTING
+    spi_bus(WRSN_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    wait for 35 ns;
     spi_bus(RDSN_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    wait for 35 ns;
+    --IRQ TESTING
+    irq_i <= x"00";
+    spi_bus(IRQRD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    wait for 35 ns;
+    spi_bus(IRQWR_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    wait for 35 ns;
+    spi_bus(IRQRD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    wait for 35 ns;
+    spi_bus(IRQMWR_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    wait for 35 ns;
+    spi_bus(IRQMRD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     wait;
   end process;
 
 
-  spi_axi_top_u : spi_axi_top
-    generic map (
-      spi_cpol      => spi_cpol,
-      ID_WIDTH      => ID_WIDTH,
-      ID_VALUE      => ID_VALUE,
-      ADDR_BYTE_NUM => ADDR_BYTE_NUM,
-      DATA_BYTE_NUM => DATA_BYTE_NUM
-    )
-    port map (
-      rst_i         => rst_i,
-      mclk_i        => mclk_i,
-      mosi_i        => mosi_i,
-      miso_o        => miso_o,
-      spck_i        => spck_i,
-      spcs_i        => spcs_i,
-      irq_i         => irq_i,
-      RSTIO_o      => RSTIO_o,
-      DID_i        => DID_i,
-      UID_i        => UID_i,
-      serial_num_i => serial_num_i,
-      M_AXI_AWID    => M_AXI_AWID,
-      M_AXI_AWVALID => M_AXI_AWVALID,
-      M_AXI_AWREADY => M_AXI_AWREADY,
-      M_AXI_AWADDR  => M_AXI_AWADDR,
-      M_AXI_AWPROT  => M_AXI_AWPROT,
-      M_AXI_WVALID  => M_AXI_WVALID,
-      M_AXI_WREADY  => M_AXI_WREADY,
-      M_AXI_WDATA   => M_AXI_WDATA,
-      M_AXI_WSTRB   => M_AXI_WSTRB,
-      M_AXI_WLAST   => M_AXI_WLAST,
-      M_AXI_BVALID  => M_AXI_BVALID,
-      M_AXI_BREADY  => M_AXI_BREADY,
-      M_AXI_BRESP   => M_AXI_BRESP,
-      M_AXI_BID     => M_AXI_BID,
-      M_AXI_ARVALID => M_AXI_ARVALID,
-      M_AXI_ARREADY => M_AXI_ARREADY,
-      M_AXI_ARADDR  => M_AXI_ARADDR,
-      M_AXI_ARPROT  => M_AXI_ARPROT,
-      M_AXI_ARID    => M_AXI_ARID,
-      M_AXI_RVALID  => M_AXI_RVALID,
-      M_AXI_RREADY  => M_AXI_RREADY,
-      M_AXI_RDATA   => M_AXI_RDATA,
-      M_AXI_RRESP   => M_AXI_RRESP,
-      M_AXI_RID     => M_AXI_RID,
-      M_AXI_RLAST   => M_AXI_RLAST
-    );
+  spi_axi_top_i : spi_axi_top
+  generic map (
+    spi_cpol      => spi_cpol,
+    ID_WIDTH      => ID_WIDTH,
+    ID_VALUE      => ID_VALUE,
+    ADDR_BYTE_NUM => ADDR_BYTE_NUM,
+    DATA_BYTE_NUM => DATA_BYTE_NUM,
+    serial_num_rw => serial_num_rw
+  )
+  port map (
+    rst_i         => rst_i,
+    mclk_i        => mclk_i,
+    mosi_i        => mosi_i,
+    miso_o        => miso_o,
+    spck_i        => spck_i,
+    spcs_i        => spcs_i,
+    RSTIO_o       => RSTIO_o,
+    DID_i         => DID_i,
+    UID_i         => UID_i,
+    serial_num_i  => serial_num_i,
+    irq_i         => irq_i,
+    irq_o         => irq_o,
+    M_AXI_AWID    => M_AXI_AWID,
+    M_AXI_AWVALID => M_AXI_AWVALID,
+    M_AXI_AWREADY => M_AXI_AWREADY,
+    M_AXI_AWADDR  => M_AXI_AWADDR,
+    M_AXI_AWPROT  => M_AXI_AWPROT,
+    M_AXI_WVALID  => M_AXI_WVALID,
+    M_AXI_WREADY  => M_AXI_WREADY,
+    M_AXI_WDATA   => M_AXI_WDATA,
+    M_AXI_WSTRB   => M_AXI_WSTRB,
+    M_AXI_WLAST   => M_AXI_WLAST,
+    M_AXI_BVALID  => M_AXI_BVALID,
+    M_AXI_BREADY  => M_AXI_BREADY,
+    M_AXI_BRESP   => M_AXI_BRESP,
+    M_AXI_BID     => M_AXI_BID,
+    M_AXI_ARVALID => M_AXI_ARVALID,
+    M_AXI_ARREADY => M_AXI_ARREADY,
+    M_AXI_ARADDR  => M_AXI_ARADDR,
+    M_AXI_ARPROT  => M_AXI_ARPROT,
+    M_AXI_ARID    => M_AXI_ARID,
+    M_AXI_RVALID  => M_AXI_RVALID,
+    M_AXI_RREADY  => M_AXI_RREADY,
+    M_AXI_RDATA   => M_AXI_RDATA,
+    M_AXI_RRESP   => M_AXI_RRESP,
+    M_AXI_RID     => M_AXI_RID,
+    M_AXI_RLAST   => M_AXI_RLAST
+  );
+
 
 
 
