@@ -116,7 +116,7 @@ architecture simulation of SPI_AXI_TOP_TB is
   signal    M_AXI_RID     : std_logic_vector(ID_WIDTH-1 downto 0);
   signal    M_AXI_RLAST   : std_logic;
 
-  constant frequency_mhz   : real := 20.0000;
+  constant frequency_mhz   : real := 10.0000;
   constant spi_period      : time := ( 1.000 / frequency_mhz) * 1 us;
   constant spi_half_period : time := spi_period;
 
@@ -130,6 +130,20 @@ architecture simulation of SPI_AXI_TOP_TB is
   signal IRQWR_c       : data_vector_t(1 downto 0) := (x"A3", x"0F");
   signal IRQMRD_c      : data_vector_t(1 downto 0) := (x"D2", x"00");
   signal IRQMWR_c      : data_vector_t(1 downto 0) := (x"D3", x"F0");
+
+  signal RD1WORD_c     : data_vector_t(8 downto 0) := (x"03", others => x"00");
+  signal WR1WORD_c     : data_vector_t(8 downto 0) := (
+    x"02",
+    x"00",
+    x"00",
+    x"00",
+    x"00",
+    x"AB",
+    x"CD",
+    x"12",
+    x"34"
+  );
+
 
   signal WRITE_c       : std_logic_vector(7 downto 0) := x"02";
   signal READ_c        : std_logic_vector(7 downto 0) := x"03";
@@ -189,26 +203,29 @@ begin
     wait until rst_i = '0';
     wait until mclk_i'event and mclk_i = '1';
     --ID TESTING
-    spi_bus(RUID_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
-    wait for 35 ns;
-    spi_bus(RDID_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
-    wait for 35 ns;
+    --spi_bus(RUID_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --wait for 35 ns;
+    --spi_bus(RDID_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --wait for 35 ns;
     --SERIAL NUMBER TESTING
-    spi_bus(WRSN_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
-    wait for 35 ns;
-    spi_bus(RDSN_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
-    wait for 35 ns;
+    --spi_bus(WRSN_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --wait for 35 ns;
+    --spi_bus(RDSN_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --wait for 35 ns;
     --IRQ TESTING
-    irq_i <= x"00";
-    spi_bus(IRQRD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
-    wait for 35 ns;
-    spi_bus(IRQWR_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
-    wait for 35 ns;
-    spi_bus(IRQRD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
-    wait for 35 ns;
-    spi_bus(IRQMWR_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
-    wait for 35 ns;
-    spi_bus(IRQMRD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --irq_i <= x"00";
+    --spi_bus(IRQRD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --wait for 35 ns;
+    --spi_bus(IRQWR_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --wait for 35 ns;
+    --spi_bus(IRQRD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --wait for 35 ns;
+    --spi_bus(IRQMWR_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --wait for 35 ns;
+    --spi_bus(IRQMRD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --wait for 35 ns;
+    --READ/WRITE TEST
+    spi_bus(RD1WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     wait;
   end process;
 
@@ -262,7 +279,16 @@ begin
     M_AXI_RLAST   => M_AXI_RLAST
   );
 
-
-
+  M_AXI_AWREADY <= '1';
+  M_AXI_WREADY  <= '1';
+  M_AXI_BVALID  <= '1';
+  M_AXI_BRESP   <= "00";
+  M_AXI_BID     <= (others=>'0');
+  M_AXI_ARREADY <= '1';
+  M_AXI_RVALID  <= '1';
+  M_AXI_RDATA   <= x"ABCD1234";
+  M_AXI_RRESP   <= "00";
+  M_AXI_RID     <= (others=>'0');
+  M_AXI_RLAST   <= '0';
 
 end simulation;

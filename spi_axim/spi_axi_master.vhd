@@ -81,7 +81,7 @@ begin
 	----------------------------------
 	--Control Machine
 	----------------------------------
-	control_p : process(M_AXI_ACLK)
+	control_p : process(M_AXI_RESET, M_AXI_ACLK)
 	begin
 	  if (M_AXI_RESET = '1') then
 	    -- reset condition

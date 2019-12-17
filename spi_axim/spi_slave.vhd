@@ -37,19 +37,13 @@ architecture behavioral of spi_slave is
 
   signal tx_en         : std_logic;
   signal rx_en         : std_logic;
-  signal spi_rxen_s    : std_logic;
   signal data_en       : std_logic_vector(7 downto 0) := "00000001";
-  signal output_sr     : std_logic_vector(7 downto 0);
   signal spi_rxdata_s  : std_logic_vector(7 downto 0) := "11111111";
-  signal spi_rxdata_en : std_logic;
   signal spi_rxen_sync : std_logic;
   signal busy_s        : std_logic;
-  signal spi_txen_s     : std_logic := '0';
-  signal spi_txen_clear : std_logic := '0';
 
-  signal spi_txdata_s  : std_logic_vector(7 downto 0);
-
-  signal input_sr : std_logic_vector(7 downto 0);
+  signal output_sr     : std_logic_vector(7 downto 0);
+  signal input_sr      : std_logic_vector(7 downto 0);
 
 begin
 
@@ -85,17 +79,6 @@ begin
     end if;
   end process;
 
-  -- output_latch_p: process(tx_en, spck_i, spcs_i, spi_txdata_i(7) )
-  -- begin
-  --   if spcs_i = '1' then
-  --     output_sr(7) <= '1';
-  --   elsif tx_en = '1' then
-  --     output_sr(7) <= spi_txdata_i(7);
-  --   elsif spck_i = CPOL then
-  --     output_sr(7) <= output_sr(6);
-  --   end if;
-  -- end process;
-
   output_sr_p : process(spck_i,spcs_i)
   begin
     if spcs_i = '1' then
@@ -130,15 +113,12 @@ begin
     port map ('0',mclk_i,rx_en,spi_rxen_sync);
 
   det_rxen_u : det_up
-    port map ('0',mclk_i,spi_rxen_sync,spi_rxen_s);
+    port map ('0',mclk_i,spi_rxen_sync,spi_rxen_o);
 
   data_gen : for j in 7 downto 0 generate
     sync_j : sync_r
       generic map (2)
-      port map ('0',mclk_i,input_sr(j),spi_rxdata_s(j));
+      port map ('0',mclk_i,input_sr(j),spi_rxdata_o(j));
   end generate;
-
-  spi_rxen_o <= spi_rxen_s;
-  spi_rxdata_o <= spi_rxdata_s;
 
 end behavioral;
