@@ -1,6 +1,40 @@
-----------------------------------------------------------------------------------
--- SPI-AXI-Master  by Ricardo F Tafas Jr
-----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------
+-- SPI-AXI-Controller Machine.
+-- Ricardo Tafas
+-- This is open source code licensed under LGPL.
+-- By using it on your system you agree with all LGPL conditions.
+-- This code is provided AS IS, without any sort of warranty.
+-- Author: Ricardo F Tafas Jr
+-- 2019
+---------------------------------------------------------------------------------------------------------
+--The SPI control machine implements an SPI-FRAM interface.
+-- BUS OPERATIONS
+--WRITE             0000 0010      0x02 Write data to memory array beginning at selected address
+--READ              0000 0011      0x03 Read data from memory array beginning at selected address
+--FAST_WRITE        0000 0010      0x0A Write data to memory array beginning at selected address
+--FAST_READ         0000 0011      0x0B Read data from memory array beginning at selected address
+--WRITE_BURST       0100 0010      0x42 Special Write. No increment.
+--READ_BURST        0100 1011      0x4B Special Read. No increment.
+
+--CONFIGS
+
+--EDIO              0011 1011      0x3B Enter Dual I/O access (enter SDI bus mode)
+--EQIO              0011 1000      0x38 Enter Quad I/O access (enter SQI bus mode)
+--RSTIO             1111 1111      0xFF Reset Dual and Quad I/O access (revert to SPI bus mode)
+--RDMR              0000 0101      0x05 Read Mode Register
+--WRMR              0000 0001      0x01 Write Mode Register
+--RDID              1001 1111      0x9F Read Golden Register / Device ID
+--RUID              0100 1100      0x4C Read Unique Device ID
+--WRSN              1100 0010      0xC2 write serial number / golden register.
+--RDSN              1100 0011      0xC3 read serial number / golden register.
+--DPD               1011 1010      0xBA deep power down
+--HBN               1011 1001      0xB9 hibernate
+
+--INTERNAL BUS Data
+
+--IRQR              1010 0100      0xA4 Interrupt Register. Used to directly decode up to 32 irqs
+--STAT              1010 0101      0xA5 Bus Operation Status.
+---------------------------------------------------------------------------------------------------------
 library ieee;
     use ieee.std_logic_1164.all;
 library stdblocks;

@@ -1,3 +1,12 @@
+----------------------------------------------------------------------------------------------------------
+-- SPI-AXI-Controller Machine.
+-- Ricardo Tafas
+-- This is open source code licensed under LGPL.
+-- By using it on your system you agree with all LGPL conditions.
+-- This code is provided AS IS, without any sort of warranty.
+-- Author: Ricardo F Tafas Jr
+-- 2019
+---------------------------------------------------------------------------------------------------------
 library ieee;
 	use ieee.std_logic_1164.all;
 	use ieee.numeric_std.all;
