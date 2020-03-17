@@ -33,7 +33,7 @@ package spi_axi_pkg is
   constant IRQR_c        : std_logic_vector(7 downto 0) := x"A4";
   constant STAT_c        : std_logic_vector(7 downto 0) := x"A5";
 
-end std_logic_expert;
+end spi_axi_pkg;
 
 --a arquitetura
 package body spi_axi_pkg is

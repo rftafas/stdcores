@@ -38,7 +38,9 @@ package genecic_block_pkg is
 
 		component genecic_block_core is
 	    generic (
-	      ram_addr : integer
+	      ram_addr    : integer;
+				pipe_num    : integer;
+        data_size   : integer
 	    );
 	    port (
 	      mclk_i      : in  std_logic;
@@ -56,8 +58,6 @@ package genecic_block_pkg is
 	      tuser_o     : out std_logic_vector;
 	      tdest_o     : out std_logic_vector;
 	      packet_size : in  integer;
-	      key_i       : in  std_logic_vector(127 downto 0);
-	      rng_data_i  : in  std_logic_vector(15 downto 0);
 	      busy_o      : out std_logic
 	    );
 	  end component;

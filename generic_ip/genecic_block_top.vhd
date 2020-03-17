@@ -7,10 +7,10 @@
 -- 2019
 ---------------------------------------------------------------------------------------------------------
 library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+	use ieee.std_logic_1164.all;
+	use ieee.numeric_std.all;
 library stdcores;
-use stdcores.genecic_block_pkg.all;
+	use stdcores.genecic_block_pkg.all;
 
 entity genecic_block_top is
 	generic (
@@ -99,6 +99,9 @@ architecture top_arch of genecic_block_top is
   signal fifo_empty_o_s   : std_logic;
   signal busy_o_s         : std_logic;
 
+	type local_array is array (natural range <>) of std_logic_vector(32 downto 0);
+	signal some_signal_s : local_array(5 downto 2);
+
 begin
 
 -- Instantiation of Axi Bus Interface S00_AXI
@@ -133,67 +136,65 @@ begin
 	  );
 
 	-- Add user logic here
-	dummy_block_inst: dummy_block
-	    generic map(
-	            ram_addr  => ram_addr,
-							pipe_num	=> 32
+	generic_block_inst: genecic_block_core
+    generic map(
+      ram_addr  => ram_addr,
+			pipe_num	=> 32,
+      data_size => 128
+    )
+    port map(
+      mclk_i       => mclk_i,
+			arst_i       => resetn_i,
 
-	    )
-	    port map(
-	        mclk_i       => mclk_i,
-					arst_i       => resetn_i,
+      --gets data
+      tready_o     => s00_axis_tready,
+      tdata_i      => s00_axis_tdata,
+      tvalid_i     => s00_axis_tvalid,
+			tlast_i      => s00_axis_tlast,
+			tuser_i      => s00_axis_tuser,
+			tdest_i      => s00_axis_tdest,
 
-	        --gets data
-	        tready_o     => s00_axis_tready,
-	        tdata_i      => s00_axis_tdata,
-	        tvalid_i     => s00_axis_tvalid,
-					tlast_i      => s00_axis_tlast,
-					tuser_i      => s00_axis_tuser,
-					tdest_i      => s00_axis_tdest,
+      --puts data
+      tvalid_o     => m00_axis_tvalid,
+      tdata_o      => m00_axis_tdata,
+      tlast_o      => m00_axis_tlast,
+			tready_i     => m00_axis_tready,
+			tuser_o      => m00_axis_tuser,
+			tdest_o      => m00_axis_tdest,
 
-	        --puts data
-	        tvalid_o     => m00_axis_tvalid,
-	        tdata_o      => m00_axis_tdata,
-	        tlast_o      => m00_axis_tlast,
-					tready_i     => m00_axis_tready,
-					tuser_o      => m00_axis_tuser,
-					tdest_o      => m00_axis_tdest,
-
-	        --status and configuration registers
-	        packet_size  => packet_size,
-	        key_i        => key_i_s,
-	        rng_data_i   => rng_data_i_s,
-	        busy_o       => busy_o_s
-	    );
-
-    --Register connection from databank
-    --read/write
-		out_reg_cnacel_gen : if false generate
-	    out_reg_gen : for j in 4 downto 1 generate
-	        some_signal_s(j) <= oreg_o_s(j);
-	    end generate;
-		end generate;
-
-    -- Read only
-    ireg_i_s <= (
-        0 => x"00A4_0AFA",
-        1 => ( 16 => fifo_full_o_s, 17 => fifo_empty_o_s, 24 => busy_o_s, others => '0'),
-        others => (others => '0')
+      --status and configuration registers
+      packet_size  => packet_size,
+      busy_o       => busy_o_s
     );
 
-    --Capture Bits
-    capture_i_s <= (
-        6 => (18 => packet_size_error_s, others => '0'),
-        others => (others => '0')
-    );
+  --Register connection from databank
+  --read/write
+	out_reg_cnacel_gen : if false generate
+    out_reg_gen : for j in 5 downto 2 generate
+        some_signal_s(j) <= oreg_o_s(j);
+    end generate;
+	end generate;
 
-		--contratos
-		assert tdest_size > 0
-			report "TDEST Size must be greater than 0."
-			severity failure;
+  -- Read only
+  ireg_i_s <= (
+      0 => x"00A4_0AFA",
+      1 => ( 16 => fifo_full_o_s, 17 => fifo_empty_o_s, 24 => busy_o_s, others => '0'),
+      others => (others => '0')
+  );
 
-		assert tuser_size > 0
-			report "TUSER Size must be greater than 0."
-			severity failure;
+  --Capture Bits
+  capture_i_s <= (
+      6 => (18 => packet_size_error_s, others => '0'),
+      others => (others => '0')
+  );
 
-end arch_imp;
+	--contratos
+	assert tdest_size > 0
+		report "TDEST Size must be greater than 0."
+		severity failure;
+
+	assert tuser_size > 0
+		report "TUSER Size must be greater than 0."
+		severity failure;
+
+end top_arch;
