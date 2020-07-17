@@ -17,113 +17,168 @@ library stdblocks;
 
 
 entity spi_slave is
-    generic (
-      CPOL : std_logic := '0'
-    );
-    port (
-      --general
-      rst_i    : in  std_logic;
-      mclk_i   : in  std_logic;
-      --spi
-      spck_i   : in  std_logic;
-      mosi_i   : in  std_logic;
-      miso_o   : out std_logic;
-      spcs_i   : in  std_logic;
-      --Internal
-      spi_busy_o   : out std_logic;
-      spi_rxen_o   : out std_logic;
-      spi_txen_i   : in  std_logic;
-      spi_rxdata_o : out std_logic_vector(7 downto 0);
-      spi_txdata_i : in  std_logic_vector(7 downto 0)
-    );
+  generic (
+    edge       : std_logic    := '0';
+    clock_mode : clock_mode_t := native
+  );
+  port (
+    --general
+    rst_i    : in  std_logic;
+    mclk_i   : in  std_logic;
+    --spi
+    spck_i   : in  std_logic;
+    mosi_i   : in  std_logic;
+    miso_o   : out std_logic;
+    spcs_i   : in  std_logic;
+    --Internal
+    spi_busy_o   : out std_logic;
+    spi_rxen_o   : out std_logic;
+    spi_txen_i   : in  std_logic;
+    spi_rxdata_o : out std_logic_vector(7 downto 0);
+    spi_txdata_i : in  std_logic_vector(7 downto 0)
+  );
 end spi_slave;
 
 architecture behavioral of spi_slave is
 
+  signal edge_s        : std_logic;
+  spck_s    <= spck_i;
+  spcs_s    <= spcs_i;
+mosi_s
+
   signal tx_en         : std_logic;
   signal rx_en         : std_logic;
   signal data_en       : std_logic_vector(7 downto 0) := "00000001";
-  signal spi_rxdata_s  : std_logic_vector(7 downto 0) := "11111111";
-  signal spi_rxen_sync : std_logic;
   signal busy_s        : std_logic;
+  signal receive_flag  : boolean := false;
 
-  signal output_sr     : std_logic_vector(7 downto 0);
-  signal input_sr      : std_logic_vector(7 downto 0);
+
+  signal output_sr     : std_logic_vector(6 downto 0);
+  signal input_sr      : std_logic_vector(6 downto 0);
+  signal spi_rxen_sync : std_logic;
 
 begin
 
-  data_cnt_p : process(spcs_i, spck_i)
-    variable zero_flag : boolean;
+  clk_gen : if spi_clock_mode = native generate
+    signal spi_rxdata_s : std_logic_vector(7 downto 0) := "11111111";
+    signal rxdata_en_s  : std_logic;
   begin
-    if spcs_i = '1' then
-      data_en   <= "00000000";
-      busy_s    <= '0';
-      zero_flag := false;
-    elsif spck_i = not CPOL and spck_i'event then
-      if zero_flag then
-        data_en <= data_en(6 downto 0) & '0';
-        if data_en(6) = '1' then
-          zero_flag := false;
+    edge_s  <= edge;
+    spck_en <= '1';
+    spck_s  <= spck_i;
+    spcs_s  <= spcs_i;
+    mosi_s  <= mosi_i;
+
+    sync_busy_u : sync_r
+      generic map (2)
+      port map ('0',mclk_i,busy_s,spi_busy_o);
+
+    sync_exen_u : sync_r
+      generic map (2)
+      port map ('0',mclk_i,rxdata_en,rxdata_en_s);
+
+    det_rxen_u : det_up
+      port map ('0',mclk_i,rxdata_en_s,spi_rxen_o);
+
+    data_gen : for j in 7 downto 0 generate
+      sync_j : sync_r
+        generic map (2)
+        port map ('0',mclk_i,rxdata_s(j),spi_rxdata_o(j));
+    end generate;
+
+  else generate
+    signal spck_sync_s : std_logic;
+  begin
+    edge_s        <= '1';
+    spck_s        <= mclk_i;
+    spi_busy_o    <= busy_s;
+    spi_rxdata_o  <= rxdata_s;
+    spi_rxen_o    <= rx_en;
+
+    sync_spck_u : sync_r
+      generic map (2)
+      port map ('0',mclk_i,mosi_i,mosi_s);
+
+    --clock will be oversampled.
+    sync_spck_u : sync_r
+      generic map (2)
+      port map ('0',mclk_i,spck_i,spck_sync_s);
+
+    --depending on the edge, we use detup or down
+    edge_gen : if edge = '1' generate
+      det_spck_u : det_up
+        port map ('0',mclk_i,spck_sync_s,spck_en);
+
+    else generate
+      det_spck_u : det_down
+        port map ('0',mclk_i,spck_sync_s,spck_en);
+
+    end generate;
+
+    sync_spcs_u : sync_r
+      generic map (2)
+      port map ('0',mclk_i,spcs_i,spcs_s);
+
+end generate;
+
+  data_cnt_p : process(spcs_s, spck_i)
+  begin
+    if spcs_s = '1' then
+      data_en <= "00000001";
+      rx_en   <= '0';
+    elsif spck_s = edge_s and spck_s'event then
+      if spck_en = '1' then
+        data_en <= data_en(6 downto 0) & data_en(7);
+      end if;
+    end if;
+  end process;
+  busy_s  <= not spcs_s;
+  rx_en   <= data_en(7);
+  tx_en   <= data_en(0) and not spcs_s;
+
+  input_sr_p : process(spck_s,spcs_s)
+  begin
+    if spcs_s = '1' then
+      input_sr  <= (others=>'0');
+      rxdata_en <= '0';
+      rxdata_s  <= (others=>'0');
+    elsif spck_s = edge_s and spck_s'event then
+      if spck_en = '1' then
+        if rx_en = '1' then
+          input_sr <= "0000000";
+          rxdata_s <= input_sr(6 downto 0) & mosi_i;
+          rxdata_en <= '1';
+        else
+          input_sr <= input_sr(5 downto 0) & mosi_i;
+          rxdata_en <= '0';
         end if;
-      else
-        zero_flag := true;
-        data_en <= data_en(6 downto 0) & '1';
       end if;
-      busy_s  <= '1';
-    end if;
-  end process;
-  tx_en <= data_en(7);
-  rx_en <= data_en(7);
-
-  input_sr_p : process(spck_i,spcs_i)
-  begin
-    if spcs_i = '1' then
-      input_sr <= "00000000";
-    elsif spck_i = not CPOL and spck_i'event then
-      input_sr <= input_sr(6 downto 0) & mosi_i;
     end if;
   end process;
 
-  output_sr_p : process(spck_i,spcs_i)
+  output_sr_p : process(spck_s,spcs_s)
   begin
-    if spcs_i = '1' then
+    if spcs_s = '1' then
       output_sr(6 downto 0) <= "1111111";
-    elsif spck_i = not CPOL and spck_i'event then
-      if tx_en = '1' then
-        output_sr(6 downto 0) <= spi_txdata_i(6 downto 0);
-      else
-        output_sr(6 downto 0) <= output_sr(5 downto 0) & '1';
+    elsif spck_s = edge_s and spck_s'event then
+      if spck_en = '1' then
+        if tx_en = '1' then
+          output_sr <= spi_txdata_i(6 downto 0);
+        else
+          output_sr <= output_sr(6 downto 0) & '1';
+        end if;
       end if;
     end if;
   end process;
 
-  output_sr(7) <= spi_txdata_i(7) when tx_en = '1' else output_sr(6);
-
-  output_latch_p: process(spck_i, spcs_i, output_sr(7) )
+  output_latch_s <= spi_txdata_i(7) when tx_en = '1' else output_sr(6);
+  output_latch_p: process(all) --(spck_s, spcs_s, output_latch_s )
   begin
     if spcs_i = '1' then
       miso_o  <= '1';
-    elsif spck_i = CPOL then
-      miso_o <= output_sr(7);
+    elsif spck_i = not edge_s then
+      miso_o <= output_latch_s;
     end if;
   end process;
-
-  --OUTPUTS
-  sync_busy_u : sync_r
-    generic map (2)
-    port map ('0',mclk_i,busy_s,spi_busy_o);
-
-  sync_exen_u : sync_r
-    generic map (2)
-    port map ('0',mclk_i,rx_en,spi_rxen_sync);
-
-  det_rxen_u : det_up
-    port map ('0',mclk_i,spi_rxen_sync,spi_rxen_o);
-
-  data_gen : for j in 7 downto 0 generate
-    sync_j : sync_r
-      generic map (2)
-      port map ('0',mclk_i,input_sr(j),spi_rxdata_o(j));
-  end generate;
 
 end behavioral;

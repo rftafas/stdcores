@@ -14,6 +14,8 @@ library expert;
     use expert.std_logic_expert.all;
 library stdblocks;
     use stdblocks.sync_lib.all;
+library stdcores;
+    use stdcores.spi_axim_pkg.all
 
 entity spi_control_mq is
     generic (
@@ -59,29 +61,6 @@ architecture behavioral of spi_control_mq is
   signal uid_c       : std_logic_vector(8*data_word_size-1 downto 0) := (others=>'0');
 
   constant buffer_size   : integer := data_word_size;--maximum(addr_word_size, data_word_size);
-  constant WRITE_c       : std_logic_vector(7 downto 0) := x"02";
-  constant READ_c        : std_logic_vector(7 downto 0) := x"03";
-  constant FAST_WRITE_c  : std_logic_vector(7 downto 0) := x"0A";
-  constant FAST_READ_c   : std_logic_vector(7 downto 0) := x"0B";
-  constant WRITE_BURST_c : std_logic_vector(7 downto 0) := x"42";
-  constant READ_BURST_c  : std_logic_vector(7 downto 0) := x"4B";
-  constant EDIO_c        : std_logic_vector(7 downto 0) := x"3B";
-  constant EQIO_c        : std_logic_vector(7 downto 0) := x"38";
-  constant RSTIO_c       : std_logic_vector(7 downto 0) := x"FF";
-  constant RDMR_c        : std_logic_vector(7 downto 0) := x"05";
-  constant WRMR_c        : std_logic_vector(7 downto 0) := x"01";
-  constant RDID_c        : std_logic_vector(7 downto 0) := x"9F";
-  constant RUID_c        : std_logic_vector(7 downto 0) := x"4C";
-  constant WRSN_c        : std_logic_vector(7 downto 0) := x"C2";
-  constant RDSN_c        : std_logic_vector(7 downto 0) := x"C3";
-  constant DPD_c         : std_logic_vector(7 downto 0) := x"BA";
-  constant HBN_c         : std_logic_vector(7 downto 0) := x"B9";
-  constant IRQRD_c       : std_logic_vector(7 downto 0) := x"A2";
-  constant IRQWR_c       : std_logic_vector(7 downto 0) := x"A3";
-  constant IRQMRD_c      : std_logic_vector(7 downto 0) := x"D2";
-  constant IRQMWR_c      : std_logic_vector(7 downto 0) := x"D3";
-  constant STAT_c        : std_logic_vector(7 downto 0) := x"A5";
-
 
   signal data_en : unsigned(7 downto 0) := "00000001";
   signal input_sr : std_logic_vector(7 downto 0);

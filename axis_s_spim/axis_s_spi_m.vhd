@@ -10,19 +10,16 @@
 library ieee;
 	use ieee.std_logic_1164.all;
 	use ieee.numeric_std.all;
+	use ieee.math_real.all;
 library expert;
 library stdblocks;
 	use stdblocks.sync_lib.all;
 
 entity axis_s_spi_m is
 	generic (
-		-- Thread ID Width and value
-		TLAST_ENABLE	    : integer	:= 1;
-		ID_VALUE	: integer	:= 1;
-		-- Width of Address Bus
+		TLAST_ENABLE	  : boolean	:= true;
 		SLAVE_NUM     	: integer	:= 4;
 		TDATA_BYTE_NUM	: integer	:= 4
-		-- Width of User Write Address Bus
 	);
 	port (
 		M_AXI_RESET  : in std_logic;
@@ -33,9 +30,15 @@ entity axis_s_spi_m is
 		s_tready_o   : out std_logic;
 		s_tvalid_i   : in  std_logic;
 		s_tlast_i    : in  std_logic;
+
+		s_tdata_o    : in  std_logic_vector(TDATA_BYTE_NUM*8-1 downto 0);
+		s_tdest_o    : in  std_logic_vector(size_for(SLAVE_NUM)-1 downto 0);
+		s_tready_i   : out std_logic;
+		s_tvalid_o   : in  std_logic;
+		s_tlast_o    : in  std_logic;
 		--spi master
 		mosi_o   : out std_logic;
-		miso_i
+		miso_i   : in  std_logic;
 		spck_o   : out std_logic;
 		spcs_o   : out std_logic_vector(SLAVE_NUM-1 downto 0)
 		);
@@ -62,7 +65,7 @@ begin
 				end if;
 				byte_cnt <= 0;
 				bit_cnt  <= 0;
-			elsif shift_en = 1 then
+			else
 				if ck_en = '1' then
 					bit_cnt <= bit_cnt + 1;
 					if byte_cnt = TDATA_BYTE_NUM then
@@ -110,11 +113,11 @@ begin
 	begin
 		if M_AXI_RESET = '1' then
 		elsif rising_edge(M_AXI_ACLK) then
-
 			if unload_en = 1 then
 				if m_tready_i = '1' or m_tvalid_s = '0' then
 					m_tvalid_s <= '1';
 					m_tdata_o  <= miso_sr;
+					m_tdest_o  <= s_tdest_i
 				end if;
 			elsif m_tready_i = '1' then
 				m_tvalid_s <= '0';
@@ -122,9 +125,12 @@ begin
 		end if;
 	end process;
 
+  m_tvalid_o <= m_tvalid_s;
+	m_tdest_o  <= s_tdest_i
 	s_tready_o <= load_en;
 
-	mosi_o <= mosi_sr(mosi_sr'high)
+	mosi_o <= mosi_sr(mosi_sr'high);
+
 	cs_gen : for j in 0 to SLAVE_NUM-1 generate
 		spcs_o(j) <= not busy_s when j = to_integer(s_tdest_i) else '0';
 	end generate;
