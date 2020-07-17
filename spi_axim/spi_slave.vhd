@@ -42,9 +42,9 @@ end spi_slave;
 architecture behavioral of spi_slave is
 
   signal edge_s        : std_logic;
-  spck_s    <= spck_i;
-  spcs_s    <= spcs_i;
-mosi_s
+  signal spck_s        : std_logic;
+  signal spcs_s        : std_logic;
+  signal mosi_s        : std_logic;
 
   signal tx_en         : std_logic;
   signal rx_en         : std_logic;
@@ -52,10 +52,8 @@ mosi_s
   signal busy_s        : std_logic;
   signal receive_flag  : boolean := false;
 
-
   signal output_sr     : std_logic_vector(6 downto 0);
   signal input_sr      : std_logic_vector(6 downto 0);
-  signal spi_rxen_sync : std_logic;
 
 begin
 
