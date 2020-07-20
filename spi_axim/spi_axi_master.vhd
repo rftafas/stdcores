@@ -167,7 +167,7 @@ begin
 	          mst_exec_state <= BUS_DONE;
 						bus_data_o     <= M_AXI_RDATA;
 						M_AXI_RREADY   <= '0';
-					elsif M_AXI_RRESP(1) = '0' then
+					elsif M_AXI_RRESP(1) = '1' then
 						mst_exec_state <= BUS_DONE;
 						bus_data_o     <= (others => '0');
 						M_AXI_RREADY   <= '0';
