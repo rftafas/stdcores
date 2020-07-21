@@ -222,7 +222,7 @@ architecture behavioral of spi_control_mq is
           when WRITE_BURST_c =>
             tmp := wait4spi_st;
           when FAST_READ_c   =>
-            tmp := read_st;
+            tmp := act_st;
           when READ_BURST_c  =>
             tmp := read_st;
           when others        =>
@@ -236,9 +236,9 @@ architecture behavioral of spi_control_mq is
           when FAST_WRITE_c  =>
             tmp := wait4spi_st;
           when READ_c        =>
-            tmp := read_st;
+            tmp := act_st;
           when FAST_READ_c   =>
-            tmp := read_st;
+            tmp := act_st;
           when others        =>
             tmp := wait_forever_st;
         end case;
@@ -348,11 +348,15 @@ begin
     variable temp_v            : std_logic_vector(7 downto 0);
     variable buffer_v          : std_logic_vector(8*buffer_size-1 downto 0);
     variable addr_v            : std_logic_vector(8*addr_word_size-1 downto 0);
+    variable bus_done_v : std_logic;
+    variable first_spi_tx_v : std_logic;
   begin
     if rst_i = '1' then
       spi_mq       <= idle_st;
       command_v    := (others=>'0');
       addr_v       := (others=>'0');
+      bus_done_v := '0';
+      first_spi_tx_v := '0';
       aux_cnt      := 0;
       spi_txen_o   <= '0';
       spi_txdata_o <= (others=>'1');
@@ -371,6 +375,8 @@ begin
               spi_mq       <= idle_st;
               command_v    := (others=>'0');
               addr_v       := (others=>'0');
+              bus_done_v := '0';
+              first_spi_tx_v := '1';
               aux_cnt      := 0;
               spi_txen_o   <= '0';
               spi_txdata_o <= (others=>'1');
@@ -380,6 +386,8 @@ begin
             else
               command_v    := (others=>'0');
               addr_v       := (others=>'0');
+              bus_done_v := '0';
+              first_spi_tx_v := '1';
               aux_cnt      := 0;
               spi_txen_o   <= '1';
               spi_txdata_o <= (others=>'1');
@@ -413,6 +421,8 @@ begin
             spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
             spi_txen_o   <= '1';
             spi_txdata_o <= x"AC";
+            bus_done_v := '0';
+            first_spi_tx_v := '0';
 
           when wait4spi_st =>
             if spi_rxen_i = '1' then
@@ -433,14 +443,23 @@ begin
             case temp_v is
 
               when READ_c        =>
-                bus_read_o <= '1';
-                bus_addr_o <= addr_v;
-                if bus_done_i = '1' then
-                  bus_read_o <= '0';
+                if (bus_done_v = '0') then
+                  bus_read_o <= '1';
+                  bus_addr_o <= addr_v;
+                  if bus_done_i = '1' then
+                    bus_done_v := '1';
+                    bus_read_o <= '0';
+                    buffer_v(buffer_v'high downto buffer_v'length-bus_data_i'length) := bus_data_i;
+                  end if;
+                end if;
+
+                if (bus_done_v = '1') and ((first_spi_tx_v = '1') or (spi_rxen_i = '1')) then
+                  bus_done_v := '0';
                   spi_mq    <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
-                  buffer_v(buffer_v'high downto buffer_v'length-bus_data_i'length) := bus_data_i;
                   spi_txen_o   <= '1';
                   spi_txdata_o <= buffer_v(buffer_v'high downto buffer_v'high-7);
+                else
+                  spi_txen_o   <= '0';
                 end if;
 
               when WRITE_c        =>
@@ -524,6 +543,13 @@ begin
                 report "Invalid Command detected." severity warning;
 
             end case;
+
+          when inc_addr_st =>
+            spi_txen_o   <=   '0';
+            addr_v := addr_v + addr_word_size;
+            first_spi_tx_v := '0';
+            spi_mq <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+            aux_cnt := 0;
 
           when others   =>
             spi_txen_o   <=   '0';
