@@ -93,8 +93,6 @@ architecture tb of vunit_spi_axi_top_tb is
     type data_vector_t is array (NATURAL RANGE <>) of std_logic_vector(7 downto 0);
     signal RDSN_c        : data_vector_t(4 downto 0) := (x"C3", others => x"00");
     signal WRSN_c        : data_vector_t(4 downto 0) := (x"C2", x"89", x"AB", x"CD", x"EF" );
-    signal RDID_c        : data_vector_t(4 downto 0) := (x"9F", others => x"00");
-    signal RUID_c        : data_vector_t(4 downto 0) := (x"4C", others => x"00");
   
     signal IRQRD_c       : data_vector_t(1 downto 0) := (x"A2", x"00");
     signal IRQWR_c       : data_vector_t(1 downto 0) := (x"A3", x"0F");
@@ -115,6 +113,8 @@ architecture tb of vunit_spi_axi_top_tb is
     signal DPD_c         : std_logic_vector(7 downto 0) := x"BA";
     signal HBN_c         : std_logic_vector(7 downto 0) := x"B9";
     signal STAT_c        : std_logic_vector(7 downto 0) := x"A5";
+    signal RDID_c        : std_logic_vector(7 downto 0) := x"9F";
+    signal RUID_c        : std_logic_vector(7 downto 0) := x"4C";
   
     signal spi_txdata_s    : data_vector_t(63 downto 0);
     signal spi_rxdata_s    : data_vector_t(63 downto 0);
@@ -228,34 +228,25 @@ begin
         end procedure;
 
         procedure spi_bus (
-            command_i : in std_logic_vector(7 downto 0);
-            address_i : in std_logic_vector(ADDR_BYTE_NUM*8-1 downto 0);
             signal data_i  : in  data_vector_t;
             signal data_o  : out data_vector_t;
             length_i : in integer
         ) is
-            variable data_tx_v : data_vector_t(length_i + ADDR_BYTE_NUM downto 0); -- Create space for the command and address bytes
-            variable data_rx_v : data_vector_t(length_i + ADDR_BYTE_NUM downto 0);
+            variable data_rx_v : std_logic_vector(7 downto 0);
         begin
-            data_tx_v(length_i + ADDR_BYTE_NUM) := command_i;
-            for i in ADDR_BYTE_NUM-1 downto 0 loop
-                data_tx_v(length_i + i) := address_i((i+1)*8-1 downto i*8);
-            end loop;
-            data_tx_v(length_i-1 downto 0) := data_i(length_i-1 downto 0);
-
-            for k in data_tx_v'range loop
+            for k in 0 to length_i-1 loop
                 for j in 7 downto 0 loop
                     spcs_s <= '0';
                     spck_s <= '0';
-                    mosi_s <= data_tx_v(k)(j);
+                    mosi_s <= data_i(k)(j);
                     wait for spi_half_period;
                     spck_s      <= '1';
-                    data_rx_v(k)(j) := miso_s;
+                    data_rx_v(j) := miso_s;
                     wait for spi_half_period;
                 end loop;
 
-                -- Update the output already
-                data_o(length_i-1 downto 0) <= data_rx_v(length_i-1 downto 0);
+                -- Update the output
+                data_o(k) <= data_rx_v;
             end loop;
             spcs_s <= '1';
             spck_s <= '0';
@@ -273,21 +264,21 @@ begin
             variable address_v : std_logic_vector(ADDR_BYTE_NUM*8-1 downto 0);
             variable address2_v : std_logic_vector(ADDR_BYTE_NUM*8-1 downto 0);
             variable expected_value_v : std_logic_vector(7 downto 0);
-            variable data_length_v : integer;
             variable byte_idx_v : integer;
+            variable data_length_v : integer;
         begin
-            data_length_v := length_i;
-
+            data_length_v := length_i-5;
+            byte_idx_v := 5; -- Skips command and address
             -- check ACK byte when needed
             if (command_i = FAST_READ_c) then
-                data_length_v := data_length_v - 1;
-
                 expected_value_v := x"AC";
-                check_equal(data_rd(data_length_v), expected_value_v, "Testing ACK byte");
+                check_equal(data_rd(byte_idx_v), expected_value_v, "Testing ACK byte");
+                
+                byte_idx_v := byte_idx_v + 1;
+                data_length_v := data_length_v - 1;
             end if;
 
             -- check data byte(s)
-            byte_idx_v := data_length_v-1;
             for i in 0 to (data_length_v/ADDR_BYTE_NUM)-1 loop
                 address2_v := address_i + (i*ADDR_BYTE_NUM);
                 address_v := address2_v(31 downto 16) & not address2_v(15 downto 0);
@@ -295,7 +286,8 @@ begin
                     info("Byte " & to_string(byte_idx_v));
                     expected_value_v := address_v((j+1)*8-1 downto j*8);
                     check_equal(data_rd(byte_idx_v), expected_value_v, "Testing data byte");
-                    byte_idx_v := byte_idx_v - 1;
+
+                    byte_idx_v := byte_idx_v + 1;
                 end loop;
             end loop;
                                                
@@ -306,9 +298,17 @@ begin
             variable address_v : std_logic_vector(ADDR_BYTE_NUM*8-1 downto 0);
         begin
             address_v := x"0000_0000";
+            
+            spi_txdata_s(0) <= READ_c;
+            for i in 1 downto ADDR_BYTE_NUM loop
+                spi_txdata_s(i) <= address_v((i+1)*8-1 downto i*8);
+            end loop;
+
             wait for 100 ns;
-            -- not fast read - 1 word
-            spi_bus(READ_c, address_v, spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM);
+
+            -- not fast read - n words
+            spi_bus(spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + ADDR_BYTE_NUM + 1);
+
             spi_check_read(READ_c, address_v, spi_rxdata_s, num_words_c*DATA_BYTE_NUM);
         end procedure;
 
@@ -317,10 +317,36 @@ begin
             variable address_v : std_logic_vector(ADDR_BYTE_NUM*8-1 downto 0);
         begin
             address_v := x"0000_0000";
+            
+            spi_txdata_s(0) <= FAST_READ_c;
+            for i in 1 downto ADDR_BYTE_NUM loop
+                spi_txdata_s(i) <= address_v((i+1)*8-1 downto i*8);
+            end loop;
+
             wait for 100 ns;
+
             -- fast read - 1 word + 1 ack byte 
-            spi_bus(FAST_READ_c, address_v, spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + 1);
+            spi_bus(spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + ADDR_BYTE_NUM + 2);
+
             spi_check_read(FAST_READ_c, address_v, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + 1);
+        end procedure;
+
+        procedure test_read_id is
+            variable address_v : std_logic_vector(ADDR_BYTE_NUM*8-1 downto 0);
+            variable expected_value_v : std_logic_vector(7 downto 0);
+        begin
+            spi_txdata_s(0) <= RDID_c;
+
+            wait for 100 ns;
+
+            -- 1 word
+            spi_bus(spi_txdata_s, spi_rxdata_s, DATA_BYTE_NUM + 1);
+            
+            for i in 0 to 3 loop
+                expected_value_v := DID_i((i+1)*8-1 downto i*8);
+                check_equal(spi_rxdata_s(4-i), expected_value_v, "Testing ID bytes");
+            end loop;
+
         end procedure;
 
     begin
@@ -344,6 +370,14 @@ begin
                 info("Reads something from SPI");
                 wait for 100 ns;
                 test_fast_read;
+                wait for 100 ns;
+
+                test_runner_cleanup(runner);
+
+            elsif run("read.id") then
+                info("Reads ID from SPI");
+                wait for 100 ns;
+                test_read_id;
                 wait for 100 ns;
 
                 test_runner_cleanup(runner);

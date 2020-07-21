@@ -251,34 +251,25 @@ begin
         end procedure;
 
         procedure spi_bus (
-            command_i : in std_logic_vector(7 downto 0);
-            address_i : in std_logic_vector(ADDR_BYTE_NUM*8-1 downto 0);
             signal data_i  : in  data_vector_t;
             signal data_o  : out data_vector_t;
             length_i : in integer
         ) is
-            variable data_tx_v : data_vector_t(length_i + ADDR_BYTE_NUM downto 0); -- Create space for the command and address bytes
-            variable data_rx_v : data_vector_t(length_i + ADDR_BYTE_NUM downto 0);
+            variable data_rx_v : std_logic_vector(7 downto 0);
         begin
-            data_tx_v(length_i + ADDR_BYTE_NUM) := command_i;
-            for i in ADDR_BYTE_NUM-1 downto 0 loop
-                data_tx_v(length_i + i) := address_i((i+1)*8-1 downto i*8);
-            end loop;
-            data_tx_v(length_i-1 downto 0) := data_i(length_i-1 downto 0);
-
-            for k in data_tx_v'range loop
+            for k in 0 to length_i-1 loop
                 for j in 7 downto 0 loop
                     spcs_s <= '0';
                     spck_s <= '0';
-                    mosi_s <= data_tx_v(k)(j);
+                    mosi_s <= data_i(k)(j);
                     wait for spi_half_period;
                     spck_s      <= '1';
-                    data_rx_v(k)(j) := miso_s;
+                    data_rx_v(j) := miso_s;
                     wait for spi_half_period;
                 end loop;
 
-                -- Update the output already
-                data_o(length_i-1 downto 0) <= data_rx_v(length_i-1 downto 0);
+                -- Update the output
+                data_o(k) <= data_rx_v;
             end loop;
             spcs_s <= '1';
             spck_s <= '0';
@@ -294,23 +285,31 @@ begin
             length_i : in integer
         ) is
             variable expected_value_v : std_logic_vector(7 downto 0);
+            variable rd_byte_idx_v : integer;
+            variable byte_idx_v : integer;
+            variable fast_read_offset_v : integer;
             variable data_length_v : integer;
         begin
-            data_length_v := length_i;
-
+            data_length_v := length_i-5;
+            byte_idx_v := 5; -- Skips command and address
+            fast_read_offset_v := 0;
             -- check ACK byte when needed
             if (command_i = FAST_READ_c) then
-                data_length_v := data_length_v - 1;
-
                 expected_value_v := x"AC";
-                check_equal(data_rd(data_length_v), expected_value_v, "Testing ACK byte");
+                check_equal(data_rd(byte_idx_v), expected_value_v, "Testing ACK byte");
+                
+                byte_idx_v := byte_idx_v + 1;
+                data_length_v := data_length_v - 1;
+                fast_read_offset_v := 1;
             end if;
             
             -- check data byte(s)
             for i in 0 to data_length_v-1 loop
                 info("Byte " & to_string(i));
-                expected_value_v := data_wr(i);
-                check_equal(data_rd(i), expected_value_v, "Testing data byte");
+                expected_value_v := data_wr(byte_idx_v-fast_read_offset_v);
+                check_equal(data_rd(byte_idx_v), expected_value_v, "Testing data byte");
+
+                byte_idx_v := byte_idx_v + 1;
             end loop;                                 
         end procedure;
 
@@ -320,17 +319,23 @@ begin
         begin
             address_v := x"0000_0010";
             
-            for i in 0 to num_words_c*DATA_BYTE_NUM-1 loop
+            spi_txdata_s(0) <= WRITE_c;
+            for i in 1 downto ADDR_BYTE_NUM loop
+                spi_txdata_s(i) <= address_v((i+1)*8-1 downto i*8);
+            end loop;
+            
+            for i in ADDR_BYTE_NUM+1 to ADDR_BYTE_NUM+num_words_c*DATA_BYTE_NUM loop
                 spi_txdata_s(i) <= to_std_logic_vector(i, 8);
             end loop;
 
             wait for 100 ns;
             -- not fast write - n words
-            spi_bus(WRITE_c, address_v, spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM);
+            spi_bus(spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + ADDR_BYTE_NUM + 1);
 
             wait for 1000 ns;
             -- now read the content of the memory
-            spi_bus(READ_c, address_v, spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM);
+            spi_txdata_s(0) <= READ_c;
+            spi_bus(spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM);
             spi_check_read(READ_c, spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM);
 
         end procedure;
@@ -341,19 +346,25 @@ begin
         begin
             address_v := x"0000_0000";
             
-            for i in 0 to num_words_c*DATA_BYTE_NUM-1 loop
+            spi_txdata_s(0) <= FAST_WRITE_c;
+            for i in 1 downto ADDR_BYTE_NUM loop
+                spi_txdata_s(i) <= address_v((i+1)*8-1 downto i*8);
+            end loop;
+            
+            for i in ADDR_BYTE_NUM+1 to ADDR_BYTE_NUM+num_words_c*DATA_BYTE_NUM loop
                 spi_txdata_s(i) <= to_std_logic_vector(i, 8);
             end loop;
 
             wait for 100 ns;
             -- fast write - n words
             -- fast write and write are the same 
-            spi_bus(FAST_WRITE_c, address_v, spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM);
+            spi_bus(spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + ADDR_BYTE_NUM + 1);
 
             wait for 1000 ns;
             -- now read the content of the memory
-            spi_bus(FAST_READ_c, address_v, spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + 1);
-            spi_check_read(FAST_READ_c, spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + 1);
+            spi_txdata_s(0) <= FAST_READ_c;
+            spi_bus(spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + ADDR_BYTE_NUM + 2);
+            spi_check_read(FAST_READ_c, spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + ADDR_BYTE_NUM + 2);
         end procedure;
 
     begin
