@@ -186,7 +186,7 @@ package spi_axi_pkg is
         spcs_i       : in  std_logic;
         spi_busy_o   : out std_logic;
         spi_rxen_o   : out std_logic;
-        spi_txen_i   : in  std_logic;
+        spi_txen_o   : out std_logic;
         spi_rxdata_o : out std_logic_vector(7 downto 0);
         spi_txdata_i : in  std_logic_vector(7 downto 0)
       );

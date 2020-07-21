@@ -33,7 +33,7 @@ entity spi_slave is
     --Internal
     spi_busy_o   : out std_logic;
     spi_rxen_o   : out std_logic;
-    spi_txen_i   : in  std_logic;
+    spi_txen_o   : out std_logic;
     spi_rxdata_o : out std_logic_vector(7 downto 0);
     spi_txdata_i : in  std_logic_vector(7 downto 0)
   );
@@ -119,7 +119,7 @@ begin
 
 end generate;
 
-  data_cnt_p : process(spcs_s, spck_i)
+  data_cnt_p : process(spcs_s, spck_s)
   begin
     if spcs_s = '1' then
       data_en <= "00000001";
