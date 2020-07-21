@@ -1,0 +1,57 @@
+[*]
+[*] GTKWave Analyzer v3.3.86 (w)1999-2017 BSI
+[*] Tue Jul 21 12:27:08 2020
+[*]
+[dumpfile] "/home/lucas/git/hdl/hdl-dev/stdcores/spi_axim/tb/vunit_out/test_output/tb_lib.vunit_spi_axi_top_2_tb.read.something_ec37d9a67932695f70f84ae2746595a09c30e370/ghdl/wave.ghw"
+[dumpfile_mtime] "Tue Jul 21 12:26:20 2020"
+[dumpfile_size] 577518
+[savefile] "/home/lucas/git/hdl/hdl-dev/stdcores/spi_axim/tb/spi_axi_write.gtkw"
+[timestart] 0
+[size] 1802 972
+[pos] 1702 -116
+*-34.000000 9770000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.vunit_spi_axi_top_2_tb.
+[sst_width] 223
+[signals_width] 198
+[sst_expanded] 1
+[sst_vpaned_height] 596
+@28
+top.vunit_spi_axi_top_2_tb.spcs_s
+top.vunit_spi_axi_top_2_tb.spck_s
+top.vunit_spi_axi_top_2_tb.miso_s
+top.vunit_spi_axi_top_2_tb.mosi_s
+@200
+-
+@28
+top.vunit_spi_axi_top_2_tb.mclk_i
+@22
+#{top.vunit_spi_axi_top_2_tb.m_axi_awaddr[31:0]} top.vunit_spi_axi_top_2_tb.m_axi_awaddr[31] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[30] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[29] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[28] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[27] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[26] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[25] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[24] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[23] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[22] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[21] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[20] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[19] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[18] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[17] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[16] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[15] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[14] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[13] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[12] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[11] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[10] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[9] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[8] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[7] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[6] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[5] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[4] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[3] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[2] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[1] top.vunit_spi_axi_top_2_tb.m_axi_awaddr[0]
+@28
+top.vunit_spi_axi_top_2_tb.m_axi_awready
+top.vunit_spi_axi_top_2_tb.m_axi_awvalid
+@22
+#{top.vunit_spi_axi_top_2_tb.m_axi_wdata[31:0]} top.vunit_spi_axi_top_2_tb.m_axi_wdata[31] top.vunit_spi_axi_top_2_tb.m_axi_wdata[30] top.vunit_spi_axi_top_2_tb.m_axi_wdata[29] top.vunit_spi_axi_top_2_tb.m_axi_wdata[28] top.vunit_spi_axi_top_2_tb.m_axi_wdata[27] top.vunit_spi_axi_top_2_tb.m_axi_wdata[26] top.vunit_spi_axi_top_2_tb.m_axi_wdata[25] top.vunit_spi_axi_top_2_tb.m_axi_wdata[24] top.vunit_spi_axi_top_2_tb.m_axi_wdata[23] top.vunit_spi_axi_top_2_tb.m_axi_wdata[22] top.vunit_spi_axi_top_2_tb.m_axi_wdata[21] top.vunit_spi_axi_top_2_tb.m_axi_wdata[20] top.vunit_spi_axi_top_2_tb.m_axi_wdata[19] top.vunit_spi_axi_top_2_tb.m_axi_wdata[18] top.vunit_spi_axi_top_2_tb.m_axi_wdata[17] top.vunit_spi_axi_top_2_tb.m_axi_wdata[16] top.vunit_spi_axi_top_2_tb.m_axi_wdata[15] top.vunit_spi_axi_top_2_tb.m_axi_wdata[14] top.vunit_spi_axi_top_2_tb.m_axi_wdata[13] top.vunit_spi_axi_top_2_tb.m_axi_wdata[12] top.vunit_spi_axi_top_2_tb.m_axi_wdata[11] top.vunit_spi_axi_top_2_tb.m_axi_wdata[10] top.vunit_spi_axi_top_2_tb.m_axi_wdata[9] top.vunit_spi_axi_top_2_tb.m_axi_wdata[8] top.vunit_spi_axi_top_2_tb.m_axi_wdata[7] top.vunit_spi_axi_top_2_tb.m_axi_wdata[6] top.vunit_spi_axi_top_2_tb.m_axi_wdata[5] top.vunit_spi_axi_top_2_tb.m_axi_wdata[4] top.vunit_spi_axi_top_2_tb.m_axi_wdata[3] top.vunit_spi_axi_top_2_tb.m_axi_wdata[2] top.vunit_spi_axi_top_2_tb.m_axi_wdata[1] top.vunit_spi_axi_top_2_tb.m_axi_wdata[0]
+@28
+top.vunit_spi_axi_top_2_tb.m_axi_wready
+top.vunit_spi_axi_top_2_tb.m_axi_wvalid
+top.vunit_spi_axi_top_2_tb.m_axi_bready
+top.vunit_spi_axi_top_2_tb.m_axi_bvalid
+@29
+top.vunit_spi_axi_top_2_tb.m_axi_rvalid
+@22
+#{top.vunit_spi_axi_top_2_tb.m_axi_araddr[31:0]} top.vunit_spi_axi_top_2_tb.m_axi_araddr[31] top.vunit_spi_axi_top_2_tb.m_axi_araddr[30] top.vunit_spi_axi_top_2_tb.m_axi_araddr[29] top.vunit_spi_axi_top_2_tb.m_axi_araddr[28] top.vunit_spi_axi_top_2_tb.m_axi_araddr[27] top.vunit_spi_axi_top_2_tb.m_axi_araddr[26] top.vunit_spi_axi_top_2_tb.m_axi_araddr[25] top.vunit_spi_axi_top_2_tb.m_axi_araddr[24] top.vunit_spi_axi_top_2_tb.m_axi_araddr[23] top.vunit_spi_axi_top_2_tb.m_axi_araddr[22] top.vunit_spi_axi_top_2_tb.m_axi_araddr[21] top.vunit_spi_axi_top_2_tb.m_axi_araddr[20] top.vunit_spi_axi_top_2_tb.m_axi_araddr[19] top.vunit_spi_axi_top_2_tb.m_axi_araddr[18] top.vunit_spi_axi_top_2_tb.m_axi_araddr[17] top.vunit_spi_axi_top_2_tb.m_axi_araddr[16] top.vunit_spi_axi_top_2_tb.m_axi_araddr[15] top.vunit_spi_axi_top_2_tb.m_axi_araddr[14] top.vunit_spi_axi_top_2_tb.m_axi_araddr[13] top.vunit_spi_axi_top_2_tb.m_axi_araddr[12] top.vunit_spi_axi_top_2_tb.m_axi_araddr[11] top.vunit_spi_axi_top_2_tb.m_axi_araddr[10] top.vunit_spi_axi_top_2_tb.m_axi_araddr[9] top.vunit_spi_axi_top_2_tb.m_axi_araddr[8] top.vunit_spi_axi_top_2_tb.m_axi_araddr[7] top.vunit_spi_axi_top_2_tb.m_axi_araddr[6] top.vunit_spi_axi_top_2_tb.m_axi_araddr[5] top.vunit_spi_axi_top_2_tb.m_axi_araddr[4] top.vunit_spi_axi_top_2_tb.m_axi_araddr[3] top.vunit_spi_axi_top_2_tb.m_axi_araddr[2] top.vunit_spi_axi_top_2_tb.m_axi_araddr[1] top.vunit_spi_axi_top_2_tb.m_axi_araddr[0]
+#{top.vunit_spi_axi_top_2_tb.m_axi_rdata[31:0]} top.vunit_spi_axi_top_2_tb.m_axi_rdata[31] top.vunit_spi_axi_top_2_tb.m_axi_rdata[30] top.vunit_spi_axi_top_2_tb.m_axi_rdata[29] top.vunit_spi_axi_top_2_tb.m_axi_rdata[28] top.vunit_spi_axi_top_2_tb.m_axi_rdata[27] top.vunit_spi_axi_top_2_tb.m_axi_rdata[26] top.vunit_spi_axi_top_2_tb.m_axi_rdata[25] top.vunit_spi_axi_top_2_tb.m_axi_rdata[24] top.vunit_spi_axi_top_2_tb.m_axi_rdata[23] top.vunit_spi_axi_top_2_tb.m_axi_rdata[22] top.vunit_spi_axi_top_2_tb.m_axi_rdata[21] top.vunit_spi_axi_top_2_tb.m_axi_rdata[20] top.vunit_spi_axi_top_2_tb.m_axi_rdata[19] top.vunit_spi_axi_top_2_tb.m_axi_rdata[18] top.vunit_spi_axi_top_2_tb.m_axi_rdata[17] top.vunit_spi_axi_top_2_tb.m_axi_rdata[16] top.vunit_spi_axi_top_2_tb.m_axi_rdata[15] top.vunit_spi_axi_top_2_tb.m_axi_rdata[14] top.vunit_spi_axi_top_2_tb.m_axi_rdata[13] top.vunit_spi_axi_top_2_tb.m_axi_rdata[12] top.vunit_spi_axi_top_2_tb.m_axi_rdata[11] top.vunit_spi_axi_top_2_tb.m_axi_rdata[10] top.vunit_spi_axi_top_2_tb.m_axi_rdata[9] top.vunit_spi_axi_top_2_tb.m_axi_rdata[8] top.vunit_spi_axi_top_2_tb.m_axi_rdata[7] top.vunit_spi_axi_top_2_tb.m_axi_rdata[6] top.vunit_spi_axi_top_2_tb.m_axi_rdata[5] top.vunit_spi_axi_top_2_tb.m_axi_rdata[4] top.vunit_spi_axi_top_2_tb.m_axi_rdata[3] top.vunit_spi_axi_top_2_tb.m_axi_rdata[2] top.vunit_spi_axi_top_2_tb.m_axi_rdata[1] top.vunit_spi_axi_top_2_tb.m_axi_rdata[0]
+@200
+-
+@420
+top.vunit_spi_axi_top_2_tb.spi_axi_top_i.spi_mq_u.spi_mq
+@22
+#{top.vunit_spi_axi_top_2_tb.spi_axi_top_i.spi_mq_u.command_s[7:0]} top.vunit_spi_axi_top_2_tb.spi_axi_top_i.spi_mq_u.command_s[7] top.vunit_spi_axi_top_2_tb.spi_axi_top_i.spi_mq_u.command_s[6] top.vunit_spi_axi_top_2_tb.spi_axi_top_i.spi_mq_u.command_s[5] top.vunit_spi_axi_top_2_tb.spi_axi_top_i.spi_mq_u.command_s[4] top.vunit_spi_axi_top_2_tb.spi_axi_top_i.spi_mq_u.command_s[3] top.vunit_spi_axi_top_2_tb.spi_axi_top_i.spi_mq_u.command_s[2] top.vunit_spi_axi_top_2_tb.spi_axi_top_i.spi_mq_u.command_s[1] top.vunit_spi_axi_top_2_tb.spi_axi_top_i.spi_mq_u.command_s[0]
+@28
+top.vunit_spi_axi_top_2_tb.spi_axi_top_i.spi_mq_u.spi_txen_o
+top.vunit_spi_axi_top_2_tb.spi_axi_top_i.spi_mq_u.spi_rxen_i
+top.vunit_spi_axi_top_2_tb.spi_axi_top_i.spi_mq_u.bus_write_o
+top.vunit_spi_axi_top_2_tb.spi_axi_top_i.spi_mq_u.bus_done_i
+[pattern_trace] 1
+[pattern_trace] 0
