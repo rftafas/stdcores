@@ -49,7 +49,7 @@ library ieee;
 library stdblocks;
     use stdblocks.sync_lib.all;
   library stdcores;
-      use stdcores.spi_axim_pkg.all
+      use stdcores.spi_axim_pkg.all;
 
 entity spi_axi_top is
   generic (

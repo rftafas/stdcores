@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------------------------------
--- SPI-AXI-Controller Machine.
+-- Simple Serial Controllers
 -- Ricardo Tafas
 -- This is open source code licensed under LGPL.
 -- By using it on your system you agree with all LGPL conditions.

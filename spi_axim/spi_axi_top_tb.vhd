@@ -12,7 +12,7 @@ library ieee;
 library stdblocks;
     use stdblocks.sync_lib.all;
 library stdcores;
-    use stdcores.spi_axim_pkg.all
+    use stdcores.spi_axim_pkg.all;
 
 entity SPI_AXI_TOP_TB is
 end SPI_AXI_TOP_TB;
@@ -20,6 +20,8 @@ end SPI_AXI_TOP_TB;
 architecture simulation of SPI_AXI_TOP_TB is
 
   constant  spi_cpol      : std_logic := '0';
+  constant  spi_cpha      : std_logic := '0';
+
   constant  ID_WIDTH      : integer := 1;
   constant  ID_VALUE      : integer := 0;
   constant  ADDR_BYTE_NUM : integer := 4;
@@ -137,8 +139,8 @@ begin
     wait until rst_i = '0';
     wait until mclk_i'event and mclk_i = '1';
     --ID TESTING
-    --spi_bus(RUID_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
-    --wait for 35 ns;
+    spi_bus(RUID_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    wait for 35 ns;
     --spi_bus(RDID_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     --wait for 35 ns;
     --SERIAL NUMBER TESTING
@@ -159,14 +161,15 @@ begin
     --spi_bus(IRQMRD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     --wait for 35 ns;
     --READ/WRITE TEST
-    spi_bus(RD1WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --spi_bus(RD1WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     wait;
   end process;
 
 
   spi_axi_top_i : spi_axi_top
   generic map (
-    spi_cpol      => spi_cpol,
+    cpol          => spi_cpol,
+    cpha          => spi_cpha,
     ID_WIDTH      => ID_WIDTH,
     ID_VALUE      => ID_VALUE,
     ADDR_BYTE_NUM => ADDR_BYTE_NUM,

@@ -14,12 +14,13 @@ library expert;
     use expert.std_logic_expert.all;
 library stdblocks;
     use stdblocks.sync_lib.all;
-
+library stdcores;
+    use stdcores.spi_axim_pkg.all;
 
 entity spi_slave is
   generic (
-    edge       : std_logic    := '0';
-    clock_mode : clock_mode_t := native
+    edge       : std_logic   := '0';
+    clock_mode : spi_clock_t := native
   );
   port (
     --general
@@ -41,23 +42,27 @@ end spi_slave;
 
 architecture behavioral of spi_slave is
 
-  signal edge_s        : std_logic;
-  signal spck_s        : std_logic;
-  signal spcs_s        : std_logic;
-  signal mosi_s        : std_logic;
+  signal edge_s         : std_logic;
+  signal spck_s         : std_logic;
+  signal spck_en        : std_logic;
+  signal spcs_s         : std_logic;
+  signal mosi_s         : std_logic;
 
-  signal tx_en         : std_logic;
-  signal rx_en         : std_logic;
-  signal data_en       : std_logic_vector(7 downto 0) := "00000001";
-  signal busy_s        : std_logic;
-  signal receive_flag  : boolean := false;
+  signal tx_en          : std_logic;
+  signal rx_en          : std_logic;
+  signal data_en        : std_logic_vector(7 downto 0) := "00000001";
+  signal rxdata_en      : std_logic;
+  signal busy_s         : std_logic;
 
-  signal output_sr     : std_logic_vector(6 downto 0);
-  signal input_sr      : std_logic_vector(6 downto 0);
+  signal output_sr      : std_logic_vector(6 downto 0);
+  signal input_sr       : std_logic_vector(6 downto 0);
+  signal rxdata_s       : std_logic_vector(7 downto 0);
+
+  signal output_latch_s : std_logic;
 
 begin
 
-  clk_gen : if spi_clock_mode = native generate
+  clk_gen : if clock_mode = native generate
     signal spi_rxdata_s : std_logic_vector(7 downto 0) := "11111111";
     signal rxdata_en_s  : std_logic;
   begin
@@ -71,7 +76,7 @@ begin
       generic map (2)
       port map ('0',mclk_i,busy_s,spi_busy_o);
 
-    sync_exen_u : sync_r
+    sync_rxen_u : sync_r
       generic map (2)
       port map ('0',mclk_i,rxdata_en,rxdata_en_s);
 
@@ -93,7 +98,7 @@ begin
     spi_rxdata_o  <= rxdata_s;
     spi_rxen_o    <= rx_en;
 
-    sync_spck_u : sync_r
+    sync_mosi_u : sync_r
       generic map (2)
       port map ('0',mclk_i,mosi_i,mosi_s);
 
@@ -163,7 +168,7 @@ end generate;
         if tx_en = '1' then
           output_sr <= spi_txdata_i(6 downto 0);
         else
-          output_sr <= output_sr(6 downto 0) & '1';
+          output_sr <= output_sr(5 downto 0) & '1';
         end if;
       end if;
     end if;

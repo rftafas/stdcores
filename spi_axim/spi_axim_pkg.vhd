@@ -11,7 +11,7 @@ library IEEE;
 	use IEEE.std_logic_1164.all;
 	use IEEE.numeric_std.all;
 
-package spi_axi_pkg is
+package spi_axim_pkg is
 
 	constant WRITE_c       : std_logic_vector(7 downto 0) := x"02";
   constant READ_c        : std_logic_vector(7 downto 0) := x"03";
@@ -175,7 +175,7 @@ package spi_axi_pkg is
     component spi_slave
 			generic (
       	edge       : std_logic    := '0';
-      	clock_mode : clock_mode_t := native
+      	clock_mode : spi_clock_t := native
       );
       port (
         rst_i        : in  std_logic;
@@ -206,14 +206,14 @@ package spi_axi_pkg is
 
 		function edge_config (CPOL : std_logic; CPHA: std_logic) return std_logic;
 
-end spi_axi_pkg;
+end spi_axim_pkg;
 
 --a arquitetura
-package body spi_axi_pkg is
+package body spi_axim_pkg is
 
 	function edge_config (CPOL : std_logic; CPHA: std_logic) return std_logic is
 	begin
 		return CPOL xnor CPHA;
 	end edge_config;
 
-end spi_axi_pkg;
+end spi_axim_pkg;
