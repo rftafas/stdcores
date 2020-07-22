@@ -128,7 +128,6 @@ end generate;
   begin
     if spcs_s = '1' then
       data_en <= "00000001";
-      rx_en   <= '0';
     elsif spck_s = edge_s and spck_s'event then
       if spck_en = '1' then
         data_en <= data_en(6 downto 0) & data_en(7);
