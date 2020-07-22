@@ -425,7 +425,9 @@ begin
             first_spi_tx_v := '0';
 
           when wait4spi_st =>
-            if spi_rxen_i = '1' then
+            if spi_busy_i = '0' then -- If SPI bus is deactivated
+              spi_mq   <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+            elsif spi_rxen_i = '1' then
               aux_cnt      := aux_cnt + 1;
               for j in 1 to 8 loop
                 buffer_v := buffer_v(8*buffer_size-2 downto 0) & '1';

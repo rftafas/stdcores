@@ -362,6 +362,8 @@ begin
                 info("Reads something from SPI");
                 wait for 100 ns;
                 test_read;
+                wait for 1000 ns;
+                test_read;
                 wait for 100 ns;
 
                 test_runner_cleanup(runner);
@@ -369,6 +371,8 @@ begin
             elsif run("fast.read.something") then
                 info("Reads something from SPI");
                 wait for 100 ns;
+                test_fast_read;
+                wait for 1000 ns;
                 test_fast_read;
                 wait for 100 ns;
 
