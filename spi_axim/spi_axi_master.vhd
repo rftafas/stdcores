@@ -146,7 +146,7 @@ begin
 	        if M_AXI_BVALID = '1' and M_AXI_BRESP(1) = '0' then
 	          mst_exec_state <= BUS_DONE;
 						M_AXI_BREADY   <= '0';
-					elsif M_AXI_BRESP(1) = '1' then
+					elsif M_AXI_BVALID = '1' and M_AXI_BRESP(1) = '1' then
 						mst_exec_state <= BUS_DONE;
 						M_AXI_BREADY   <= '0';
 						bus_error_o    <= '1';
@@ -167,7 +167,7 @@ begin
 	          mst_exec_state <= BUS_DONE;
 						bus_data_o     <= M_AXI_RDATA;
 						M_AXI_RREADY   <= '0';
-					elsif M_AXI_RRESP(1) = '1' then
+					elsif M_AXI_RVALID = '1' and M_AXI_RRESP(1) = '1' then
 						mst_exec_state <= BUS_DONE;
 						bus_data_o     <= (others => '0');
 						M_AXI_RREADY   <= '0';
