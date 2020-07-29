@@ -309,7 +309,7 @@ begin
             -- not fast read - n words
             spi_bus(spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + ADDR_BYTE_NUM + 1);
 
-            spi_check_read(READ_c, address_v, spi_rxdata_s, num_words_c*DATA_BYTE_NUM);
+            spi_check_read(READ_c, address_v, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + ADDR_BYTE_NUM + 1);
         end procedure;
 
         procedure test_fast_read is
@@ -328,7 +328,7 @@ begin
             -- fast read - 1 word + 1 ack byte 
             spi_bus(spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + ADDR_BYTE_NUM + 2);
 
-            spi_check_read(FAST_READ_c, address_v, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + 1);
+            spi_check_read(FAST_READ_c, address_v, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + ADDR_BYTE_NUM + 2);
         end procedure;
 
         procedure test_read_id is

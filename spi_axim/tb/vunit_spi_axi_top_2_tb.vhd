@@ -305,7 +305,7 @@ begin
             
             -- check data byte(s)
             for i in 0 to data_length_v-1 loop
-                info("Byte " & to_string(i));
+                info("Byte " & to_string(byte_idx_v));
                 expected_value_v := data_wr(byte_idx_v-fast_read_offset_v);
                 check_equal(data_rd(byte_idx_v), expected_value_v, "Testing data byte");
 
@@ -335,8 +335,8 @@ begin
             wait for 1000 ns;
             -- now read the content of the memory
             spi_txdata_s(0) <= READ_c;
-            spi_bus(spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM);
-            spi_check_read(READ_c, spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM);
+            spi_bus(spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + ADDR_BYTE_NUM + 1);
+            spi_check_read(READ_c, spi_txdata_s, spi_rxdata_s, num_words_c*DATA_BYTE_NUM + ADDR_BYTE_NUM + 1);
 
         end procedure;
 
