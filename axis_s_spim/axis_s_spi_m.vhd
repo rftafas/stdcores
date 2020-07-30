@@ -1,138 +1,261 @@
 ----------------------------------------------------------------------------------------------------------
--- SPI-AXI-Controller Machine.
+-- SPI MASTER / AXI SLAVE
 -- Ricardo Tafas
 -- This is open source code licensed under LGPL.
 -- By using it on your system you agree with all LGPL conditions.
 -- This code is provided AS IS, without any sort of warranty.
 -- Author: Ricardo F Tafas Jr
--- 2019
+-- 2020
 ---------------------------------------------------------------------------------------------------------
 library ieee;
 	use ieee.std_logic_1164.all;
 	use ieee.numeric_std.all;
 	use ieee.math_real.all;
 library expert;
+	use expert.std_logic_expert.all;
 library stdblocks;
 	use stdblocks.sync_lib.all;
+library stdcores;
+	use stdcores.axis_s_spim_pkg.all;
 
 entity axis_s_spi_m is
 	generic (
 		TLAST_ENABLE	  : boolean	:= true;
+		TKEEP_ENABLE	  : boolean	:= true;
 		SLAVE_NUM     	: integer	:= 4;
-		TDATA_BYTE_NUM	: integer	:= 4
+		TDATA_BYTE_NUM	: integer	:= 4;
+		clock_mode      : spi_clock_t := oversampled
 	);
 	port (
-		M_AXI_RESET  : in std_logic;
-		M_AXI_ACLK	 : in std_logic;
-		--internal axis
+		rst_i        : in std_logic;
+		mclk_i	     : in std_logic;
+	  refclk_i  	 : in std_logic;
+		--slave axi port
 		s_tdata_i    : in  std_logic_vector(TDATA_BYTE_NUM*8-1 downto 0);
+		s_tkeep_i    : in  std_logic_vector(TDATA_BYTE_NUM-1 downto 0);
 		s_tdest_i    : in  std_logic_vector(SLAVE_NUM-1 downto 0);
 		s_tready_o   : out std_logic;
 		s_tvalid_i   : in  std_logic;
 		s_tlast_i    : in  std_logic;
-
-		s_tdata_o    : in  std_logic_vector(TDATA_BYTE_NUM*8-1 downto 0);
-		s_tdest_o    : in  std_logic_vector(size_for(SLAVE_NUM)-1 downto 0);
-		s_tready_i   : out std_logic;
-		s_tvalid_o   : in  std_logic;
-		s_tlast_o    : in  std_logic;
+		--master axi port
+		m_tdata_o    : out std_logic_vector(TDATA_BYTE_NUM*8-1 downto 0);
+		m_tkeep_o    : out std_logic_vector(TDATA_BYTE_NUM-1 downto 0);
+		m_tdest_o    : out std_logic_vector(SLAVE_NUM-1 downto 0);
+		m_tready_i   : in  std_logic;
+		m_tvalid_o   : out std_logic;
+		m_tlast_o    : out std_logic;
 		--spi master
-		mosi_o   : out std_logic;
-		miso_i   : in  std_logic;
-		spck_o   : out std_logic;
-		spcs_o   : out std_logic_vector(SLAVE_NUM-1 downto 0)
+		mosi_o       : out std_logic;
+		miso_i       : in  std_logic;
+		spck_o       : out std_logic;
+		spcs_o       : out std_logic_vector(SLAVE_NUM-1 downto 0)
 		);
 end axis_s_spi_m;
 
 architecture implementation of axis_s_spi_m is
 
-	 type state is (IDLE, INIT_WRITE, INIT_READ, BUS_DONE);
-	 signal mst_exec_state  : state ;
+	 type state is (IDLE, LOAD, RUN, STALLED, DONE);
+	 signal tx_mq         : state;
 
+	 signal tx_load_en    : std_logic;
+	 signal tx_run_en     : std_logic;
+	 signal tx_timer_en   : std_logic;
+	 signal tx_idle_en    : std_logic;
+	 signal spi_txdata_sr : std_logic_vector(s_tdata_i'range);
+
+	 signal txkeep_s      : std_logic_vector(s_tdata_i'range);
+	 signal txdest_s      : std_logic_vector(s_tdest_i'range);
+	 signal txlast_s      : std_logic;
+
+	 signal rx_done_en    : std_logic;
+	 signal rx_load_en    : std_logic;
+	 signal rx_run_en     : std_logic;
+
+	 signal timer_sr      : std_logic_vector(15 downto 0);
 
 begin
 
-	process(all)
+	--control MQ
+	main_p : process(all)
 	begin
-		if M_AXI_RESET = '1' then
-		elsif rising_edge(M_AXI_ACLK) then
-			if shift_en = '0' then
-			 	if load_en = '1' then
-					load_en <= '0';
-					shift_en  <= '1';
-				elsif s_tvalid_i = '1' then
-					load_en <= '1';
-				end if;
-				byte_cnt <= 0;
-				bit_cnt  <= 0;
-			else
-				if ck_en = '1' then
-					bit_cnt <= bit_cnt + 1;
-					if byte_cnt = TDATA_BYTE_NUM then
-						if not tlast_enable then
-							shift_en   <= '0';
-						elsif s_tlast_i = '1' then
-							shift_en   <= '0';
-						end if;
-						unload_en <= '1';
-						byte_cnt  <= 0;
-					else
-						byte_cnt <= byte_cnt + 1;
+		if rst_i = '1' then
+		elsif rising_edge(mclk_i) then
+			case tx_mq is
+				when idle =>
+					if s_tvalid_i = '1' then
+						tx_mq <= load;
 					end if;
+
+				when load =>
+					tx_mq <= run;
+
+				when run =>
+					if txkeep_s = 0 then
+						tx_mq <= done;
+					end if;
+
+				when done =>
+					if TLAST_ENABLE then
+						if txlast_s = '1' then
+							tx_mq <= idle;
+						elsif s_tvalid_i = '1' then
+							tx_mq <= load;
+						else
+							tx_mq <= stalled;
+						end if;
+					else
+						tx_mq <= idle;
+					end if;
+
+				when stalled =>
+					if timer_sr(15) = '0' then
+						tx_mq <= idle;
+					elsif s_tvalid_i = '1' then
+						tx_mq <= load;
+					end if;
+
+				when others =>
+
+			end case;
+		end if;
+	end process;
+
+	tx_load_en  <= '1' when tx_mq = load    else '0';
+	tx_run_en   <= '1' when tx_mq = run     else '0';
+	tx_timer_en <= '1' when tx_mq = stalled else '0';
+	tx_idle_en  <= '1' when tx_mq = idle    else '0';
+
+	s_tready_o  <= '1' when tx_mq = load    else '0';
+
+	timer_p : process(all)
+	begin
+		if rising_edge(rst_i) then
+			if tx_timer_en = '1' then
+				timer_sr <= timer_sr sll 1;
+			else
+				timer_sr <= (0=>'1', others=>'0');
+			end if;
+		end if;
+	end process;
+
+	tx_p : process(all)
+		variable range_v      : range_t;
+		variable spi_txdata_v : std_logic_vector(s_tdata_i'range);
+	begin
+		if rst_i = '1' then
+		elsif rising_edge(mclk_i) then
+			if tx_idle_en = '1' then
+				spi_txdata_sr <= (others=>'0');
+				txkeep_s      <= (others=>'0');
+				txlast_s      <= '0';
+			elsif tx_load_en = '1' then
+				spi_txdata_sr <= s_tdata_i;
+				txdest_s 			<= s_tdest_i;
+				txlast_s      <= s_tlast_i;
+				if TKEEP_ENABLE then
+					txkeep_s      <= s_tkeep_i;
 				else
-					unload_en <= '0';
+					txkeep_s      <= (others=>'1');
 				end if;
-
+			elsif tx_run_en = '1' and spi_tx_en = '1' then
+				txkeep_s      <= txkeep_s srl 1;
 			end if;
+			index        <= index_of_1(txkeep_s);
+			range_v      <= to_range(index,8);
+			spi_txdata_s <= spi_txdata_v(range_v.high downto range_v.low);
 		end if;
 	end process;
 
-	process(all)
+	aux_p : process(all)
 	begin
-		if M_AXI_RESET = '1' then
-		elsif rising_edge(M_AXI_ACLK) then
-			if load_en = '1' then
-				mosi_sr   <= s_tdata_i;
-			elsif shift_en = 1 then
-				mosi_sr   <= mosi_sr(mosi_sr'high-1 downto 0) & '0';
-			end if;
+		if rst_i = '1' then
+		elsif rising_edge(mclk_i) then
+			case rx_mq is
+				when idle =>
+					if tx_idle_en = '0' then
+						rx_mq <= run;
+					end if;
+
+				when run =>
+					if tx_done_en = 1 then
+						rx_mq <= done;
+					end if;
+
+				when done =>
+					if spi_rx_en = '1' then
+						rx_mq <= load;
+					end if;
+
+				when load =>
+					if tx_idle_en = '1' then
+						rx_mq <= idle;
+					else
+						rx_mq <= run;
+					end if;
+
+				when others =>
+
+			end case;
 		end if;
 	end process;
 
-	process(all)
+	rx_done_en <= '1' when rx_mq = done else '0';
+	rx_load_en <= '1' when rx_mq = load else '0';
+	rx_run_en  <= '1' when rx_mq = run  else '0';
+
+	rx_p : process(all)
+		variable spi_rxdata_v : std_logic_vector(s_tdata_i'range);
 	begin
-		if M_AXI_RESET = '1' then
-		elsif rising_edge(M_AXI_ACLK) then
-			if shift_en = 1 then
-				miso_sr   <= miso_sr(miso_sr'high-1 downto 0) & miso_i;
+		if rst_i = '1' then
+		elsif rising_edge(mclk_i) then
+			if spi_rx_en = '1' then
+				spi_rxdata_sr <= spi_rxdata_sr sll 8;
+				spi_rxdata_s(7 downto 0) <= spi_rx_data_s;
+				rxkeep_s    <= rxkeep_s sll 1
+				rxkeep_s(0) <= '1';
 			end if;
 		end if;
 	end process;
 
-	process(all)
+	rx_out_p : process(all)
+		variable spi_rxdata_v : std_logic_vector(s_tdata_i'range);
 	begin
-		if M_AXI_RESET = '1' then
-		elsif rising_edge(M_AXI_ACLK) then
-			if unload_en = 1 then
-				if m_tready_i = '1' or m_tvalid_s = '0' then
-					m_tvalid_s <= '1';
-					m_tdata_o  <= miso_sr;
-					m_tdest_o  <= s_tdest_i
-				end if;
-			elsif m_tready_i = '1' then
-				m_tvalid_s <= '0';
+		if rst_i = '1' then
+		elsif rising_edge(mclk_i) then
+			if rx_load_en = '1' then
+				spi_rxdata_sr <= (others=>'0');
+				rxkeep_s      <= (others=>'0');
+				rxlast_s      <= txlast_s;
+				m_tdata_o     <= spi_rxdata_sr;
+				m_tvalid_o    <= '1';
+			else
+				m_tvalid_o    <= '0';
+				rxlast_s      <= '0';
 			end if;
 		end if;
 	end process;
 
-  m_tvalid_o <= m_tvalid_s;
-	m_tdest_o  <= s_tdest_i
-	s_tready_o <= load_en;
-
-	mosi_o <= mosi_sr(mosi_sr'high);
-
-	cs_gen : for j in 0 to SLAVE_NUM-1 generate
-		spcs_o(j) <= not busy_s when j = to_integer(s_tdest_i) else '0';
-	end generate;
+	spi_master_u : spi_master
+	  generic map(
+	    edge       => '1',
+	    clock_mode => clock_mode
+	  )
+	  port map(
+	    --general
+	    rst_i          => rst_i,
+	    mclk_i         => mclk_i,
+	    refclk_i       => refclk_i,
+	    --spi
+	    spck_o         => spck_o,
+	    miso_i         => miso_i,
+	    mosi_o         => mosi_o,
+	    spcs_o         => spcs_o,
+	    --Internal
+	    spi_tx_valid_i => tx_run_en,
+	    spi_rxen_o     => spi_rx_en,
+	    spi_txen_o     => spi_tx_en,
+	    spi_rxdata_o   => spi_rxdata_s,
+	    spi_txdata_i   => spi_txdata_s
+	  );
 
 end implementation;

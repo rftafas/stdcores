@@ -14,10 +14,10 @@ library stdblocks;
 library stdcores;
     use stdcores.spi_axim_pkg.all;
 
-entity SPI_AXI_TOP_TB is
-end SPI_AXI_TOP_TB;
+entity spi_axi_top_tb is
+end spi_axi_top_tb;
 
-architecture simulation of SPI_AXI_TOP_TB is
+architecture simulation of spi_axi_top_tb is
 
   constant  spi_cpol      : std_logic := '0';
   constant  spi_cpha      : std_logic := '0';

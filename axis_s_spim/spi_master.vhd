@@ -1,25 +1,27 @@
 ----------------------------------------------------------------------------------------------------------
--- Simple Serial Controllers
+-- Simple Serial Controllers - SPI MASTER
 -- Ricardo Tafas
 -- This is open source code licensed under LGPL.
 -- By using it on your system you agree with all LGPL conditions.
 -- This code is provided AS IS, without any sort of warranty.
 -- Author: Ricardo F Tafas Jr
--- 2019
+-- 2020
 ---------------------------------------------------------------------------------------------------------
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
+  use ieee.std_logic_1164.all;
+  use ieee.numeric_std.all;
 library expert;
-    use expert.std_logic_expert.all;
+  use expert.std_logic_expert.all;
 library stdblocks;
-    use stdblocks.sync_lib.all;
+  use stdblocks.sync_lib.all;
+library stdcores;
+	use stdcores.axis_s_spim_pkg.all;
 
 
 entity spi_master is
   generic (
-    edge            : std_logic   := '0';
-    clock_reference : spi_clock_t := oversampled
+    edge       : std_logic   := '0';
+    clock_mode : spi_clock_t := oversampled
   );
   port (
     --general
@@ -30,7 +32,7 @@ entity spi_master is
     spck_o         : out std_logic;
     miso_i         : in  std_logic;
     mosi_o         : out std_logic;
-    spcs_i         : in  std_logic;
+    spcs_o         : out std_logic;
     --Internal
     spi_tx_valid_i : in  std_logic;
     spi_rxen_o     : out std_logic;
@@ -44,8 +46,12 @@ architecture behavioral of spi_master is
 
   signal edge_s        : std_logic;
   signal spck_s        : std_logic;
+  signal spck_en       : std_logic;
   signal spcs_s        : std_logic;
   signal miso_s        : std_logic;
+
+  signal refclk_up_s   : std_logic;
+  signal refclk_dn_s   : std_logic;
 
   signal tx_en         : std_logic;
   signal rx_en         : std_logic;
@@ -56,10 +62,13 @@ architecture behavioral of spi_master is
   signal output_sr     : std_logic_vector(6 downto 0);
   signal input_sr      : std_logic_vector(6 downto 0);
 
+  signal rxdata_en     : std_logic;
+  signal rxdata_s      : std_logic_vector(7 downto 0) := "00000001";
+
+
 begin
 
-
-  clk_gen : if spi_clock_mode = native generate
+  clk_gen : if clock_mode = native generate
     spck_en <= '1';
     miso_s  <= miso_i;
     spck_s  <= mclk_i and busy_s;
@@ -106,15 +115,20 @@ begin
     end if;
   end process;
   spcs_s  <= not busy_s;
-  rx_en   <= data_en(7) and busy_s = '1';
+  rx_en   <= data_en(7) and busy_s;
   tx_en   <= data_en(7) and spi_tx_valid_i;
+  spi_rxen_o <= rx_en;
+  spi_txen_o <= tx_en;
+  spcs_o <= spcs_s;
 
-  output_sr_p : process(spck_s,spcs_s)
+  output_sr_p : process(rst_i,mclk_i)
   begin
-    if spcs_s = '1' then
+    if rst_i = '1' then
       output_sr(6 downto 0) <= "1111111";
-    elsif spck_s = edge_s and spck_s'event then
-      if spck_en = '1' then
+    elsif mclk_i = '1' and mclk_i'event then
+      if busy_s = '0' then
+        output_sr(6 downto 0) <= "1111111";
+      elsif spck_en = '1' then
         if tx_en = '1' then
           output_sr <= spi_txdata_i(7 downto 0);
         else
@@ -124,7 +138,7 @@ begin
     end if;
   end process;
 
-  miso_o <= output_sr(7);
+  mosi_o <= output_sr(7);
 
   input_sr_p : process(rst_i,mclk_i)
   begin
@@ -148,8 +162,5 @@ begin
       end if;
     end if;
   end process;
-
-
-
 
 end behavioral;
