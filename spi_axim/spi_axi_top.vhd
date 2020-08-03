@@ -8,13 +8,22 @@
 -- 2019
 ---------------------------------------------------------------------------------------------------------
 --The SPI control machine implements an SPI-FRAM interface.
--- BUS OPERATIONS
+-- Check for Microchip 23LCV1024
+--
+--BUS OPERATIONS
+--
 --WRITE             0000 0010      0x02 Write data to memory array beginning at selected address
 --READ              0000 0011      0x03 Read data from memory array beginning at selected address
 --FAST_WRITE        0000 0010      0x0A Write data to memory array beginning at selected address
 --FAST_READ         0000 0011      0x0B Read data from memory array beginning at selected address
 --WRITE_BURST       0100 0010      0x42 Special Write. No increment.
 --READ_BURST        0100 1011      0x4B Special Read. No increment.
+
+--Note:
+--For oversampled clock, SPICK < MCLK/8 and all operations work well.
+--To use regular READ and WRITE, SPICK < MCLK/4
+--If SPICK > MCLK/4, FAST_READ and FAST_WRITE will work.
+--upper limit: SPICK = MCLK
 
 --CONFIGS
 
@@ -39,16 +48,19 @@ library ieee;
     use ieee.std_logic_1164.all;
 library stdblocks;
     use stdblocks.sync_lib.all;
-
+  library stdcores;
+      use stdcores.spi_axim_pkg.all;
 
 entity spi_axi_top is
   generic (
-    spi_cpol         : std_logic := '0';
-    ID_WIDTH         : integer   := 1;
-    ID_VALUE         : integer   := 0;
-    ADDR_BYTE_NUM    : integer   := 4;
-    DATA_BYTE_NUM    : integer   := 4;
-    serial_num_rw    : boolean := true
+    CPOL          : std_logic   := '0';
+    CPHA          : std_logic   := '0';
+    ID_WIDTH      : integer     := 1;
+    ID_VALUE      : integer     := 0;
+    ADDR_BYTE_NUM : integer     := 4;
+    DATA_BYTE_NUM : integer     := 4;
+    serial_num_rw : boolean     := true;
+    clock_mode    : spi_clock_t := native
     );
   port (
     --general
@@ -106,6 +118,7 @@ architecture behavioral of spi_axi_top is
   signal irq_mask_s  : std_logic_vector(7 downto 0);
 
   signal spick_en : std_logic;
+  signal spick_s : std_logic;
 
   signal bus_write_s  : std_logic;
   signal bus_read_s   : std_logic;
@@ -120,139 +133,34 @@ architecture behavioral of spi_axi_top is
   signal spi_rxdata_s : std_logic_vector(7 downto 0);
   signal spi_txdata_s : std_logic_vector(7 downto 0);
 
-  component spi_control_mq
-    generic (
-      addr_word_size : integer := 4;
-      data_word_size : integer := 4;
-      serial_num_rw  : boolean := true
-      );
-    port (
-      rst_i        : in  std_logic;
-      mclk_i       : in  std_logic;
-      bus_write_o  : out std_logic;
-      bus_read_o   : out std_logic;
-      bus_done_i   : in  std_logic;
-      bus_data_i   : in  std_logic_vector(data_word_size*8-1 downto 0);
-      bus_data_o   : out std_logic_vector(data_word_size*8-1 downto 0);
-      bus_addr_o   : out std_logic_vector(addr_word_size*8-1 downto 0);
-      spi_busy_i   : in  std_logic;
-      spi_rxen_i   : in  std_logic;
-      spi_txen_o   : out std_logic;
-      spi_txdata_o : out std_logic_vector(7 downto 0);
-      spi_rxdata_i : in  std_logic_vector(7 downto 0);
-      RSTIO_o      : out std_logic;
-      DID_i        : in  std_logic_vector(data_word_size*8-1 downto 0);
-      UID_i        : in  std_logic_vector(data_word_size*8-1 downto 0);
-      serial_num_i : in  std_logic_vector(data_word_size*8-1 downto 0);
-      irq_i        : in  std_logic_vector(7 downto 0);
-      irq_mask_o   : out std_logic_vector(7 downto 0);
-      irq_clear_o  : out std_logic_vector(7 downto 0)
-      );
-    end component spi_control_mq;
-
-    component spi_axi_master
-      generic (
-        ID_WIDTH      : integer := 1;
-        ID_VALUE      : integer := 1;
-        ADDR_BYTE_NUM : integer := 4;
-        DATA_BYTE_NUM : integer := 4
-      );
-      port (
-        M_AXI_RESET   : in  std_logic;
-        M_AXI_ACLK    : in  std_logic;
-        bus_addr_i    : in  std_logic_vector(ADDR_BYTE_NUM*8-1 downto 0);
-        bus_data_i    : in  std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
-        bus_data_o    : out std_logic_vector(DATA_BYTE_NUM*8-1 downto 0);
-        bus_write_i   : in  std_logic;
-        bus_read_i    : in  std_logic;
-        bus_done_o    : out std_logic;
-        bus_error_o   : out std_logic;
-        M_AXI_AWID    : out std_logic_vector(ID_WIDTH-1 downto 0);
-        M_AXI_AWVALID : out std_logic;
-        M_AXI_AWREADY : in  std_logic;
-        M_AXI_AWADDR  : out std_logic_vector(8*ADDR_BYTE_NUM-1 downto 0);
-        M_AXI_AWPROT  : out std_logic_vector(2 downto 0);
-        M_AXI_WVALID  : out std_logic;
-        M_AXI_WREADY  : in  std_logic;
-        M_AXI_WDATA   : out std_logic_vector(8*DATA_BYTE_NUM-1 downto 0);
-        M_AXI_WSTRB   : out std_logic_vector(DATA_BYTE_NUM-1 downto 0);
-        M_AXI_WLAST   : out std_logic;
-        M_AXI_BVALID  : in  std_logic;
-        M_AXI_BREADY  : out std_logic;
-        M_AXI_BRESP   : in  std_logic_vector(1 downto 0);
-        M_AXI_BID     : in  std_logic_vector(ID_WIDTH-1 downto 0);
-        M_AXI_ARVALID : out std_logic;
-        M_AXI_ARREADY : in  std_logic;
-        M_AXI_ARADDR  : out std_logic_vector(8*ADDR_BYTE_NUM-1 downto 0);
-        M_AXI_ARPROT  : out std_logic_vector(2 downto 0);
-        M_AXI_ARID    : out std_logic_vector(ID_WIDTH-1 downto 0);
-        M_AXI_RVALID  : in  std_logic;
-        M_AXI_RREADY  : out std_logic;
-        M_AXI_RDATA   : in  std_logic_vector(8*DATA_BYTE_NUM-1 downto 0);
-        M_AXI_RRESP   : in  std_logic_vector(1 downto 0);
-        M_AXI_RID     : in  std_logic_vector(ID_WIDTH-1 downto 0);
-        M_AXI_RLAST   : in  std_logic
-      );
-    end component spi_axi_master;
-
-    component spi_slave
-      generic (
-        CPOL : std_logic
-      );
-      port (
-        rst_i        : in  std_logic;
-        mclk_i       : in  std_logic;
-        spck_i       : in  std_logic;
-        mosi_i       : in  std_logic;
-        miso_o       : out std_logic;
-        spcs_i       : in  std_logic;
-        spi_busy_o   : out std_logic;
-        spi_rxen_o   : out std_logic;
-        spi_txen_i   : in  std_logic;
-        spi_rxdata_o : out std_logic_vector(7 downto 0);
-        spi_txdata_i : in  std_logic_vector(7 downto 0)
-      );
-    end component spi_slave;
-
-    component spi_irq_ctrl
-      port (
-        rst_i        : in  std_logic;
-        mclk_i       : in  std_logic;
-        master_irq_o : out std_logic;
-        vector_irq_o : out std_logic_vector(7 downto 0);
-        vector_irq_i : in  std_logic_vector(7 downto 0);
-        vector_clr_i : in  std_logic_vector(7 downto 0);
-        vector_msk_i : in  std_logic_vector(7 downto 0)
-      );
-    end component spi_irq_ctrl;
-
-
+  constant edge       : std_logic := edge_config(CPOL, CPHA);
 
 begin
 
   spi_slave_u : spi_slave
-  generic map (
-    CPOL => spi_cpol
-  )
-  port map (
-    rst_i        => rst_i,
-    mclk_i       => mclk_i,
-    spck_i       => spck_i,
-    mosi_i       => mosi_i,
-    miso_o       => miso_o,
-    spcs_i       => spcs_i,
-    spi_busy_o   => spi_busy_s,
-    spi_rxen_o   => spi_rxen_s,
-    spi_txen_i   => spi_txen_s,
-    spi_rxdata_o => spi_rxdata_s,
-    spi_txdata_i => spi_txdata_s
-  );
-
+    generic map (
+      edge       => edge,
+      clock_mode => clock_mode
+    )
+    port map (
+      rst_i        => rst_i,
+      mclk_i       => mclk_i,
+      spck_i       => spck_i,
+      mosi_i       => mosi_i,
+      miso_o       => miso_o,
+      spcs_i       => spcs_i,
+      spi_busy_o   => spi_busy_s,
+      spi_rxen_o   => spi_rxen_s,
+      spi_txen_o   => open,
+      spi_rxdata_o => spi_rxdata_s,
+      spi_txdata_i => spi_txdata_s
+    );
 
   spi_mq_u : spi_control_mq
       generic map (
         addr_word_size => ADDR_BYTE_NUM,
-        data_word_size => DATA_BYTE_NUM
+        data_word_size => DATA_BYTE_NUM,
+        serial_num_rw  => serial_num_rw
       )
       port map (
         rst_i        => rst_i,
@@ -276,7 +184,6 @@ begin
         irq_mask_o   => irq_mask_s,
         irq_clear_o  => irq_clear_s
       );
-
 
   axi_master_u : spi_axi_master
     generic map (
@@ -332,7 +239,5 @@ begin
       vector_clr_i => irq_clear_s,
       vector_msk_i => irq_mask_s
     );
-
-
 
 end behavioral;
