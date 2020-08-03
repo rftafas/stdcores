@@ -143,13 +143,15 @@ begin
 	        end if;
 
 	      when INIT_WRITE =>
-	        if M_AXI_BVALID = '1' and M_AXI_BRESP(1) = '0' then
-	          mst_exec_state <= BUS_DONE;
-						M_AXI_BREADY   <= '0';
-					elsif M_AXI_BRESP(1) = '1' then
-						mst_exec_state <= BUS_DONE;
-						M_AXI_BREADY   <= '0';
-						bus_error_o    <= '1';
+	        if M_AXI_BVALID = '1' then
+						if M_AXI_BRESP(1) = '0' then
+		          mst_exec_state <= BUS_DONE;
+							M_AXI_BREADY   <= '0';
+						else M_AXI_BRESP(1) = '1' then
+							mst_exec_state <= BUS_DONE;
+							M_AXI_BREADY   <= '0';
+							bus_error_o    <= '1';
+						end if;
 	        else
 	          mst_exec_state <= INIT_WRITE;
 	        end if;
@@ -163,15 +165,17 @@ begin
 	        end if;
 
 	      when INIT_READ =>
-	        if M_AXI_RVALID = '1' and M_AXI_RRESP(1) = '0' then
-	          mst_exec_state <= BUS_DONE;
-						bus_data_o     <= M_AXI_RDATA;
-						M_AXI_RREADY   <= '0';
-					elsif M_AXI_RRESP(1) = '0' then
-						mst_exec_state <= BUS_DONE;
-						bus_data_o     <= (others => '0');
-						M_AXI_RREADY   <= '0';
-						bus_error_o    <= '1';
+	        if M_AXI_RVALID = '1' then
+						if M_AXI_RRESP(1) = '0' then
+		          mst_exec_state <= BUS_DONE;
+							bus_data_o     <= M_AXI_RDATA;
+							M_AXI_RREADY   <= '0';
+						else
+							mst_exec_state <= BUS_DONE;
+							bus_data_o     <= (others => '0');
+							M_AXI_RREADY   <= '0';
+							bus_error_o    <= '1';
+						end if;
 	        else
 	          mst_exec_state <= INIT_READ;
 	        end if;
