@@ -22,7 +22,7 @@ entity axis_s_spi_m is
 	generic (
 		TLAST_ENABLE	  : boolean	:= true;
 		TKEEP_ENABLE	  : boolean	:= true;
-		SLAVE_NUM     	: integer	:= 4;
+		SLAVE_SIZE     	: integer	:= 4;
 		TDATA_BYTE_NUM	: integer	:= 4;
 		clock_mode      : spi_clock_t := oversampled
 	);
@@ -33,14 +33,14 @@ entity axis_s_spi_m is
 		--slave axi port
 		s_tdata_i    : in  std_logic_vector(TDATA_BYTE_NUM*8-1 downto 0);
 		s_tkeep_i    : in  std_logic_vector(TDATA_BYTE_NUM-1 downto 0);
-		s_tdest_i    : in  std_logic_vector(SLAVE_NUM-1 downto 0);
+		s_tdest_i    : in  std_logic_vector(SLAVE_SIZE-1 downto 0);
 		s_tready_o   : out std_logic;
 		s_tvalid_i   : in  std_logic;
 		s_tlast_i    : in  std_logic;
 		--master axi port
 		m_tdata_o    : out std_logic_vector(TDATA_BYTE_NUM*8-1 downto 0);
 		m_tkeep_o    : out std_logic_vector(TDATA_BYTE_NUM-1 downto 0);
-		m_tdest_o    : out std_logic_vector(SLAVE_NUM-1 downto 0);
+		m_tdest_o    : out std_logic_vector(SLAVE_SIZE-1 downto 0);
 		m_tready_i   : in  std_logic;
 		m_tvalid_o   : out std_logic;
 		m_tlast_o    : out std_logic;
@@ -94,7 +94,7 @@ begin
 		elsif rising_edge(mclk_i) then
 			case tx_mq is
 				when idle =>
-					if s_tvalid_i = '1' then
+					if s_tvalid_i = '1' and rx_idle_en = '1' then
 						tx_mq <= load;
 					end if;
 
@@ -108,10 +108,16 @@ begin
 
 				when done =>
 					if TLAST_ENABLE then
-						if txlast_s = '1' then
-							tx_mq <= idle;
-						elsif s_tvalid_i = '1' then
-							tx_mq <= load;
+						if s_tvalid_i = '1' then
+							if s_tdest_i /= txdest_s then
+								if txlast_s = '1' then
+									tx_mq <= idle;
+								else
+									tx_mq <= load;
+								end if;
+							else
+								tx_mq <= idle;
+							end if;
 						else
 							tx_mq <= stalled;
 						end if;
@@ -268,7 +274,10 @@ begin
 			end if;
 		end if;
 	end process;
-spcs_o(j) <= spcs_s when cs_s
+
+	spcs_gen : for j in txdest_s'range generate
+		spcs_o(j) <= spcs_s and (not tx_timer_en) when txdest_s = j else '1';
+	end generate;
 
 	spi_master_u : spi_master
 	  generic map(
