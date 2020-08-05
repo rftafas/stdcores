@@ -56,11 +56,17 @@ architecture implementation of axis_s_spi_m is
 
 	 type state is (IDLE, LOAD, RUN, STALLED, DONE);
 	 signal tx_mq         : state;
+	 signal rx_mq         : state;
+
+	 signal timer_sr      : std_logic_vector(15 downto 0);
 
 	 signal tx_load_en    : std_logic;
+	 signal tx_done_en    : std_logic;
 	 signal tx_run_en     : std_logic;
 	 signal tx_timer_en   : std_logic;
 	 signal tx_idle_en    : std_logic;
+	 signal spi_tx_en     : std_logic;
+	 signal spi_txdata_s  : std_logic_vector(7 downto 0);
 	 signal spi_txdata_sr : std_logic_vector(s_tdata_i'range);
 
 	 signal txkeep_s      : std_logic_vector(s_tdata_i'range);
@@ -70,8 +76,14 @@ architecture implementation of axis_s_spi_m is
 	 signal rx_done_en    : std_logic;
 	 signal rx_load_en    : std_logic;
 	 signal rx_run_en     : std_logic;
+	 signal spi_rx_en     : std_logic;
+	 signal spi_rxdata_s  : std_logic_vector(7 downto 0);
+     signal spi_rxdata_sr : std_logic_vector(s_tdata_i'range);
 
-	 signal timer_sr      : std_logic_vector(15 downto 0);
+	 signal rxkeep_s      : std_logic_vector(s_tdata_i'range);
+     signal rxdest_s      : std_logic_vector(s_tdest_i'range);
+     signal rxlast_s      : std_logic;
+
 
 begin
 
@@ -115,6 +127,7 @@ begin
 					end if;
 
 				when others =>
+					tx_mq <= idle;
 
 			end case;
 		end if;
@@ -139,6 +152,7 @@ begin
 	end process;
 
 	tx_p : process(all)
+		variable index        : integer;
 		variable range_v      : range_t;
 		variable spi_txdata_v : std_logic_vector(s_tdata_i'range);
 	begin
@@ -160,8 +174,8 @@ begin
 			elsif tx_run_en = '1' and spi_tx_en = '1' then
 				txkeep_s      <= txkeep_s srl 1;
 			end if;
-			index        <= index_of_1(txkeep_s);
-			range_v      <= to_range(index,8);
+			index        := index_of_1(txkeep_s);
+			range_v      := range_of(index,8);
 			spi_txdata_s <= spi_txdata_v(range_v.high downto range_v.low);
 		end if;
 	end process;
@@ -177,7 +191,7 @@ begin
 					end if;
 
 				when run =>
-					if tx_done_en = 1 then
+					if tx_done_en = '1' then
 						rx_mq <= done;
 					end if;
 
@@ -194,11 +208,13 @@ begin
 					end if;
 
 				when others =>
+					rx_mq <= idle;
 
 			end case;
 		end if;
 	end process;
 
+	rx_idle_en <= '1' when rx_mq = idle else '0';
 	rx_done_en <= '1' when rx_mq = done else '0';
 	rx_load_en <= '1' when rx_mq = load else '0';
 	rx_run_en  <= '1' when rx_mq = run  else '0';
@@ -210,8 +226,8 @@ begin
 		elsif rising_edge(mclk_i) then
 			if spi_rx_en = '1' then
 				spi_rxdata_sr <= spi_rxdata_sr sll 8;
-				spi_rxdata_s(7 downto 0) <= spi_rx_data_s;
-				rxkeep_s    <= rxkeep_s sll 1
+				spi_rxdata_s(7 downto 0) <= spi_rxdata_s;
+				rxkeep_s    <= rxkeep_s sll 1;
 				rxkeep_s(0) <= '1';
 			end if;
 		end if;
@@ -235,6 +251,25 @@ begin
 		end if;
 	end process;
 
+	rx_out_p : process(all)
+		variable spi_rxdata_v : std_logic_vector(s_tdata_i'range);
+	begin
+		if rst_i = '1' then
+		elsif rising_edge(mclk_i) then
+			if rx_load_en = '1' then
+				spi_rxdata_sr <= (others=>'0');
+				rxkeep_s      <= (others=>'0');
+				rxlast_s      <= txlast_s;
+				m_tdata_o     <= spi_rxdata_sr;
+				m_tvalid_o    <= '1';
+			else
+				m_tvalid_o    <= '0';
+				rxlast_s      <= '0';
+			end if;
+		end if;
+	end process;
+spcs_o(j) <= spcs_s when cs_s
+
 	spi_master_u : spi_master
 	  generic map(
 	    edge       => '1',
@@ -249,7 +284,7 @@ begin
 	    spck_o         => spck_o,
 	    miso_i         => miso_i,
 	    mosi_o         => mosi_o,
-	    spcs_o         => spcs_o,
+	    spcs_o         => spcs_s,
 	    --Internal
 	    spi_tx_valid_i => tx_run_en,
 	    spi_rxen_o     => spi_rx_en,
@@ -257,5 +292,7 @@ begin
 	    spi_rxdata_o   => spi_rxdata_s,
 	    spi_txdata_i   => spi_txdata_s
 	  );
+
+
 
 end implementation;

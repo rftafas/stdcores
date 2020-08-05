@@ -70,8 +70,16 @@ begin
 
   clk_gen : if clock_mode = native generate
     spck_en <= '1';
-    miso_s  <= miso_i;
+
     spck_s  <= mclk_i and busy_s;
+    miso_s <= miso_i when mclk_i = edge and mclk_i'event;
+
+    -- miso_edge_p : process(mclk_i)
+    -- begin
+    --   if mclk_i = edge and mclk_i'event then
+    --     miso_s <= miso_i when mclk_i = edge and mclk_i'event;
+    --   end if;
+    -- end process;
 
   else generate
     spck_en <= '1';

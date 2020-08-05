@@ -147,7 +147,7 @@ begin
 						if M_AXI_BRESP(1) = '0' then
 		          mst_exec_state <= BUS_DONE;
 							M_AXI_BREADY   <= '0';
-						else M_AXI_BRESP(1) = '1' then
+						else
 							mst_exec_state <= BUS_DONE;
 							M_AXI_BREADY   <= '0';
 							bus_error_o    <= '1';
