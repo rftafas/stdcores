@@ -19,7 +19,7 @@
 --WRITE_BURST       0100 0010      0x42 Special Write. No increment.
 --READ_BURST        0100 1011      0x4B Special Read. No increment.
 
---Note:
+--Note for READ and WRITE
 --For oversampled clock, SPICK < MCLK/8 and all operations work well.
 --To use regular READ and WRITE, SPICK < MCLK/4
 --If SPICK > MCLK/4, FAST_READ and FAST_WRITE will work.

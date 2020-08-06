@@ -117,7 +117,7 @@ architecture behavioral of spi_control_mq is
       when FAST_WRITE_c  =>
         tmp := WRITE_c;
       when FAST_READ_c   =>
-        tmp := READ_c;
+        tmp := FAST_READ_c;
       when WRITE_BURST_c =>
         tmp := WRITE_c;
       when READ_BURST_c  =>
@@ -201,9 +201,9 @@ architecture behavioral of spi_control_mq is
           when WRITE_BURST_c =>
             tmp := wait4spi_st;
           when FAST_READ_c   =>
-            tmp := read_st;
+            tmp := act_st;
           when READ_BURST_c  =>
-            tmp := read_st;
+            tmp := act_st;
           when others        =>
             tmp := wait_forever_st;
         end case;
@@ -411,9 +411,24 @@ begin
             temp_v := action_decode(command_v);
             case temp_v is
 
+              when FAST_READ_c   =>
+                bus_read_o <= '1';
+                bus_addr_o <= addr_v;
+                spi_txen_o <= '0';
+                if bus_done_i = '1' then
+                  bus_read_o <= '0';
+                  buffer_v(buffer_v'high downto buffer_v'length-bus_data_i'length) := bus_data_i;
+                end if;
+                if spi_rxen_i = '1' then
+                  spi_txen_o <= '1';
+                  spi_txdata_o <= buffer_v(buffer_v'high downto buffer_v'high-7);
+                  spi_mq    <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+                end if;
+
               when READ_c        =>
                 bus_read_o <= '1';
                 bus_addr_o <= addr_v;
+                spi_txen_o <= '0';
                 if bus_done_i = '1' then
                   bus_read_o <= '0';
                   spi_mq    <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);

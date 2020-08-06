@@ -48,11 +48,13 @@ entity axis_s_spi_m is
 		mosi_o       : out std_logic;
 		miso_i       : in  std_logic;
 		spck_o       : out std_logic;
-		spcs_o       : out std_logic_vector(SLAVE_NUM-1 downto 0)
+		spcs_o       : out std_logic_vector(2**SLAVE_SIZE-1 downto 0)
 		);
 end axis_s_spi_m;
 
 architecture implementation of axis_s_spi_m is
+
+	 signal spcs_s        : std_logic;
 
 	 type state is (IDLE, LOAD, RUN, STALLED, DONE);
 	 signal tx_mq         : state;
@@ -76,14 +78,14 @@ architecture implementation of axis_s_spi_m is
 	 signal rx_done_en    : std_logic;
 	 signal rx_load_en    : std_logic;
 	 signal rx_run_en     : std_logic;
+	 signal rx_idle_en    : std_logic;
 	 signal spi_rx_en     : std_logic;
 	 signal spi_rxdata_s  : std_logic_vector(7 downto 0);
-     signal spi_rxdata_sr : std_logic_vector(s_tdata_i'range);
+   signal spi_rxdata_sr : std_logic_vector(s_tdata_i'range);
 
 	 signal rxkeep_s      : std_logic_vector(s_tdata_i'range);
-     signal rxdest_s      : std_logic_vector(s_tdest_i'range);
-     signal rxlast_s      : std_logic;
-
+   signal rxdest_s      : std_logic_vector(s_tdest_i'range);
+	 signal rxlast_s      : std_logic;
 
 begin
 
@@ -235,24 +237,6 @@ begin
 				spi_rxdata_s(7 downto 0) <= spi_rxdata_s;
 				rxkeep_s    <= rxkeep_s sll 1;
 				rxkeep_s(0) <= '1';
-			end if;
-		end if;
-	end process;
-
-	rx_out_p : process(all)
-		variable spi_rxdata_v : std_logic_vector(s_tdata_i'range);
-	begin
-		if rst_i = '1' then
-		elsif rising_edge(mclk_i) then
-			if rx_load_en = '1' then
-				spi_rxdata_sr <= (others=>'0');
-				rxkeep_s      <= (others=>'0');
-				rxlast_s      <= txlast_s;
-				m_tdata_o     <= spi_rxdata_sr;
-				m_tvalid_o    <= '1';
-			else
-				m_tvalid_o    <= '0';
-				rxlast_s      <= '0';
 			end if;
 		end if;
 	end process;

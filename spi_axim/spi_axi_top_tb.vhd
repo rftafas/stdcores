@@ -83,9 +83,10 @@ architecture simulation of spi_axi_top_tb is
   signal IRQMRD_c      : data_vector_t(1 downto 0) := (x"D2", x"00");
   signal IRQMWR_c      : data_vector_t(1 downto 0) := (x"D3", x"F0");
 
-  signal RD1WORD_c     : data_vector_t(8 downto 0) := (x"03", others => x"00");
-  signal WR1WORD_c     : data_vector_t(8 downto 0) := (
-    x"02",
+  --read/write
+  signal SIMPLE_READ_c   : data_vector_t(8 downto 0) := (READ_c, others => x"00");
+  signal SIMPLE_WRITE_c  : data_vector_t(8 downto 0) := (
+    WRITE_c,
     x"00",
     x"00",
     x"00",
@@ -96,9 +97,23 @@ architecture simulation of spi_axi_top_tb is
     x"34"
   );
 
+  --read/write
+  signal FAST_READ_WORD_c     : data_vector_t(9 downto 0) := (FAST_READ_c, others => x"00");
+  signal FAST_WRITE_WORD_c     : data_vector_t(9 downto 0) := (
+    FAST_WRITE_c,
+    x"00",
+    x"00",
+    x"00",
+    x"00",
+    X"UU",--intentional trash
+    x"AB",
+    x"CD",
+    x"12",
+    x"34"
+  );
+
   signal spi_rxdata_s    : data_vector_t(15 downto 0);
   signal spi_rxdata_en   : std_logic;
-
 
   procedure spi_bus (
     signal data_i  : in  data_vector_t;
@@ -139,8 +154,8 @@ begin
     wait until rst_i = '0';
     wait until mclk_i'event and mclk_i = '1';
     --ID TESTING
-    spi_bus(RUID_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
-    wait for 35 ns;
+    --spi_bus(RUID_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --wait for 35 ns;
     --spi_bus(RDID_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     --wait for 35 ns;
     --SERIAL NUMBER TESTING
@@ -161,7 +176,13 @@ begin
     --spi_bus(IRQMRD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     --wait for 35 ns;
     --READ/WRITE TEST
-    --spi_bus(RD1WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --spi_bus(SIMPLE_READ_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --wait for 35 ns;
+    --spi_bus(SIMPLE_WRITE_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --FAST_READ/WRITE
+    spi_bus(FAST_READ_WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --wait for 35 ns;
+    --spi_bus(FAST_WRITE_WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     wait;
   end process;
 
