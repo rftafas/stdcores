@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <spirit:component xmlns:xilinx="http://www.xilinx.com" xmlns:spirit="http://www.spiritconsortium.org/XMLSchema/SPIRIT/1685-2009" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <spirit:vendor>kryptus</spirit:vendor>
-  <spirit:library>kryptus</spirit:library>
+  <spirit:vendor>repo</spirit:vendor>
+  <spirit:library>stdcores</spirit:library>
   <spirit:name>verification_ip</spirit:name>
   <spirit:version>1.0</spirit:version>
   <spirit:busInterfaces>
@@ -1246,21 +1246,21 @@
       <spirit:modelParameter spirit:dataType="integer">
         <spirit:name>C_M00_AXI_ADDR_WIDTH</spirit:name>
         <spirit:displayName>C M00 AXI ADDR WIDTH</spirit:displayName>
-        <spirit:description>Width of M_AXI address bus. 
+        <spirit:description>Width of M_AXI address bus.
     -- The master generates the read and write addresses of width specified as C_M_AXI_ADDR_WIDTH.</spirit:description>
         <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.C_M00_AXI_ADDR_WIDTH" spirit:order="8" spirit:rangeType="long">32</spirit:value>
       </spirit:modelParameter>
       <spirit:modelParameter spirit:dataType="integer">
         <spirit:name>C_M00_AXI_DATA_WIDTH</spirit:name>
         <spirit:displayName>C M00 AXI DATA WIDTH</spirit:displayName>
-        <spirit:description>Width of M_AXI data bus. 
+        <spirit:description>Width of M_AXI data bus.
     -- The master issues write data and accept read data where the width of the data bus is C_M_AXI_DATA_WIDTH</spirit:description>
         <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.C_M00_AXI_DATA_WIDTH" spirit:order="9" spirit:rangeType="long">32</spirit:value>
       </spirit:modelParameter>
       <spirit:modelParameter spirit:dataType="integer">
         <spirit:name>C_M00_AXI_TRANSACTIONS_NUM</spirit:name>
         <spirit:displayName>C M00 AXI TRANSACTIONS NUM</spirit:displayName>
-        <spirit:description>Transaction number is the number of write 
+        <spirit:description>Transaction number is the number of write
     -- and read transactions the master will perform as a part of this example memory test.</spirit:description>
         <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.C_M00_AXI_TRANSACTIONS_NUM" spirit:order="10" spirit:minimum="1" spirit:rangeType="long">5</spirit:value>
       </spirit:modelParameter>
@@ -1457,14 +1457,14 @@
     <spirit:parameter>
       <spirit:name>C_M00_AXI_ADDR_WIDTH</spirit:name>
       <spirit:displayName>C M00 AXI ADDR WIDTH</spirit:displayName>
-      <spirit:description>Width of M_AXI address bus. 
+      <spirit:description>Width of M_AXI address bus.
     -- The master generates the read and write addresses of width specified as C_M_AXI_ADDR_WIDTH.</spirit:description>
       <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M00_AXI_ADDR_WIDTH" spirit:order="8" spirit:minimum="1" spirit:maximum="2048" spirit:rangeType="long">32</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>C_M00_AXI_DATA_WIDTH</spirit:name>
       <spirit:displayName>C M00 AXI DATA WIDTH</spirit:displayName>
-      <spirit:description>Width of M_AXI data bus. 
+      <spirit:description>Width of M_AXI data bus.
     -- The master issues write data and accept read data where the width of the data bus is C_M_AXI_DATA_WIDTH</spirit:description>
       <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M00_AXI_DATA_WIDTH" spirit:choiceRef="choice_list_acf05fe2" spirit:order="9">32</spirit:value>
       <spirit:vendorExtensions>
@@ -1478,7 +1478,7 @@
     <spirit:parameter>
       <spirit:name>C_M00_AXI_TRANSACTIONS_NUM</spirit:name>
       <spirit:displayName>C M00 AXI TRANSACTIONS NUM</spirit:displayName>
-      <spirit:description>Transaction number is the number of write 
+      <spirit:description>Transaction number is the number of write
     -- and read transactions the master will perform as a part of this example memory test.</spirit:description>
       <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M00_AXI_TRANSACTIONS_NUM" spirit:order="10" spirit:minimum="1" spirit:rangeType="long">5</spirit:value>
     </spirit:parameter>
