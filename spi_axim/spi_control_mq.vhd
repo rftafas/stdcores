@@ -197,7 +197,9 @@ architecture behavioral of spi_control_mq is
       when ack_st =>
         case command is
           when FAST_WRITE_c  =>
-            tmp := wait4spi_st;
+            if aux_cnt = 2 then
+              tmp := wait4spi_st;
+            end if;
           when WRITE_BURST_c =>
             tmp := wait4spi_st;
           when FAST_READ_c   =>
@@ -321,7 +323,7 @@ architecture behavioral of spi_control_mq is
 begin
 
   spi_mq_p : process(mclk_i,rst_i)
-    variable aux_cnt           : integer range 0 to 4 := 0;
+    variable aux_cnt           : integer range 0 to buffer_size := 0;
     variable command_v         : std_logic_vector(7 downto 0);
     variable decoded_command_v : std_logic_vector(7 downto 0);
     variable temp_v            : std_logic_vector(7 downto 0);
@@ -376,10 +378,8 @@ begin
 
           when addr_st =>
             if spi_rxen_i = '1' then
-              aux_cnt := aux_cnt + 1;
-              for j in 1 to 8 loop
-                buffer_v := buffer_v(buffer_v'high-1 downto 0) & '1';
-              end loop;
+              aux_cnt  := aux_cnt + 1;
+              buffer_v := buffer_v sll 8;
               buffer_v(7 downto 0) := spi_rxdata_i;
               spi_mq     <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
               addr_v     := buffer_v(addr_v'range);
@@ -389,26 +389,36 @@ begin
             end if;
 
           when ack_st =>
+            spi_txen_o   <= '0';
+            if aux_cnt = 0 then
+              aux_cnt      := aux_cnt + 1;
+              spi_txen_o   <= '1';
+              spi_txdata_o <= x"AC";
+            elsif spi_rxen_i = '1' then
+              aux_cnt := aux_cnt + 1;
+              spi_txdata_o <= x"00";
+            end if;
             spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
-            spi_txen_o   <= '1';
-            spi_txdata_o <= x"AC";
+            if aux_cnt = 2 then
+              aux_cnt := 0;
+            end if;
 
           when wait4spi_st =>
             if spi_rxen_i = '1' then
               aux_cnt      := aux_cnt + 1;
-              for j in 1 to 8 loop
-                buffer_v := buffer_v(8*buffer_size-2 downto 0) & '1';
-              end loop;
+              buffer_v     := buffer_v sll 8;
               buffer_v(7 downto 0) := spi_rxdata_i;
-              spi_mq   <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+              spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
               spi_txen_o   <= '1';
-              spi_txdata_o <= buffer_v(buffer_v'high downto buffer_v'high-7);
+              spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
             else
               spi_txen_o <= '0';
             end if;
 
           when act_st =>
-            temp_v := action_decode(command_v);
+            temp_v  := action_decode(command_v);
+            aux_cnt := 0;
+
             case temp_v is
 
               when FAST_READ_c   =>
@@ -421,7 +431,7 @@ begin
                 end if;
                 if spi_rxen_i = '1' then
                   spi_txen_o <= '1';
-                  spi_txdata_o <= buffer_v(buffer_v'high downto buffer_v'high-7);
+                  spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                   spi_mq    <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
                 end if;
 
@@ -434,11 +444,13 @@ begin
                   spi_mq    <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
                   buffer_v(buffer_v'high downto buffer_v'length-bus_data_i'length) := bus_data_i;
                   spi_txen_o   <= '1';
-                  spi_txdata_o <= buffer_v(buffer_v'high downto buffer_v'high-7);
+                  spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                 end if;
 
               when WRITE_c        =>
-                bus_data_o  <= buffer_v(bus_data_o'range);
+                bus_data_o   <= buffer_v(bus_data_o'range);
+                buffer_v     := (others=>'0');
+                spi_txdata_o <= (others=>'0');
                 bus_addr_o  <= addr_v;
                 bus_write_o <= '1';
                 if bus_done_i = '1' then
@@ -519,6 +531,10 @@ begin
 
             end case;
 
+          when inc_addr_st   =>
+            spi_mq <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+            addr_v := addr_v + 1;
+
           when others   =>
             spi_txen_o   <=   '0';
             --spi_txdata_o <= x"FF";
@@ -526,8 +542,8 @@ begin
 
         end case;
       end if;
-      --saídas
-    buffer_s <= buffer_v;
+    --debugg signals: variables are not tracked on Xilinx VivadoSIM.
+    buffer_s  <= buffer_v;
     aux_cnt_s <= aux_cnt;
     command_s <= command_v;
   end process;

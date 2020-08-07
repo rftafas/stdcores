@@ -71,7 +71,7 @@ architecture implementation of axis_s_spi_m is
 	 signal spi_txdata_s  : std_logic_vector(7 downto 0);
 	 signal spi_txdata_sr : std_logic_vector(s_tdata_i'range);
 
-	 signal txkeep_s      : std_logic_vector(s_tdata_i'range);
+	 signal txkeep_s      : std_logic_vector(s_tkeep_i'range);
 	 signal txdest_s      : std_logic_vector(s_tdest_i'range);
 	 signal txlast_s      : std_logic;
 
@@ -83,7 +83,7 @@ architecture implementation of axis_s_spi_m is
 	 signal spi_rxdata_s  : std_logic_vector(7 downto 0);
    signal spi_rxdata_sr : std_logic_vector(s_tdata_i'range);
 
-	 signal rxkeep_s      : std_logic_vector(s_tdata_i'range);
+	 signal rxkeep_s      : std_logic_vector(s_tkeep_i'range);
    signal rxdest_s      : std_logic_vector(s_tdest_i'range);
 	 signal rxlast_s      : std_logic;
 

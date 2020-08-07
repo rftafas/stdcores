@@ -59,7 +59,7 @@ architecture behavioral of spi_master is
   signal busy_s        : std_logic;
   signal receive_flag  : boolean := false;
 
-  signal output_sr     : std_logic_vector(6 downto 0);
+  signal output_sr     : std_logic_vector(7 downto 0);
   signal input_sr      : std_logic_vector(6 downto 0);
 
   signal rxdata_en     : std_logic;
