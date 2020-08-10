@@ -72,7 +72,7 @@ architecture simulation of spi_axi_top_tb is
   constant spi_period      : time := ( 1.000 / frequency_mhz) * 1 us;
   constant spi_half_period : time := spi_period;
 
-  type data_vector_t is array (NATURAL RANGE <>) of std_logic_vector(7 downto 0);
+  type spi_buffer_t is array (NATURAL RANGE <>) of std_logic_vector(7 downto 0);
   signal RDSN_c        : data_vector_t(4 downto 0) := (x"C3", others => x"00");
   signal WRSN_c        : data_vector_t(4 downto 0) := (x"C2", x"89", x"AB", x"CD", x"EF" );
   signal RDID_c        : data_vector_t(4 downto 0) := (x"9F", others => x"00");
@@ -84,8 +84,8 @@ architecture simulation of spi_axi_top_tb is
   signal IRQMWR_c      : data_vector_t(1 downto 0) := (x"D3", x"F0");
 
   --read/write
-  signal SIMPLE_READ_c   : data_vector_t(8 downto 0) := (READ_c, others => x"00");
-  signal SIMPLE_WRITE_c  : data_vector_t(8 downto 0) := (
+  signal SIMPLE_READ_c   : spi_buffer_t(8 downto 0) := (READ_c, others => x"00");
+  signal SIMPLE_WRITE_c  : spi_buffer_t(8 downto 0) := (
     WRITE_c,
     x"00",
     x"00",
@@ -98,8 +98,8 @@ architecture simulation of spi_axi_top_tb is
   );
 
   --read/write
-  signal FAST_READ_WORD_c     : data_vector_t(9 downto 0) := (FAST_READ_c, others => x"00");
-  signal FAST_WRITE_WORD_c     : data_vector_t(9 downto 0) := (
+  signal FAST_READ_WORD_c     : spi_buffer_t(9 downto 0) := (FAST_READ_c, others => x"00");
+  signal FAST_WRITE_WORD_c    : spi_buffer_t(13 downto 0) := (
     FAST_WRITE_c,
     x"00",
     x"00",
@@ -109,7 +109,11 @@ architecture simulation of spi_axi_top_tb is
     x"AB",
     x"CD",
     x"12",
-    x"34"
+    x"34",
+    x"56",
+    x"78",
+    x"9A",
+    x"BC"
   );
 
   signal spi_rxdata_s    : data_vector_t(15 downto 0);
@@ -180,9 +184,9 @@ begin
     --wait for 35 ns;
     --spi_bus(SIMPLE_WRITE_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     --FAST_READ/WRITE
-    spi_bus(FAST_READ_WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --spi_bus(FAST_READ_WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     --wait for 35 ns;
-    --spi_bus(FAST_WRITE_WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    spi_bus(FAST_WRITE_WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     wait;
   end process;
 
