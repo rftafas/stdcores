@@ -60,7 +60,7 @@ entity spi_axi_top is
     ADDR_BYTE_NUM : integer     := 4;
     DATA_BYTE_NUM : integer     := 4;
     serial_num_rw : boolean     := true;
-    clock_mode    : spi_clock_t := native
+    native_clock_mode : boolean     := true
     );
   port (
     --general
@@ -113,6 +113,8 @@ end spi_axi_top;
 
 architecture behavioral of spi_axi_top is
 
+  signal clock_mode    : spi_clock_t := native;
+
   signal irq_s       : std_logic_vector(7 downto 0);
   signal irq_clear_s : std_logic_vector(7 downto 0);
   signal irq_mask_s  : std_logic_vector(7 downto 0);
@@ -133,14 +135,23 @@ architecture behavioral of spi_axi_top is
   signal spi_rxdata_s : std_logic_vector(7 downto 0);
   signal spi_txdata_s : std_logic_vector(7 downto 0);
 
-  constant edge       : std_logic := edge_config(CPOL, CPHA);
+  
+function get_clock_mode(is_native : boolean) return spi_clock_t
+is begin
+    if (native_clock_mode = true) then
+        return native;
+    else
+        return oversampled; -- Or some other default
+    end if;
+end function;
 
+  constant edge       : std_logic := edge_config(CPOL, CPHA, get_clock_mode(native_clock_mode));
 begin
 
   spi_slave_u : spi_slave
     generic map (
       edge       => edge,
-      clock_mode => clock_mode
+      clock_mode => get_clock_mode(native_clock_mode)
     )
     port map (
       rst_i        => rst_i,

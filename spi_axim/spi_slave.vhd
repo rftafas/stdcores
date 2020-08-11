@@ -42,7 +42,6 @@ end spi_slave;
 
 architecture behavioral of spi_slave is
 
-  signal edge_s         : std_logic;
   signal spck_s         : std_logic;
   signal spck_en        : std_logic;
   signal spcs_s         : std_logic;
@@ -66,7 +65,6 @@ begin
     signal spi_rxdata_s : std_logic_vector(7 downto 0) := "11111111";
     signal rxdata_en_s  : std_logic;
   begin
-    edge_s  <= edge;
     spck_en <= '1';
     spck_s  <= spck_i;
     spcs_s  <= spcs_i;
@@ -92,7 +90,6 @@ begin
   else generate
     signal spck_sync_s : std_logic;
   begin
-    edge_s        <= '1';
     spck_s        <= mclk_i;
     spi_busy_o    <= busy_s;
     spi_rxdata_o  <= rxdata_s;
@@ -128,7 +125,7 @@ end generate;
   begin
     if spcs_s = '1' then
       data_en <= "00000001";
-    elsif spck_s = edge_s and spck_s'event then
+    elsif spck_s = edge and spck_s'event then
       if spck_en = '1' then
         data_en <= data_en(6 downto 0) & data_en(7);
       end if;
@@ -144,7 +141,7 @@ end generate;
       input_sr  <= (others=>'0');
       rxdata_en <= '0';
       rxdata_s  <= (others=>'0');
-    elsif spck_s = edge_s and spck_s'event then
+    elsif spck_s = edge and spck_s'event then
       if spck_en = '1' then
         if rx_en = '1' then
           input_sr <= "0000000";
@@ -162,7 +159,7 @@ end generate;
   begin
     if spcs_s = '1' then
       output_sr(6 downto 0) <= "1111111";
-    elsif spck_s = edge_s and spck_s'event then
+    elsif spck_s = edge and spck_s'event then
       if spck_en = '1' then
         if tx_en = '1' then
           output_sr <= spi_txdata_i(6 downto 0);
@@ -178,7 +175,7 @@ end generate;
   begin
     if spcs_i = '1' then
       miso_o  <= '1';
-    elsif spck_i = not edge_s then
+    elsif spck_i = not edge then
       miso_o <= output_latch_s;
     end if;
   end process;
