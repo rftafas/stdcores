@@ -10,19 +10,7 @@ library stdblocks;
 
 package stdcores_pkg is
 
-  type fifo_config_rec is record
-    ram_type     :  fifo_t;
-    fifo_size    : integer;
-    tdata_size   : integer;
-    tdest_size   : integer;
-    tuser_size   : integer;
-    packet_mode  : boolean;
-    tuser_enable : boolean;
-    tlast_enable : boolean;
-    tdest_enable : boolean;
-    sync_mode    : boolean;
-    cut_through  : boolean;
-  end record;
+
 
 end package;
 
