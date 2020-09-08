@@ -24,8 +24,8 @@ entity axis_intercon is
     );
     port (
       --general
-      clk_i       : in  std_logic;
       rst_i       : in  std_logic;
+      clk_i       : in  std_logic;
       --AXIS Master Port
       m_tdata_o  : out vector_array(number_masters-1 downto 0)(tdata_size-1 downto 0);
       m_tuser_o  : out vector_array(number_masters-1 downto 0)(tuser_size-1 downto 0);
@@ -40,7 +40,6 @@ entity axis_intercon is
       s_tready_o : out std_logic_vector(number_slaves-1 downto 0);
       s_tvalid_i : in  std_logic_vector(number_slaves-1 downto 0);
       s_tlast_i  : in  std_logic_vector(number_slaves-1 downto 0)
-  );
     );
 end axis_intercon;
 
