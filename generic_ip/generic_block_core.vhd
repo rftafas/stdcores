@@ -23,7 +23,9 @@ entity genecic_block_core is
     generic (
         ram_addr     : integer;
         pipe_num     : integer;
-        data_size    : integer
+        data_size    : integer;
+        type heap_t;
+        procedure block_operation (input : in std_logic_vector; output : out std_logic_vector; config_i : in reg_t; status_o : out reg_t; variable heap_io : inout heap_t )
     );
     port (
         mclk_i       : in  std_logic;
@@ -44,15 +46,17 @@ entity genecic_block_core is
         tuser_o      : out std_logic_vector;
         tdest_o      : out std_logic_vector;
 
-
         --status and configuration registers
-        packet_size  : in  std_logic_vector(31 downto 0);
-        busy_o       : out std_logic
+        config_i     : reg_t;
+        status_o     : reg_t;
+        busy_o              : out std_logic
     );
 end genecic_block_core;
 
 architecture behavioral of genecic_block_core is
 
+    signal status_s : reg_t;
+    full_s
 
     signal rx_ok   : std_logic;
     signal px_ok   : std_logic;
@@ -108,11 +112,10 @@ begin
     ---------------------------------------------------------------------------------------------------------------------
     busy_o <= '1' when rx_control_mq = exception else '0';
 
-
     ---------------------------------------------------------------------------------------------------------------------
     -- INPUT CONTROL
     ---------------------------------------------------------------------------------------------------------------------
-    process(mclk_i)
+    input_p : process(mclk_i)
       variable start_pointer_v : unsigned(write1_cnt'range) := (others=>'0');
       variable end_pointer_v   : unsigned(write1_cnt'range) := (others=>'0');
     begin
@@ -188,10 +191,13 @@ begin
 
     rx_done <= '1' when rx_control_mq = reload else
                '0';
+
+    full_s  <= '1' when  rx_control_mq = exception else
+               '0';
     ---------------------------------------------------------------------------------------------------------------------
     -- Processing CONTROL
     ---------------------------------------------------------------------------------------------------------------------
-    process(mclk_i)
+    control_p : process(mclk_i)
       variable end_pointer_v   : unsigned(write1_cnt'range) := (others=>'0');
       variable start_pointer_v : unsigned(write1_cnt'range) := (others=>'0');
       variable last_pointer_v  : unsigned(write1_cnt'range) := (others => '0');
@@ -261,7 +267,6 @@ begin
 
                 end case;
             --always reading.
-
         end if;
      end process;
 
@@ -277,12 +282,29 @@ begin
    ---------------------------------------------------------------------------------------------------------------------
    --operation
    ---------------------------------------------------------------------------------------------------------------------
-   data2_s <= data1_s;
+   operation_p : process(mclk_i)
+    variable heap_v : heap_t;
+   begin
+     if arst_i = '0' then
+     elsif rising_edge(mclk_i) then
+       block_operation(data1_s,data2_s,config_i,status_s,heap_v);
+     end if;
+   end process;
 
-    ---------------------------------------------------------------------------------------------------------------------
-    --OUTPUT CONTROL
-    ---------------------------------------------------------------------------------------------------------------------
-    process(mclk_i)
+  status_o <= (
+    0 => x"00A4_0AFA",
+    1 => (
+      0  => full_s,
+      1  => busy_o,
+      others => '0'
+    ),
+    status_o'high downto 2 => status_s(status_o'high downto 2)
+  );
+
+  ---------------------------------------------------------------------------------------------------------------------
+  --OUTPUT CONTROL
+  ---------------------------------------------------------------------------------------------------------------------
+    output_p : process(mclk_i)
       variable start_pointer_v : unsigned(write1_cnt'range) := (others => '0');
       variable end_pointer_v   : unsigned(write1_cnt'range) := (others => '0');
       variable last_pointer_v  : unsigned(write1_cnt'range) := (others => '0');
@@ -378,7 +400,7 @@ begin
           index := 0;
         elsif index > pipe_num-1 then
           index := pipe_num-1;
-          report "Error on Idex for TUSER fifo.";
+          report "Error on Index for TUSER fifo.";
         end if;
         index_t <= index;
       end if;

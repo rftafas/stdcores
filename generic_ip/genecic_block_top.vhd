@@ -20,10 +20,13 @@ library stdcores;
 
 entity genecic_block_top is
 	generic (
-		ram_addr            : integer := 9;
-		tdest_size					: integer := 1;
-		tuser_size					: integer := 1;
-		pipe_num						: integer := 32
+		ram_addr            : positive := 9;
+		tdata_size					: positive := 128;
+		tdest_size					: positive := 1;
+		tuser_size					: positive := 1;
+		pipe_num						: positive := 1
+		type heap_t;
+		procedure block_operation (input : in std_logic_vector; output : out std_logic_vector; config_i : in reg_t; status_o : out reg_t; variable heap_io : inout heap_t )
 	);
 	port (
 	   -- Users to add ports here
@@ -54,8 +57,8 @@ entity genecic_block_top is
 
 		-- Ports of Axi Slave Bus Interface S00_AXIS
 		s00_axis_tready	: out std_logic;
-		s00_axis_tdata	: in  std_logic_vector(127 downto 0);
-		s00_axis_tstrb  : in  std_logic_vector(15 downto 0);
+		s00_axis_tdata	: in  std_logic_vector(tdata_size-1 downto 0);
+		s00_axis_tstrb  : in  std_logic_vector(tdata_size/8-1 downto 0);
 		s00_axis_tlast	: in  std_logic;
 		s00_axis_tvalid	: in  std_logic;
 		s00_axis_tuser	: in  std_logic_vector(tuser_size-1 downto 0);
@@ -63,8 +66,8 @@ entity genecic_block_top is
 
 		-- Ports of Axi Master Bus Interface M00_AXIS
 		m00_axis_tvalid	: out std_logic;
-		m00_axis_tdata	: out std_logic_vector(127 downto 0);
-		m00_axis_tstrb	: out std_logic_vector(15 downto 0);
+		m00_axis_tdata	: out std_logic_vector(tdata_size-1 downto 0);
+		m00_axis_tstrb	: out std_logic_vector(tdata_size/8-1 downto 0);
 		m00_axis_tlast	: out std_logic;
 		m00_axis_tready	: in  std_logic;
 		m00_axis_tuser	: out std_logic_vector(tuser_size-1 downto 0);
@@ -74,10 +77,6 @@ end genecic_block_top;
 
 architecture top_arch of genecic_block_top is
 
-	-- Parameters of Axi Master Bus Interface M00_AXIS
-	constant C_AXIS_TDATA_WIDTH	    : integer	:= 128;
-	constant C_M_DATA_COUNT	        : integer	:= 1024;
-
 	alias s00_axi_aclk	    : std_logic is mclk_i;
 	alias s00_axi_aresetn	  : std_logic is resetn_i;
 	alias s00_axis_aclk	    : std_logic is mclk_i;
@@ -85,28 +84,21 @@ architecture top_arch of genecic_block_top is
 	alias m00_axis_aclk	    : std_logic is mclk_i;
 	alias m00_axis_aresetn	: std_logic is resetn_i;
 
-	signal data_o_s 	         : std_logic_vector(127 downto 0);
+	signal data_o_s 	         : std_logic_vector(tdata_size-1 downto 0);
   signal empty_o_s	         : std_logic;
   signal oen_i_s	           : std_logic;
-  signal data_i_s            : std_logic_vector(127 downto 0);
+  signal data_i_s            : std_logic_vector(tdata_size-1 downto 0);
   signal ien_i_s             : std_logic;
   signal full_o_s            : std_logic;
-  signal packet_size_error_s : std_logic;
-  signal packet_size         : integer range 0 to 65535;
 	signal start_s             : std_logic;
 	signal stop_s              : std_logic;
 
   signal oreg_o_s         : reg_t;
   signal ireg_i_s         : reg_t;
-  signal pulse_o_s        : reg_t;
-  signal capture_i_s      : reg_t;
 
   signal fifo_full_o_s    : std_logic;
   signal fifo_empty_o_s   : std_logic;
   signal busy_o_s         : std_logic;
-
-	type local_array is array (natural range <>) of std_logic_vector(32 downto 0);
-	signal some_signal_s : local_array(5 downto 2);
 
 begin
 
@@ -144,9 +136,11 @@ begin
 	-- Add user logic here
 	generic_block_inst: genecic_block_core
     generic map(
-      ram_addr  => ram_addr,
-			pipe_num	=> 32,
-      data_size => 128
+      ram_addr        => ram_addr,
+      data_size       => tdata_size,
+			pipe_num	      => 1,
+			heap_t          => heap_t,
+			block_operation => block_operation
     )
     port map(
       mclk_i       => mclk_i,
@@ -169,38 +163,9 @@ begin
 			tdest_o      => m00_axis_tdest,
 
       --status and configuration registers
-      packet_size  => packet_size,
+			config_i     => oreg_o_s;
+			status_o     => ireg_i_s;
       busy_o       => busy_o_s
     );
-
-  --Register connection from databank
-  --read/write
-	out_reg_cnacel_gen : if false generate
-    out_reg_gen : for j in 5 downto 2 generate
-        some_signal_s(j) <= oreg_o_s(j);
-    end generate;
-	end generate;
-
-  -- Read only
-  ireg_i_s <= (
-      0 => x"00A4_0AFA",
-      1 => ( 16 => fifo_full_o_s, 17 => fifo_empty_o_s, 24 => busy_o_s, others => '0'),
-      others => (others => '0')
-  );
-
-  --Capture Bits
-  capture_i_s <= (
-      6 => (18 => packet_size_error_s, others => '0'),
-      others => (others => '0')
-  );
-
-	--contratos
-	assert tdest_size > 0
-		report "TDEST Size must be greater than 0."
-		severity failure;
-
-	assert tuser_size > 0
-		report "TUSER Size must be greater than 0."
-		severity failure;
 
 end top_arch;

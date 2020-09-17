@@ -42,38 +42,101 @@ package genecic_block_pkg is
         others => (others => '0')
     );
 
+		component genecic_block_top is
+			generic (
+				ram_addr            : positive := 9;
+				tdata_size					: positive := 128;
+				tdest_size					: positive := 1;
+				tuser_size					: positive := 1;
+				pipe_num						: positive := 1
+				type heap_t;
+				procedure block_operation (input : in std_logic_vector; output : out std_logic_vector; config_i : in reg_t; status_o : out reg_t; variable heap_io : inout heap_t )
+			);
+			port (
+			   -- Users to add ports here
+			   mclk_i	  : in std_logic;
+			   resetn_i	: in std_logic;
+				-- User ports ends
+
+				-- Ports of Axi Slave Bus Interface S00_AXI
+				s00_axi_awaddr	: in  std_logic_vector(7 downto 0);
+				s00_axi_awprot	: in  std_logic_vector(2 downto 0);
+				s00_axi_awvalid	: in  std_logic;
+				s00_axi_awready	: out std_logic;
+				s00_axi_wdata	  : in  std_logic_vector(31 downto 0);
+				s00_axi_wstrb	  : in  std_logic_vector(3 downto 0);
+				s00_axi_wvalid	: in  std_logic;
+				s00_axi_wready	: out std_logic;
+				s00_axi_bresp	  : out std_logic_vector(1 downto 0);
+				s00_axi_bvalid	: out std_logic;
+				s00_axi_bready	: in  std_logic;
+				s00_axi_araddr	: in  std_logic_vector(7 downto 0);
+				s00_axi_arprot	: in  std_logic_vector(2 downto 0);
+				s00_axi_arvalid	: in  std_logic;
+				s00_axi_arready	: out std_logic;
+				s00_axi_rdata	  : out std_logic_vector(31 downto 0);
+				s00_axi_rresp	  : out std_logic_vector(1 downto 0);
+				s00_axi_rvalid	: out std_logic;
+				s00_axi_rready	: in  std_logic;
+
+				-- Ports of Axi Slave Bus Interface S00_AXIS
+				s00_axis_tready	: out std_logic;
+				s00_axis_tdata	: in  std_logic_vector(tdata_size-1 downto 0);
+				s00_axis_tstrb  : in  std_logic_vector(tdata_size/8-1 downto 0);
+				s00_axis_tlast	: in  std_logic;
+				s00_axis_tvalid	: in  std_logic;
+				s00_axis_tuser	: in  std_logic_vector(tuser_size-1 downto 0);
+				s00_axis_tdest	: in  std_logic_vector(tdest_size-1 downto 0);
+
+				-- Ports of Axi Master Bus Interface M00_AXIS
+				m00_axis_tvalid	: out std_logic;
+				m00_axis_tdata	: out std_logic_vector(tdata_size-1 downto 0);
+				m00_axis_tstrb	: out std_logic_vector(tdata_size/8-1 downto 0);
+				m00_axis_tlast	: out std_logic;
+				m00_axis_tready	: in  std_logic;
+				m00_axis_tuser	: out std_logic_vector(tuser_size-1 downto 0);
+				m00_axis_tdest	: out std_logic_vector(tdest_size-1 downto 0)
+			);
+		end component genecic_block_top;
+
 		component genecic_block_core is
-	    generic (
-	      ram_addr    : integer;
-				pipe_num    : integer;
-        data_size   : integer
-	    );
-	    port (
-	      mclk_i      : in  std_logic;
-	      arst_i      : in  std_logic;
-	      tready_o    : out std_logic;
-	      tdata_i     : in  std_logic_vector(127 downto 0);
-	      tvalid_i    : in  std_logic;
-	      tlast_i     : in  std_logic;
-	      tuser_i     : in  std_logic_vector;
-	      tdest_i     : in  std_logic_vector;
-	      tvalid_o    : out std_logic;
-	      tdata_o     : out std_logic_vector(127 downto 0);
-	      tlast_o     : out std_logic;
-	      tready_i    : in  std_logic;
-	      tuser_o     : out std_logic_vector;
-	      tdest_o     : out std_logic_vector;
-	      packet_size : in  integer;
-	      busy_o      : out std_logic
-	    );
-	  end component;
+		    generic (
+		        ram_addr     : integer;
+		        pipe_num     : integer;
+		        data_size    : integer;
+		        type heap_t;
+		        procedure block_operation (input : in std_logic_vector; output : out std_logic_vector; config_i : in reg_t; status_o : out reg_t; variable heap_io : inout heap_t )
+		    );
+		    port (
+		        mclk_i       : in  std_logic;
+		        arst_i       : in  std_logic;
+
+		        --gets data
+		        tready_o     : out std_logic;
+		        tdata_i      : in  std_logic_vector(data_size-1 downto 0);
+		        tvalid_i     : in  std_logic;
+		        tlast_i      : in  std_logic;
+		        tuser_i      : in  std_logic_vector;
+		        tdest_i      : in  std_logic_vector;
+		        --puts data
+		        tvalid_o     : out std_logic;
+		        tdata_o      : out std_logic_vector(data_size-1 downto 0);
+		        tlast_o      : out std_logic;
+		        tready_i     : in  std_logic;
+		        tuser_o      : out std_logic_vector;
+		        tdest_o      : out std_logic_vector;
+
+						--status and configuration registers
+		        config_i     : reg_t;
+		        status_o     : reg_t;
+		        busy_o       : out std_logic
+		    );
+		end component genecic_block_core;
 
 		component genecic_block_regs is
         port (
             oreg_o       : out reg_t;
             ireg_i       : in  reg_t;
-            pulse_o      : out reg_t;
-            capture_i    : in  reg_t;
 
             S_AXI_ACLK	    : in  std_logic;
             S_AXI_ARESETN	: in  std_logic;

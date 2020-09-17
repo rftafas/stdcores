@@ -22,12 +22,10 @@ library stdcores;
 entity genecic_block_regs is
 	port (
 		-- Aqui ficam os registros de entrada e saída.
-        oreg_o     : out reg_t; --saída de registro estável.
-        ireg_i     : in  reg_t; --entrada de registro estável.
-        pulse_o    : out reg_t; --saída de pulso. quando escrito '1' no endereço correspondente.
-        capture_i  : in  reg_t; --entrada de captura. ao detectar '1', trava o valor até leitura.
+    oreg_o     : out reg_t; --saída de registro estável.
+    ireg_i     : in  reg_t; --entrada de registro estável.
 
-        -- Sinais do Barramento AXI. Não mexer.
+    -- Sinais do Barramento AXI. Não mexer.
 		-- Global Clock Signal
 		S_AXI_ACLK	: in std_logic;
 		-- Global Reset Signal. This Signal is Active LOW
@@ -239,29 +237,6 @@ begin
     --put output register into output port
     oreg_o <= slv_reg_write;
 
-    --
-    process (S_AXI_ACLK)
-        variable loc_addr : integer;
-    begin
-        if rising_edge(S_AXI_ACLK) then
-            if S_AXI_ARESETN = '0' then
-                pulse_o <= (others => (others => '0'));
-            else
-                loc_addr := to_integer(unsigned(axi_awaddr(C_S_AXI_ADDR_WIDTH-1 downto ADDR_LSB)));
-                if (slv_reg_wren = '1') then
-                    for byte_index in 0 to (BYTE_NUM-1) loop
-                        if ( S_AXI_WSTRB(byte_index) = '1' ) then
-                            pulse_o( loc_addr )( byte_index*8+7 downto byte_index*8 ) <= S_AXI_WDATA( byte_index*8+7 downto byte_index*8 );
-                        end if;
-                    end loop;
-                 else
-                    pulse_o <= ( others => (others => '0') );
-                 end if;
-            end if;
-        end if;
-    end process;
-
-
 	-- Implement write response logic generation
 	-- The write response and response valid signals are asserted by the slave
 	-- when axi_wready, S_AXI_WVALID, axi_wready and S_AXI_WVALID are asserted.
@@ -291,7 +266,6 @@ begin
 	-- de-asserted when reset (active low) is asserted.
 	-- The read address is also latched when S_AXI_ARVALID is
 	-- asserted. axi_araddr is reset to zero on reset assertion.
-
 	process (S_AXI_ACLK)
 	begin
 	  if rising_edge(S_AXI_ACLK) then
@@ -343,67 +317,19 @@ begin
 	-- and the slave is ready to accept the read address.
 	slv_reg_rden <= axi_arready and S_AXI_ARVALID and (not axi_rvalid) ;
 
-    -- Get data from ports to bus
-    process( S_AXI_ACLK ) is
-        variable loc_addr : integer;
-        variable capture_v : reg_t := (others => (others => '0'));
-    begin
-        if (rising_edge (S_AXI_ACLK)) then
-            if ( S_AXI_ARESETN = '0' ) then
-                slv_reg_read  <= (others => (others => '0'));
-            else
-                for j in slv_reg_read'range loop
-                    slv_reg_read(j) <= capture_v(j) or ( ireg_i(j) and not RW_MAP(j) ) or ( slv_reg_write(j) and RW_MAP(j) );
-                end loop;
-
-                if (slv_reg_rden = '1') then
-                    -- always clear after reading.
-                    loc_addr := to_integer(unsigned(axi_araddr(C_S_AXI_ADDR_WIDTH-1 downto ADDR_LSB)));
-                    capture_v(loc_addr) :=  (others => '0');
-                else
-                    for j in capture_i'range loop
-                        for k in capture_i(j)'range loop
-                            if capture_i(j)(k) = '1' then
-                                capture_v(j)(k) := '1';
-                            end if;
-                        end loop;
-                    end loop;
-                end if;
-
-            end if;
-        end if;
-    end process;
-
-    -- Output register or memory read data to bus
-    process( S_AXI_ACLK ) is
-        variable loc_addr : integer;
-    begin
-        if (rising_edge (S_AXI_ACLK)) then
-            if ( S_AXI_ARESETN = '0' ) then
-                axi_rdata  <= (others => '0');
-            else
-
-                if (slv_reg_rden = '1') then
-                -- When there is a valid read address (S_AXI_ARVALID) with
-                -- acceptance of read address by the slave (axi_arready),
-                -- output the read dada
-                -- Read address mux
-                    loc_addr := to_integer(unsigned(axi_araddr(C_S_AXI_ADDR_WIDTH-1 downto ADDR_LSB)));
-                    axi_rdata              <= slv_reg_read(loc_addr);
-                end if;
-            end if;
-        end if;
-    end process;
-
-
-	--Registros READ ONLY: slv_reg_read receives data from a port.
-
-	--Registros READ WRITE: slv_reg_read receives data from slv_reg_write
-
-
-
-
-
-
+	-- Output register or memory read data to bus
+	process( S_AXI_ACLK ) is
+		variable loc_addr : integer;
+	begin
+		if ( S_AXI_ARESETN = '0' ) then
+			axi_rdata  <= (others => '0');
+		elsif (rising_edge (S_AXI_ACLK)) then
+			slv_reg_read <= ireg_i;
+			if (slv_reg_rden = '1') then
+				loc_addr := to_integer(unsigned(axi_araddr(C_S_AXI_ADDR_WIDTH-1 downto ADDR_LSB)));
+				axi_rdata              <= slv_reg_read(loc_addr);
+			end if;
+		end if;
+	end process;
 
 end arch_imp;
