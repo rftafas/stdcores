@@ -43,15 +43,16 @@ package spi_axim_pkg is
 
 	type spi_clock_t is (native, oversampled);
 
-	component spi_axi_top
+    component spi_axi_top
     generic (
-			CPOL          : std_logic := '0';
-			CPHA          : std_logic := '0';
-      ID_WIDTH      : integer   := 1;
-      ID_VALUE      : integer   := 0;
-      ADDR_BYTE_NUM : integer   := 4;
-      DATA_BYTE_NUM : integer   := 4;
-      serial_num_rw : boolean   := true
+      CPOL          : std_logic   := '0';
+      CPHA          : std_logic   := '0';
+      ID_WIDTH      : integer     := 1;
+      ID_VALUE      : integer     := 0;
+      ADDR_BYTE_NUM : integer     := 4;
+      DATA_BYTE_NUM : integer     := 4;
+      serial_num_rw : boolean     := true;
+      clock_mode    : spi_clock_t := native
       );
     port (
       --general
