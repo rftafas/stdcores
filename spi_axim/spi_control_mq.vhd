@@ -96,8 +96,6 @@ architecture behavioral of spi_control_mq is
   type spi_control_t is (
     --command states
     addr_st,
-    read_st,
-    write_st,
     act_st,
     inc_addr_st,
     idle_st,
@@ -222,9 +220,9 @@ architecture behavioral of spi_control_mq is
           when FAST_WRITE_c  =>
             tmp := wait4spi_st;
           when READ_c        =>
-            tmp := read_st;
+            tmp := act_st;
           when FAST_READ_c   =>
-            tmp := read_st;
+            tmp := act_st;
           when others        =>
             tmp := wait_forever_st;
         end case;
@@ -253,7 +251,7 @@ architecture behavioral of spi_control_mq is
             end if;
           when READ_BURST_c =>
             if aux_cnt = data_word_size-1 then
-              tmp := read_st;
+              tmp := act_st;
             end if;
           when RDSN_c =>
             if aux_cnt = data_word_size-1 then
@@ -296,7 +294,7 @@ architecture behavioral of spi_control_mq is
           when FAST_READ_c =>
             tmp := wait4spi_st;
           when READ_BURST_c =>
-            tmp := read_st;
+            tmp := wait4spi_st;
           when RDSN_c =>
             tmp := wait4spi_st;
           when RUID_c =>
@@ -320,9 +318,9 @@ architecture behavioral of spi_control_mq is
 
   signal get_addr_s : boolean;
 
-  signal buffer_s : std_logic_vector(8*buffer_size-1 downto 0);
+  signal buffer_s  : std_logic_vector(8*buffer_size-1 downto 0);
   signal aux_cnt_s : integer;
-  signal command_s         : std_logic_vector(7 downto 0);
+  signal command_s : std_logic_vector(7 downto 0);
 
 
 begin
