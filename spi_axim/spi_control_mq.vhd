@@ -536,7 +536,7 @@ begin
 
           when inc_addr_st   =>
             spi_mq <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
-            addr_v := addr_v + 1;
+            addr_v := addr_v + data_word_size;
 
           when others   =>
             spi_txen_o   <=   '0';
