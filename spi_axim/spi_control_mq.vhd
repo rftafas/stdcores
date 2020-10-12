@@ -332,6 +332,7 @@ begin
     variable temp_v            : std_logic_vector(7 downto 0);
     variable buffer_v          : std_logic_vector(8*buffer_size-1 downto 0);
     variable addr_v            : std_logic_vector(8*addr_word_size-1 downto 0);
+    variable act_done_v        : std_logic := '0';
   begin
     if rst_i = '1' then
       spi_mq       <= idle_st;
@@ -348,9 +349,11 @@ begin
       bus_read_o   <= '0';
       bus_write_o  <= '0';
       bus_addr_o   <= (others=>'0');
+      act_done_v   := '0';
     elsif mclk_i = '1' and mclk_i'event then
       case spi_mq is
           when idle_st  =>
+            act_done_v   := '0';
             if spi_busy_i = '0' then
               spi_mq       <= idle_st;
               command_v    := (others=>'0');
@@ -427,17 +430,21 @@ begin
             case temp_v is
 
               when FAST_READ_c   =>
-                bus_read_o <= '1';
-                bus_addr_o <= addr_v;
-                spi_txen_o <= '0';
-                if bus_done_i = '1' then
-                  bus_read_o <= '0';
-                  buffer_v   := set_slice(buffer_v, bus_data_i, 0);
+                if (act_done_v = '0') then
+                  bus_read_o <= '1';
+                  bus_addr_o <= addr_v;
+                  spi_txen_o <= '0';
+                  if bus_done_i = '1' then
+                    bus_read_o <= '0';
+                    buffer_v   := set_slice(buffer_v, bus_data_i, 0);
+                    act_done_v := '1';
+                  end if;
                 end if;
                 if spi_rxen_i = '1' then
                   spi_txen_o   <= '1';
                   spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                   spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+                  act_done_v := '0';
                 end if;
 
               when READ_c        =>
