@@ -15,8 +15,6 @@
 library ieee;
     use ieee.std_logic_1164.all;
     use ieee.numeric_std.all;
-library expert;
-    use expert.std_logic_expert.all;
 library stdblocks;
     use stdblocks.sync_lib.all;
 

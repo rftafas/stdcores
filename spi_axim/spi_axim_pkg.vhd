@@ -120,7 +120,7 @@ package spi_axim_pkg is
       bus_addr_o   : out std_logic_vector(addr_word_size*8-1 downto 0);
       spi_busy_i   : in  std_logic;
       spi_rxen_i   : in  std_logic;
-      spi_txen_o   : out std_logic;
+      spi_txen_i   : in  std_logic;
       spi_txdata_o : out std_logic_vector(7 downto 0);
       spi_rxdata_i : in  std_logic_vector(7 downto 0);
       RSTIO_o      : out std_logic;

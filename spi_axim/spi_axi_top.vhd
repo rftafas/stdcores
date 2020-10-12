@@ -156,7 +156,7 @@ begin
       spcs_i       => spcs_i,
       spi_busy_o   => spi_busy_s,
       spi_rxen_o   => spi_rxen_s,
-      spi_txen_o   => open,
+      spi_txen_o   => spi_txen_s,
       spi_rxdata_o => spi_rxdata_s,
       spi_txdata_i => spi_txdata_s
     );
@@ -178,7 +178,7 @@ begin
         bus_addr_o   => bus_addr_s,
         spi_busy_i   => spi_busy_s,
         spi_rxen_i   => spi_rxen_s,
-        spi_txen_o   => spi_txen_s,
+        spi_txen_i   => spi_txen_s,
         spi_txdata_o => spi_txdata_s,
         spi_rxdata_i => spi_rxdata_s,
         RSTIO_o      => RSTIO_o,
