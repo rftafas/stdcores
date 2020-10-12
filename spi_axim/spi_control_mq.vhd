@@ -432,7 +432,7 @@ begin
                 spi_txen_o <= '0';
                 if bus_done_i = '1' then
                   bus_read_o <= '0';
-                  buffer_v   := set_slice(buffer_v, bus_data_i, buffer_size-1);
+                  buffer_v   := set_slice(buffer_v, bus_data_i, 0);
                 end if;
                 if spi_rxen_i = '1' then
                   spi_txen_o   <= '1';
@@ -447,7 +447,7 @@ begin
                 if bus_done_i = '1' then
                   bus_read_o   <= '0';
                   spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
-                  buffer_v     := set_slice(buffer_v, bus_data_i, buffer_size-1);
+                  buffer_v     := set_slice(buffer_v, bus_data_i, 0);
                   spi_txen_o   <= '1';
                   spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                 end if;
