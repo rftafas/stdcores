@@ -317,10 +317,9 @@ architecture behavioral of spi_control_mq is
   end function;
 
   signal get_addr_s : boolean;
-
-  signal buffer_s  : std_logic_vector(8*buffer_size-1 downto 0);
-  signal aux_cnt_s : integer;
-  signal command_s : std_logic_vector(7 downto 0);
+  signal buffer_s   : std_logic_vector(8*buffer_size-1 downto 0);
+  signal aux_cnt_s  : integer;
+  signal command_s  : std_logic_vector(7 downto 0);
 
 
 begin
@@ -407,13 +406,14 @@ begin
             end if;
 
           when wait4spi_st =>
-            if spi_rxen_i = '1' then
-              aux_cnt      := aux_cnt + 1;
+            if spi_busy_i = '0' then -- If SPI bus is deactivated
+              spi_mq   <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+            elsif spi_rxen_i = '1' then              aux_cnt      := aux_cnt + 1;
               buffer_v     := buffer_v sll 8;
               buffer_v     := set_slice(buffer_v, spi_rxdata_i, 0);
               spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
               spi_txen_o   <= '1';
-              spi_txdata_o <= get_slice(buffer_v,8,data_word_size-1);
+              spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
             else
               spi_txen_o <= '0';
             end if;
@@ -434,7 +434,7 @@ begin
                 end if;
                 if spi_rxen_i = '1' then
                   spi_txen_o   <= '1';
-                  spi_txdata_o <= get_slice(buffer_v,8,data_word_size-1);
+                  spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                   spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
                 end if;
 
@@ -447,7 +447,7 @@ begin
                   spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
                   buffer_v     := set_slice(buffer_v, bus_data_i, 0);
                   spi_txen_o   <= '1';
-                  spi_txdata_o <= get_slice(buffer_v,8,data_word_size-1);
+                  spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                 end if;
 
               when WRITE_c        =>
@@ -477,13 +477,13 @@ begin
               when RDID_c        =>
                 spi_txen_o   <= '1';
                 buffer_v     := did_i;
-                spi_txdata_o <= get_slice(buffer_v,8,data_word_size-1);
+                spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                 spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
               when RUID_c        =>
                 spi_txen_o   <= '1';
                 buffer_v     := uid_i;
-                spi_txdata_o <= get_slice(buffer_v,8,data_word_size-1);
+                spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                 spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
               when WRSN_c        =>
@@ -499,7 +499,7 @@ begin
                   buffer_v     := serial_num_i;
                 end if;
                 spi_txen_o   <= '1';
-                spi_txdata_o <= get_slice(buffer_v,8,data_word_size-1);
+                spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                 spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
               when DPD_c         =>
