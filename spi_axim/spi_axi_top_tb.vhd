@@ -189,9 +189,9 @@ begin
     --wait for 35 ns;
     --spi_bus(SIMPLE_WRITE_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     --FAST_READ/WRITE
-    --spi_bus(FAST_READ_WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    spi_bus(FAST_READ_WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     --wait for 35 ns;
-    spi_bus(FAST_WRITE_WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --spi_bus(FAST_WRITE_WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     wait;
   end process;
 
@@ -253,7 +253,7 @@ begin
   M_AXI_BID     <= (others=>'0');
   M_AXI_ARREADY <= '1';
   M_AXI_RVALID  <= '1';
-  M_AXI_RDATA   <= x"ABCD1234";
+  M_AXI_RDATA   <= x"ABCD1234"  when M_AXI_ARADDR(2) = '0' else x"56789ABC";
   M_AXI_RRESP   <= "00";
   M_AXI_RID     <= (others=>'0');
   M_AXI_RLAST   <= '0';

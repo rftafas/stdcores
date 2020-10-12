@@ -336,6 +336,8 @@ begin
     elsif mclk_i = '1' and mclk_i'event then
       case spi_mq is
           when idle_st  =>
+            bus_read_o   <= '0';
+            bus_write_o  <= '0';
             if spi_busy_i = '0' then
               spi_mq       <= idle_st;
               command_v    := (others=>'0');
@@ -369,7 +371,8 @@ begin
               spi_mq     <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
               addr_v     := buffer_v(addr_v'range);
               if aux_cnt = addr_word_size then
-                aux_cnt := 0;
+                aux_cnt    := 0;
+                bus_addr_o <= addr_v;
               end if;
             end if;
 
@@ -399,19 +402,14 @@ begin
 
               when FAST_READ_c   =>
                 bus_read_o <= '1';
-                bus_addr_o <= addr_v;
                 if bus_done_i = '1' then
                   bus_read_o <= '0';
                   buffer_v   := set_slice(buffer_v, bus_data_i, 0);
-                end if;
-                if spi_rxen_i = '1' then
-                  spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                   spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
                 end if;
 
               when READ_c        =>
                 bus_read_o <= '1';
-                bus_addr_o <= addr_v;
                 if bus_done_i = '1' then
                   bus_read_o   <= '0';
                   spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
@@ -423,7 +421,6 @@ begin
                 bus_data_o   <= buffer_v(bus_data_o'range);
                 buffer_v     := (others=>'0');
                 spi_txdata_o <= (others=>'0');
-                bus_addr_o   <= addr_v;
                 bus_write_o  <= '1';
                 if bus_done_i = '1' then
                   spi_mq      <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
@@ -497,8 +494,9 @@ begin
             end case;
 
           when inc_addr_st   =>
-            spi_mq  <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
-            addr_v  := addr_v + data_word_size;
+            spi_mq     <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+            addr_v     := addr_v + data_word_size;
+            bus_addr_o <= addr_v;
 
           when others   =>
             --spi_txdata_o <= x"FF";
