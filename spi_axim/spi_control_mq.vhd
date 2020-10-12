@@ -407,7 +407,9 @@ begin
             end if;
 
           when wait4spi_st =>
-            if spi_rxen_i = '1' then
+            if spi_busy_i = '0' then -- If SPI bus is deactivated
+              spi_mq   <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+            elsif spi_rxen_i = '1' then
               aux_cnt      := aux_cnt + 1;
               buffer_v     := buffer_v sll 8;
               buffer_v     := set_slice(buffer_v, spi_rxdata_i, 0);
