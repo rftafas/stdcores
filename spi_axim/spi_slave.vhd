@@ -88,6 +88,10 @@ begin
     det_rxen_u : det_up
       port map ('0',mclk_i,rxdata_en_s,spi_rxen_o);
 
+    sync_txen_u : sync_r
+      generic map (2)
+      port map ('0',mclk_i,tx_en,spi_txen_o);
+
     data_gen : for j in 7 downto 0 generate
       sync_j : sync_r
         generic map (2)
@@ -101,8 +105,11 @@ begin
     spck_s        <= mclk_i;
     spi_busy_o    <= busy_s;
     spi_rxdata_o  <= rxdata_s;
+
     det_rxen_u : det_up
       port map ('0',mclk_i,rxdata_en,spi_rxen_o);
+
+    spi_txen_o <= tx_en;
 
     sync_mosi_u : sync_r
       generic map (2)

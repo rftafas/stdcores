@@ -31,7 +31,7 @@ architecture simulation of spi_axi_top_tb is
   constant  ID_VALUE      : integer := 0;
   constant  ADDR_BYTE_NUM : integer := 4;
   constant  DATA_BYTE_NUM : integer := 4;
-  constant  serial_num_rw : boolean := true;
+  constant  serial_num_rw : boolean := false;
 
   signal    rst_i         : std_logic;
   signal    mclk_i        : std_logic := '0';
@@ -43,7 +43,7 @@ architecture simulation of spi_axi_top_tb is
 
   constant  DID_i         : std_logic_vector(DATA_BYTE_NUM*8-1 downto 0) := x"76543210";
   constant  UID_i         : std_logic_vector(DATA_BYTE_NUM*8-1 downto 0) := x"AAAAAAAA";
-  constant  serial_num_i  : std_logic_vector(DATA_BYTE_NUM*8-1 downto 0) := x"00000000";
+  constant  serial_num_i  : std_logic_vector(DATA_BYTE_NUM*8-1 downto 0) := x"A4A4A4A4";
   signal    irq_i         : std_logic_vector(7 downto 0)                 := x"86";
   signal    irq_o         : std_logic;
 
@@ -100,6 +100,23 @@ architecture simulation of spi_axi_top_tb is
     x"CD",
     x"12",
     x"34"
+  );
+
+  signal SIMPLE_READ_2_c   : spi_buffer_t(12 downto 0) := (READ_c, others => x"00");
+  signal SIMPLE_WRITE_2_c  : spi_buffer_t(12 downto 0) := (
+    WRITE_c,
+    x"00",
+    x"00",
+    x"00",
+    x"00",
+    x"AB",
+    x"CD",
+    x"12",
+    x"34",
+    x"56",
+    x"78",
+    x"9A",
+    x"BC"
   );
 
   --read/write
@@ -184,12 +201,14 @@ begin
     --wait for 35 ns;
     --spi_bus(IRQMRD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     --wait for 35 ns;
-    --READ/WRITE TEST
+    --READ/WRITE TEST - 1 beat
     --spi_bus(SIMPLE_READ_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --READ/WRITE TEST - 2 beat
+    spi_bus(SIMPLE_READ_2_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     --wait for 35 ns;
     --spi_bus(SIMPLE_WRITE_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     --FAST_READ/WRITE
-    spi_bus(FAST_READ_WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --spi_bus(FAST_READ_WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     --wait for 35 ns;
     --spi_bus(FAST_WRITE_WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     wait;

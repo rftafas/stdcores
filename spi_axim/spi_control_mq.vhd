@@ -21,6 +21,8 @@ library stdblocks;
     use stdblocks.sync_lib.all;
 library stdcores;
     use stdcores.spi_axim_pkg.all;
+library stdblocks;
+    use stdblocks.sync_lib.all;
 
 entity spi_control_mq is
     generic (
@@ -120,7 +122,7 @@ architecture behavioral of spi_control_mq is
       when FAST_WRITE_c  =>
         tmp := WRITE_c;
       when FAST_READ_c   =>
-        tmp := FAST_READ_c;
+        tmp := READ_c;
       when WRITE_BURST_c =>
         tmp := WRITE_c;
       when READ_BURST_c  =>
@@ -241,15 +243,15 @@ architecture behavioral of spi_control_mq is
               tmp := act_st;
             end if;
           when RDSN_c =>
-            if aux_cnt = data_word_size-1 then
+            if aux_cnt = data_word_size then
               tmp := wait_forever_st;
             end if;
           when RUID_c =>
-            if aux_cnt = data_word_size-1 then
+            if aux_cnt = data_word_size then
               tmp := wait_forever_st;
             end if;
           when RDID_c =>
-            if aux_cnt = data_word_size-1 then
+            if aux_cnt = data_word_size then
               tmp := wait_forever_st;
             end if;
           when WRMR_c =>
@@ -307,7 +309,6 @@ architecture behavioral of spi_control_mq is
   signal buffer_s   : std_logic_vector(8*buffer_size-1 downto 0);
   signal aux_cnt_s  : integer;
   signal command_s  : std_logic_vector(7 downto 0);
-
 
 begin
 
@@ -378,35 +379,45 @@ begin
 
           when ack_st =>
             spi_txdata_o <= x"AC";
-            aux_cnt      := data_word_size-1;
-            spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+            aux_cnt      := -1;
+            if spi_txen_i = '0' then
+              --i.e. we won't get out of here while it still has something to do.
+              spi_mq <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+            end if;
 
           when wait4spi_st =>
             if spi_busy_i = '0' then -- If SPI bus is deactivated
               spi_mq   <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
-            elsif spi_rxen_i = '1' then
-              spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
-              aux_cnt      := aux_cnt + 1;
-              buffer_v     := buffer_v sll 8;
-              buffer_v     := set_slice(buffer_v, spi_rxdata_i, 0);
-              spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
-              if aux_cnt = data_word_size then
-                aux_cnt := 0;
-              end if;
-            end if;
+            else
+              case command_v is
+
+                when FAST_READ_c =>
+                  if spi_rxen_i = '1' then
+                    spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
+                    if aux_cnt > -1 then
+                      buffer_v     := buffer_v sll 8;
+                      buffer_v     := set_slice(buffer_v, spi_rxdata_i, 0);
+                    end if;
+                    aux_cnt      := aux_cnt + 1;
+                    spi_mq <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+                  end if;
+
+                when others =>
+                  if spi_rxen_i = '1' then
+                    aux_cnt      := aux_cnt + 1;
+                  elsif spi_txen_i = '0' then
+                    spi_mq <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+                  elsif spi_txen_i = '1' then
+                    spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
+                  end if;
+                  aux_cnt := 0 when aux_cnt = data_word_size;
+
+                end case;
 
           when act_st =>
             temp_v  := action_decode(command_v);
 
             case temp_v is
-
-              when FAST_READ_c   =>
-                bus_read_o <= '1';
-                if bus_done_i = '1' then
-                  bus_read_o <= '0';
-                  buffer_v   := set_slice(buffer_v, bus_data_i, 0);
-                  spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
-                end if;
 
               when READ_c        =>
                 bus_read_o <= '1';
@@ -440,12 +451,10 @@ begin
 
               when RDID_c        =>
                 buffer_v     := did_i;
-                --spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                 spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
               when RUID_c        =>
                 buffer_v     := uid_i;
-                --spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                 spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
               when WRSN_c        =>
