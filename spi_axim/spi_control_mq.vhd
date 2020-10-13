@@ -229,7 +229,7 @@ architecture behavioral of spi_control_mq is
               tmp := act_st;
             end if;
           when READ_c =>
-            if aux_cnt = data_word_size-1 then
+            if aux_cnt = data_word_size then
               tmp := act_st;
             end if;
           when FAST_READ_c =>
@@ -311,7 +311,7 @@ architecture behavioral of spi_control_mq is
 
 begin
 
-  spi_mq_p : process(mclk_i,rst_i)
+  spi_mq_p : process(all)
     variable aux_cnt           : integer range -1 to buffer_size := 0;
     variable command_v         : std_logic_vector(7 downto 0);
     variable decoded_command_v : std_logic_vector(7 downto 0);
@@ -378,19 +378,19 @@ begin
 
           when ack_st =>
             spi_txdata_o <= x"AC";
-            aux_cnt      := -1;
+            aux_cnt      := data_word_size-1;
             spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
           when wait4spi_st =>
             if spi_busy_i = '0' then -- If SPI bus is deactivated
               spi_mq   <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
             elsif spi_rxen_i = '1' then
+              spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
               aux_cnt      := aux_cnt + 1;
               buffer_v     := buffer_v sll 8;
               buffer_v     := set_slice(buffer_v, spi_rxdata_i, 0);
               spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
-              spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
-              if aux_cnt = addr_word_size then
+              if aux_cnt = data_word_size then
                 aux_cnt := 0;
               end if;
             end if;
@@ -414,7 +414,6 @@ begin
                   bus_read_o   <= '0';
                   spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
                   buffer_v     := set_slice(buffer_v, bus_data_i, 0);
-                  spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                 end if;
 
               when WRITE_c        =>
@@ -441,17 +440,17 @@ begin
 
               when RDID_c        =>
                 buffer_v     := did_i;
-                spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
+                --spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                 spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
               when RUID_c        =>
                 buffer_v     := uid_i;
-                spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
+                --spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                 spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
               when WRSN_c        =>
                 if serial_num_rw then
-                  serialnum_s <= buffer_v(serialnum_s'range);
+                  serialnum_s <= buffer_v;
                 end if;
                 spi_mq   <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
@@ -461,7 +460,7 @@ begin
                 else
                   buffer_v     := serial_num_i;
                 end if;
-                spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
+                --spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                 spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
               when DPD_c         =>
@@ -471,24 +470,24 @@ begin
                 spi_mq <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
               when IRQRD_c =>
-                spi_txdata_o <= irq_i;
-                spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+                buffer_v := set_slice(buffer_v, irq_i, buffer_size-1);
+                spi_mq   <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
               when IRQWR_c =>
                 irq_clear_o <= buffer_v(7 downto 0);
                 spi_mq      <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
               when IRQMRD_c =>
-                spi_txdata_o <= irq_mask_s;
-                spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+                buffer_v := set_slice(buffer_v, irq_mask_s, buffer_size-1);
+                spi_mq   <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
               when IRQMWR_c =>
-                irq_mask_s <= buffer_v(7 downto 0);
-                spi_mq     <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+                buffer_v := set_slice(buffer_v, irq_mask_s, buffer_size-1);
+                spi_mq   <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
               when others        =>
-                spi_txdata_o <= x"FF";
-                spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+                buffer_v := (others=>'1');
+                spi_mq   <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
                 report "Invalid Command detected." severity warning;
 
             end case;
