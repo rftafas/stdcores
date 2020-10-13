@@ -229,7 +229,7 @@ architecture behavioral of spi_control_mq is
               tmp := act_st;
             end if;
           when READ_c =>
-            if aux_cnt = data_word_size-1 then
+            if aux_cnt = data_word_size then
               tmp := act_st;
             end if;
           when FAST_READ_c =>
