@@ -204,11 +204,11 @@ begin
     --READ/WRITE TEST - 1 beat
     --spi_bus(SIMPLE_READ_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     --READ/WRITE TEST - 2 beat
-    spi_bus(SIMPLE_READ_2_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    --spi_bus(SIMPLE_READ_2_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     --wait for 35 ns;
     --spi_bus(SIMPLE_WRITE_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     --FAST_READ/WRITE
-    --spi_bus(FAST_READ_WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
+    spi_bus(FAST_READ_WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     --wait for 35 ns;
     --spi_bus(FAST_WRITE_WORD_c,spi_rxdata_s,spcs_i,spck_i,miso_o,mosi_i);
     wait;

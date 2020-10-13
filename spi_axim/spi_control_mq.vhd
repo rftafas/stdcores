@@ -394,10 +394,10 @@ begin
                 when FAST_READ_c =>
                   if spi_rxen_i = '1' then
                     spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
-                    if aux_cnt > -1 then
+                    --if aux_cnt > -1 then
                       buffer_v     := buffer_v sll 8;
                       buffer_v     := set_slice(buffer_v, spi_rxdata_i, 0);
-                    end if;
+                    --end if;
                     aux_cnt      := aux_cnt + 1;
                     spi_mq <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
                   end if;
@@ -405,14 +405,17 @@ begin
                 when others =>
                   if spi_rxen_i = '1' then
                     aux_cnt      := aux_cnt + 1;
-                  elsif spi_txen_i = '0' then
                     spi_mq <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
+                    buffer_v     := buffer_v sll 8;
+                    buffer_v     := set_slice(buffer_v, spi_rxdata_i, 0);
+                  elsif spi_txen_i = '0' then
                   elsif spi_txen_i = '1' then
                     spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
                   end if;
-                  aux_cnt := 0 when aux_cnt = data_word_size;
 
-                end case;
+              end case;
+            end if;
+            aux_cnt := 0 when aux_cnt = data_word_size;
 
           when act_st =>
             temp_v  := action_decode(command_v);
