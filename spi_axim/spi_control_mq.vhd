@@ -386,10 +386,10 @@ begin
               spi_mq   <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
             elsif spi_rxen_i = '1' then
               aux_cnt      := aux_cnt + 1;
-              buffer_v     := buffer_v sll 8;
-              buffer_v     := set_slice(buffer_v, spi_rxdata_i, 0);
               spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
               spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
+              buffer_v     := buffer_v sll 8;
+              buffer_v     := set_slice(buffer_v, spi_rxdata_i, 0);
               if aux_cnt = addr_word_size then
                 aux_cnt := 0;
               end if;
@@ -415,6 +415,7 @@ begin
                   spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
                   buffer_v     := set_slice(buffer_v, bus_data_i, 0);
                   spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
+                  buffer_v     := buffer_v sll 8;
                 end if;
 
               when WRITE_c        =>
@@ -442,11 +443,13 @@ begin
               when RDID_c        =>
                 buffer_v     := did_i;
                 spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
+                buffer_v     := buffer_v sll 8;
                 spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
               when RUID_c        =>
                 buffer_v     := uid_i;
                 spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
+                buffer_v     := buffer_v sll 8;
                 spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
               when WRSN_c        =>
@@ -462,6 +465,7 @@ begin
                   buffer_v     := serial_num_i;
                 end if;
                 spi_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
+                buffer_v     := buffer_v sll 8;
                 spi_mq       <= next_state(command_v, aux_cnt, spi_busy_i, spi_mq);
 
               when DPD_c         =>
