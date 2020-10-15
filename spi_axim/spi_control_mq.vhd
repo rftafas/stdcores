@@ -415,7 +415,9 @@ begin
 
               end case;
             end if;
-            aux_cnt := 0 when aux_cnt = data_word_size;
+            if (aux_cnt = data_word_size) then
+              aux_cnt := 0;
+            end if;
 
           when act_st =>
             temp_v  := action_decode(command_v);
