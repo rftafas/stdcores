@@ -36,16 +36,16 @@ entity axis_intercon is
       rst_i       : in  std_logic;
       clk_i       : in  std_logic;
       --AXIS Master Port
-      m_tdata_o  : out vector_array(number_masters-1 downto 0)(tdata_size-1 downto 0);
-      m_tuser_o  : out vector_array(number_masters-1 downto 0)(tuser_size-1 downto 0);
-      m_tdest_o  : out vector_array(number_masters-1 downto 0)(tdest_size-1 downto 0);
+      m_tdata_o  : out std_logic_array (number_masters-1 downto 0,tdata_size-1 downto 0);
+      m_tuser_o  : out std_logic_array (number_masters-1 downto 0,tuser_size-1 downto 0);
+      m_tdest_o  : out std_logic_array (number_masters-1 downto 0,tdest_size-1 downto 0);
       m_tready_i : in  std_logic_vector(number_masters-1 downto 0);
       m_tvalid_o : out std_logic_vector(number_masters-1 downto 0);
       m_tlast_o  : out std_logic_vector(number_masters-1 downto 0);
         --AXIS Slave Port
-      s_tdata_i  : in  vector_array(number_slaves-1 downto 0)(tdata_size-1 downto 0);
-      s_tuser_i  : in  vector_array(number_slaves-1 downto 0)(tuser_size-1 downto 0);
-      s_tdest_i  : in  vector_array(number_slaves-1 downto 0)(tdest_size-1 downto 0);
+      s_tdata_i  : in  std_logic_array (number_slaves-1 downto 0,tdata_size-1 downto 0);
+      s_tuser_i  : in  std_logic_array (number_slaves-1 downto 0,tuser_size-1 downto 0);
+      s_tdest_i  : in  std_logic_array (number_slaves-1 downto 0,tdest_size-1 downto 0);
       s_tready_o : out std_logic_vector(number_slaves-1 downto 0);
       s_tvalid_i : in  std_logic_vector(number_slaves-1 downto 0);
       s_tlast_i  : in  std_logic_vector(number_slaves-1 downto 0)
@@ -114,7 +114,8 @@ architecture behavioral of axis_intercon is
       s_tdest_i  : in  vector_array(number_ports-1 downto 0)(tdest_size-1 downto 0);
       s_tready_o : out std_logic_vector(number_ports-1 downto 0);
       s_tvalid_i : in  std_logic_vector(number_ports-1 downto 0);
-      s_tlast_i  : in  std_logic_vector(number_ports-1 downto 0)               m_tdata_o  : out std_logic_vector(tdata_size-1 downto 0);
+      s_tlast_i  : in  std_logic_vector(number_ports-1 downto 0);
+      m_tdata_o  : out std_logic_vector(tdata_size-1 downto 0);
       m_tuser_o  : out std_logic_vector(tuser_size-1 downto 0);
       m_tdest_o  : out std_logic_vector(tdest_size-1 downto 0);
       m_tready_i : in  std_logic;
@@ -222,11 +223,11 @@ begin
         rst_i      => rst_i,
         --master
         m_tvalid_o => mux_tvalid_s(master_portnum*(j+1)-1 downto master_portnum*j),
-        m_tlast_o  =>  mux_tlast_s(master_portnum*(j+1)-1 downto master_portnum*j),
+        m_tlast_o  => mux_tlast_s(master_portnum*(j+1)-1  downto master_portnum*j),
         m_tready_i => mux_tready_s(master_portnum*(j+1)-1 downto master_portnum*j),
-        m_tdata_o  =>  mux_tdata_s(master_portnum*(j+1)-1 downto master_portnum*j),
-        m_tuser_o  =>  mux_tuser_s(master_portnum*(j+1)-1 downto master_portnum*j),
-        m_tdest_o  =>  mux_tdest_s(master_portnum*(j+1)-1 downto master_portnum*j),
+        m_tdata_o  => mux_tdata_s(master_portnum*(j+1)-1  downto master_portnum*j),
+        m_tuser_o  => mux_tuser_s(master_portnum*(j+1)-1  downto master_portnum*j),
+        m_tdest_o  => mux_tdest_s(master_portnum*(j+1)-1  downto master_portnum*j),
         --slave
         s_tdata_i  => s_tdata_i(j),
         s_tuser_i  => s_tuser_i(j),
