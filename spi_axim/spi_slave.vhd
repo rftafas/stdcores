@@ -191,7 +191,7 @@ end generate;
   begin
     if spcs_i = '1' then
       miso_o  <= '1';
-    elsif spck_i = not edge_s then
+    elsif spck_i = not edge then
       miso_o <= output_latch_s;
     end if;
   end process;
