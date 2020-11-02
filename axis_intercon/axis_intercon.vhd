@@ -28,8 +28,7 @@ entity axis_intercon is
       select_auto    : boolean  := false;
       switch_tlast   : boolean  := false;
       interleaving   : boolean  := false;
-      max_tx_size    : positive := 10;
-      mode           : integer  := 10
+      max_tx_size    : positive := 10
     );
     port (
       --general
@@ -103,19 +102,23 @@ architecture behavioral of axis_intercon is
       select_auto  : boolean := false;
       switch_tlast : boolean := false;
       interleaving : boolean := false;
-      max_tx_size  : positive := 10;
-      mode         : integer := 10
+      max_tx_size  : positive := 10
     );
     port (
-      clk_i      : in  std_logic;
-      rst_i      : in  std_logic;
+      --general
+      clk_i       : in  std_logic;
+      rst_i       : in  std_logic;
+      --AXIS Slave Port
       s_tdata_i  : in  vector_array(number_ports-1 downto 0)(tdata_size-1 downto 0);
+      s_tstrb_i  : in  vector_array(number_ports-1 downto 0)(tdata_size/8-1 downto 0);
       s_tuser_i  : in  vector_array(number_ports-1 downto 0)(tuser_size-1 downto 0);
       s_tdest_i  : in  vector_array(number_ports-1 downto 0)(tdest_size-1 downto 0);
       s_tready_o : out std_logic_vector(number_ports-1 downto 0);
       s_tvalid_i : in  std_logic_vector(number_ports-1 downto 0);
-      s_tlast_i  : in  std_logic_vector(number_ports-1 downto 0);
+      s_tlast_i  : in  std_logic_vector(number_ports-1 downto 0)
+      --AXIS Master port
       m_tdata_o  : out std_logic_vector(tdata_size-1 downto 0);
+      m_tstrb_o  : out std_logic_vector(tdata_size/8-1 downto 0);
       m_tuser_o  : out std_logic_vector(tuser_size-1 downto 0);
       m_tdest_o  : out std_logic_vector(tdest_size-1 downto 0);
       m_tready_i : in  std_logic;
@@ -182,8 +185,7 @@ begin
         select_auto  => select_auto,
         switch_tlast => switch_tlast,
         interleaving => interleaving,
-        max_tx_size  => max_tx_size,
-        mode         => mode
+        max_tx_size  => max_tx_size
       )
       port map (
         clk_i      => clk_i,

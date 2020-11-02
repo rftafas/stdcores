@@ -105,8 +105,7 @@ begin
 
   priority_engine_i : queueing
     generic map (
-      n_elements => number_ports,
-      mode       => mode
+      n_elements => number_ports
     )
     port map (
       clk_i     => clk_i,
