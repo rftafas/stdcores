@@ -17,9 +17,9 @@ library ieee;
 	use ieee.numeric_std.all;
 	use ieee.math_real.all;
 library stdcores;
-	use stdcores.genecic_block_pkg.all;
+	use stdcores.generic_block_pkg.all;
 
-entity genecic_block_regs is
+entity generic_block_regs is
 	port (
 		-- Aqui ficam os registros de entrada e saída.
     oreg_o     : out reg_t; --saída de registro estável.
@@ -87,9 +87,9 @@ entity genecic_block_regs is
     -- accept the read data and response information.
 		S_AXI_RREADY	: in std_logic
 	);
-end genecic_block_regs;
+end generic_block_regs;
 
-architecture arch_imp of genecic_block_regs is
+architecture arch_imp of generic_block_regs is
 
 	-- AXI4LITE signals
 	signal axi_awaddr	: std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);

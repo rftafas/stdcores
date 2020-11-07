@@ -17,9 +17,9 @@ library ieee;
     use ieee.numeric_std.all;
     use ieee.math_real.all;
 library stdcores;
-    use stdcores.genecic_block_pkg.all;
+    use stdcores.generic_block_pkg.all;
 
-entity genecic_block_core is
+entity generic_block_core is
     generic (
         ram_addr     : integer;
         pipe_num     : integer;
@@ -47,16 +47,17 @@ entity genecic_block_core is
         tdest_o      : out std_logic_vector;
 
         --status and configuration registers
-        config_i     : reg_t;
-        status_o     : reg_t;
-        busy_o              : out std_logic
+        config_i     : in  reg_t;
+        status_o     : out reg_t;
+        busy_o       : out std_logic
     );
-end genecic_block_core;
+end generic_block_core;
 
-architecture behavioral of genecic_block_core is
+architecture behavioral of generic_block_core is
 
     signal status_s : reg_t;
-    full_s
+
+    signal full_s  : std_logic;
 
     signal rx_ok   : std_logic;
     signal px_ok   : std_logic;
@@ -283,11 +284,15 @@ begin
    --operation
    ---------------------------------------------------------------------------------------------------------------------
    operation_p : process(mclk_i)
-    variable heap_v : heap_t;
+    variable heap_v  : heap_t;
+    variable data1_v : std_logic_vector(127 downto 0);
+    variable data2_v : std_logic_vector(127 downto 0);
    begin
      if arst_i = '0' then
      elsif rising_edge(mclk_i) then
-       block_operation(data1_s,data2_s,config_i,status_s,heap_v);
+       data1_v := data1_s;
+       data2_v := data2_s;
+       block_operation(data1_v,data2_v,config_i,status_s,heap_v);
      end if;
    end process;
 

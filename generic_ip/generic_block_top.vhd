@@ -16,15 +16,15 @@ library ieee;
 	use ieee.std_logic_1164.all;
 	use ieee.numeric_std.all;
 library stdcores;
-	use stdcores.genecic_block_pkg.all;
+	use stdcores.generic_block_pkg.all;
 
-entity genecic_block_top is
+entity generic_block_top is
 	generic (
 		ram_addr            : positive := 9;
 		tdata_size					: positive := 128;
 		tdest_size					: positive := 1;
 		tuser_size					: positive := 1;
-		pipe_num						: positive := 1
+		pipe_num					: positive := 1;
 		type heap_t;
 		procedure block_operation (input : in std_logic_vector; output : out std_logic_vector; config_i : in reg_t; status_o : out reg_t; variable heap_io : inout heap_t )
 	);
@@ -73,9 +73,9 @@ entity genecic_block_top is
 		m00_axis_tuser	: out std_logic_vector(tuser_size-1 downto 0);
 		m00_axis_tdest	: out std_logic_vector(tdest_size-1 downto 0)
 	);
-end genecic_block_top;
+end generic_block_top;
 
-architecture top_arch of genecic_block_top is
+architecture top_arch of generic_block_top is
 
 	alias s00_axi_aclk	    : std_logic is mclk_i;
 	alias s00_axi_aresetn	  : std_logic is resetn_i;
@@ -103,7 +103,7 @@ architecture top_arch of genecic_block_top is
 begin
 
 -- Instantiation of Axi Bus Interface S00_AXI
-	regbank_u : genecic_block_regs
+	regbank_u : generic_block_regs
 	  port map (
 	    oreg_o    => oreg_o_s,
 	    ireg_i    => ireg_i_s,
@@ -134,7 +134,7 @@ begin
 	  );
 
 	-- Add user logic here
-	generic_block_inst: genecic_block_core
+	generic_block_inst: generic_block_core
     generic map(
       ram_addr        => ram_addr,
       data_size       => tdata_size,
@@ -163,8 +163,8 @@ begin
 			tdest_o      => m00_axis_tdest,
 
       --status and configuration registers
-			config_i     => oreg_o_s;
-			status_o     => ireg_i_s;
+			config_i     => oreg_o_s,
+			status_o     => ireg_i_s,
       busy_o       => busy_o_s
     );
 

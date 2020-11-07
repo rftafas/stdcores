@@ -21,7 +21,7 @@ use IEEE.math_real.all;
 --library UNISIM;
 --use UNISIM.VComponents.all;
 
-package genecic_block_pkg is
+package generic_block_pkg is
 
 	constant REG_NUM	        : integer := 32;
 	constant C_S_AXI_DATA_WIDTH	: integer := 32;
@@ -42,7 +42,7 @@ package genecic_block_pkg is
         others => (others => '0')
     );
 
-		component genecic_block_top is
+		component generic_block_top is
 			generic (
 				ram_addr            : positive := 9;
 				tdata_size					: positive := 128;
@@ -97,9 +97,9 @@ package genecic_block_pkg is
 				m00_axis_tuser	: out std_logic_vector(tuser_size-1 downto 0);
 				m00_axis_tdest	: out std_logic_vector(tdest_size-1 downto 0)
 			);
-		end component genecic_block_top;
+		end component generic_block_top;
 
-		component genecic_block_core is
+		component generic_block_core is
 		    generic (
 		        ram_addr     : integer;
 		        pipe_num     : integer;
@@ -131,9 +131,9 @@ package genecic_block_pkg is
 		        status_o     : reg_t;
 		        busy_o       : out std_logic
 		    );
-		end component genecic_block_core;
+		end component generic_block_core;
 
-		component genecic_block_regs is
+		component generic_block_regs is
         port (
             oreg_o       : out reg_t;
             ireg_i       : in  reg_t;
@@ -160,10 +160,10 @@ package genecic_block_pkg is
             S_AXI_RVALID	: out std_logic;
             S_AXI_RREADY	: in  std_logic
         );
-    end component genecic_block_regs;
+    end component generic_block_regs;
 
 end package;
 
-package body genecic_block_pkg is
+package body generic_block_pkg is
 
 end package body;
