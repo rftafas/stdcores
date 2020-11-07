@@ -17,7 +17,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-entity verification_ip_v1_0_M00_AXI is
+entity verification_ip_MAXI is
 	generic (
 		-- Users to add parameters here
         verbose : boolean := false;
@@ -92,9 +92,9 @@ entity verification_ip_v1_0_M00_AXI is
 		-- Read ready. This signal indicates that the master can accept the read data and response information.
 		M_AXI_RREADY	: out std_logic
 	);
-end verification_ip_v1_0_M00_AXI;
+end verification_ip_MAXI;
 
-architecture implementation of verification_ip_v1_0_M00_AXI is
+architecture implementation of verification_ip_MAXI is
 
 
 	-- Example user application signals

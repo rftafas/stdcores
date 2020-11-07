@@ -16,7 +16,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity verification_ip_v1_0_S00_AXIS is
+entity verification_ip_SAXIS is
 	generic (
         test_number     : integer;
         prbs_sel        : string  := "PRBS23";
@@ -50,9 +50,9 @@ entity verification_ip_v1_0_S00_AXIS is
 		-- Data is in valid
 		S_AXIS_TVALID	: in std_logic
 	);
-end verification_ip_v1_0_S00_AXIS;
+end verification_ip_SAXIS;
 
-architecture arch_imp of verification_ip_v1_0_S00_AXIS is
+architecture arch_imp of verification_ip_SAXIS is
 
 	signal axis_tready	: std_logic;
   signal packet_data  : unsigned(S_AXIS_TDATA'range) := (others => '0');

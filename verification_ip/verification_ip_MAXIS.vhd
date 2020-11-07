@@ -16,7 +16,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity verification_ip_v1_0_M00_AXIS is
+entity verification_ip_MAXIS is
 	generic (
 		-- Users to add parameters here
         test_number     : integer;
@@ -52,9 +52,9 @@ entity verification_ip_v1_0_M00_AXIS is
 		-- TREADY indicates that the slave can accept a transfer in the current cycle.
 		M_AXIS_TREADY	 : in  std_logic
 	);
-end verification_ip_v1_0_M00_AXIS;
+end verification_ip_MAXIS;
 
-architecture implementation of verification_ip_v1_0_M00_AXIS is
+architecture implementation of verification_ip_MAXIS is
 
 	--streaming data valid
 	signal axis_tvalid	: std_logic;

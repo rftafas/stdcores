@@ -17,9 +17,9 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-entity verification_ip_v1_0 is
+entity verification_top is
   generic (
-    test_number                      : integer          := 0;
+    test_sel                         : testtype_t       := all_ones;
     prbs_sel                         : string           := "PRBS23";
     packet                           : boolean          := false;
     packet_random                    : boolean          := false;
@@ -89,98 +89,11 @@ entity verification_ip_v1_0 is
     m00_axis_tlast   : out std_logic;
     m00_axis_tready  : in  std_logic
   );
-end verification_ip_v1_0;
+end verification_top;
 
 
-architecture arch_imp of verification_ip_v1_0 is
-    signal TEST_START       : BOOLEAN := TRUE;
-
-	-- component declaration
-	component verification_ip_v1_0_M00_AXI is
-		generic (
-			verbose                     : boolean := false;
-			C_M_AXI_ADDR_WIDTH	        : integer	:= 32;
-			C_M_AXI_DATA_WIDTH	        : integer	:= 32
-		);
-		port (
-			addr_i        : in  std_logic_vector(C_M_AXI_ADDR_WIDTH-1 downto 0);
-			data_i        : in  std_logic_vector(C_M_AXI_DATA_WIDTH-1 downto 0);
-			data_o        : out std_logic_vector(C_M_AXI_DATA_WIDTH-1 downto 0);
-			command       : in  std_logic_vector(2 downto 0);
-			start         : in  std_logic;
-			busy          : out std_logic;
-			M_AXI_ACLK	  : in  std_logic;
-			M_AXI_ARESETN	: in  std_logic;
-			M_AXI_AWADDR	: out std_logic_vector(C_M_AXI_ADDR_WIDTH-1 downto 0);
-			M_AXI_AWPROT	: out std_logic_vector(2 downto 0);
-			M_AXI_AWVALID	: out std_logic;
-			M_AXI_AWREADY	: in  std_logic;
-			M_AXI_WDATA	  : out std_logic_vector(C_M_AXI_DATA_WIDTH-1 downto 0);
-			M_AXI_WSTRB	  : out std_logic_vector(C_M_AXI_DATA_WIDTH/8-1 downto 0);
-			M_AXI_WVALID	: out std_logic;
-			M_AXI_WREADY	: in  std_logic;
-			M_AXI_BRESP	  : in  std_logic_vector(1 downto 0);
-			M_AXI_BVALID	: in  std_logic;
-			M_AXI_BREADY	: out std_logic;
-			M_AXI_ARADDR	: out std_logic_vector(C_M_AXI_ADDR_WIDTH-1 downto 0);
-			M_AXI_ARPROT	: out std_logic_vector(2 downto 0);
-			M_AXI_ARVALID	: out std_logic;
-			M_AXI_ARREADY	: in  std_logic;
-			M_AXI_RDATA	  : in  std_logic_vector(C_M_AXI_DATA_WIDTH-1 downto 0);
-			M_AXI_RRESP	  : in  std_logic_vector(1 downto 0);
-			M_AXI_RVALID	: in  std_logic;
-			M_AXI_RREADY	: out std_logic
-		);
-	end component verification_ip_v1_0_M00_AXI;
-
-	component verification_ip_v1_0_S00_AXIS
-		generic (
-		  test_number     : integer;
-		  prbs_sel        : string;
-		  packet          : boolean;
-		  packet_random   : boolean;
-		  packet_size_max : integer;
-		  packet_size_min : integer
-		);
-		port (
-		  TEST_START          : in  BOOLEAN;
-		  current_packet_size : in  integer;
-		  S_AXIS_ACLK         : in  std_logic;
-		  S_AXIS_ARESETN      : in  std_logic;
-		  S_AXIS_TREADY       : out std_logic;
-		  S_AXIS_TDATA        : in  std_logic_vector;
-		  S_AXIS_TSTRB        : in  std_logic_vector;
-		  S_AXIS_TLAST        : in  std_logic;
-		  S_AXIS_TUSER        : in  std_logic_vector;
-		  S_AXIS_TDEST        : in  std_logic_vector;
-		  S_AXIS_TVALID       : in  std_logic
-		);
-	end component verification_ip_v1_0_S00_AXIS;
-
-	component verification_ip_v1_0_M00_AXIS is
-    generic (
-      test_number     : integer;
-      prbs_sel        : string;
-      packet          : boolean;
-      packet_random   : boolean;
-      packet_size_max : integer;
-      packet_size_min : integer
-    );
-    port (
-      TEST_START          : in  BOOLEAN;
-      current_packet_size : out integer;
-      M_AXIS_ACLK         : in  std_logic;
-      M_AXIS_ARESETN      : in  std_logic;
-      M_AXIS_TVALID       : out std_logic;
-      M_AXIS_TDATA        : out std_logic_vector;
-      M_AXIS_TSTRB        : out std_logic_vector;
-      M_AXIS_TUSER        : out std_logic_vector;
-      M_AXIS_TDEST        : out std_logic_vector;
-      M_AXIS_TLAST        : out std_logic;
-      M_AXIS_TREADY       : in  std_logic
-    );
-  end component;
-
+architecture arch_imp of verification_top is
+  signal TEST_START       : BOOLEAN := TRUE;
 
 	type size_array is array (2**TUSER_SIZE-1 downto 0) of integer;
 	signal size_buffer : size_array := (others => 0);
@@ -194,7 +107,7 @@ architecture arch_imp of verification_ip_v1_0 is
 begin
 
     -- Instantiation of Axi Bus Interface M00_AXI
-    verification_ip_v1_0_M00_AXI_inst : verification_ip_v1_0_M00_AXI
+    verification_ip_MAXI_u : verification_ip_MAXI
         generic map (
           verbose                 => verbose,
           C_M_AXI_ADDR_WIDTH	    => C_M00_AXI_ADDR_WIDTH,
@@ -231,7 +144,7 @@ begin
         );
 
     -- Instantiation of Axi Bus Interface S00_AXIS
-    verification_ip_v1_0_S00_AXIS_inst : verification_ip_v1_0_S00_AXIS
+    verification_ip_SAXIS_u : verification_ip_SAXIS
         generic map (
             test_number     => test_number,
             prbs_sel        => prbs_sel,
@@ -259,7 +172,7 @@ begin
 		current_packet_size_rx <= size_buffer(to_integer(unsigned(s00_axis_tuser_s)));
 
     -- Instantiation of Axi Bus Interface M00_AXIS
-    verification_ip_v1_0_M00_AXIS_inst : verification_ip_v1_0_M00_AXIS
+    verification_ip_MAXIS_u : verification_ip_MAXIS
         generic map (
             test_number     => test_number,
             prbs_sel        => prbs_sel,
