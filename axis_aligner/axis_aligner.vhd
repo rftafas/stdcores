@@ -18,7 +18,7 @@ library ieee;
 library expert;
   use expert.std_logic_expert.all;
 library stdblocks;
-  use std_blocks.sync_lib.all;
+  use stdblocks.sync_lib.all;
 
 entity axis_aligner is
     generic (
@@ -31,16 +31,16 @@ entity axis_aligner is
       clk_i      : in  std_logic;
       rst_i      : in  std_logic;
         --AXIS Master Port
-      m_tdata_o  : out vector_array(number_ports-1 downto 0,tdata_size-1 downto 0);
-      m_tuser_o  : out vector_array(number_ports-1 downto 0,tuser_size-1 downto 0);
-      m_tdest_o  : out vector_array(number_ports-1 downto 0,tdest_size-1 downto 0);
+      m_tdata_o  : out std_logic_array (number_ports-1 downto 0,tdata_size-1 downto 0);
+      m_tuser_o  : out std_logic_array (number_ports-1 downto 0,tuser_size-1 downto 0);
+      m_tdest_o  : out std_logic_array (number_ports-1 downto 0,tdest_size-1 downto 0);
       m_tready_i : in  std_logic_vector(number_ports-1 downto 0);
       m_tvalid_o : out std_logic_vector(number_ports-1 downto 0);
       m_tlast_o  : out std_logic_vector(number_ports-1 downto 0);
         --AXIS Slave Port
-      s_tdata_i  : in  vector_array(number_ports-1 downto 0,tdata_size-1 downto 0);
-      s_tuser_i  : in  vector_array(number_ports-1 downto 0,tuser_size-1 downto 0);
-      s_tdest_i  : in  vector_array(number_ports-1 downto 0,tdest_size-1 downto 0);
+      s_tdata_i  : in  std_logic_array (number_ports-1 downto 0,tdata_size-1 downto 0);
+      s_tuser_i  : in  std_logic_array (number_ports-1 downto 0,tuser_size-1 downto 0);
+      s_tdest_i  : in  std_logic_array (number_ports-1 downto 0,tdest_size-1 downto 0);
       s_tready_o : out std_logic_vector(number_ports-1 downto 0);
       s_tvalid_i : in  std_logic_vector(number_ports-1 downto 0);
       s_tlast_i  : in  std_logic_vector(number_ports-1 downto 0)
@@ -58,14 +58,13 @@ architecture behavioral of axis_aligner is
 begin
 
   --Master Connections
-  m_tvalid_o <= s_tvalid_i;
   m_tlast_o  <= s_tlast_i;
   m_tdata_o  <= s_tdata_i;
   m_tuser_o  <= s_tuser_i;
   m_tdest_o  <= s_tdest_i;
 
   m_tready_s <= m_tready_i;
-  s_tready_o  <= s_tready_s
+  s_tready_o  <= s_tready_s;
 
   ready_gen : for j in number_ports-1 downto 0 generate
 
@@ -80,16 +79,16 @@ begin
       en_o   => en_o_s
     );
 
-    en_i_s(j)     <= s_tvalid_s(j) and ready_s(j);
+    en_i_s(j)     <= s_tvalid_i(j) and ready_s(j);
     s_tready_s(j) <= en_o_s(j);
-    m_tvalid_s(j) <= en_o_s(j);
+    m_tvalid_o(j) <= en_o_s(j);
 
     det_down_i : det_down
       port map (
         mclk_i => clk_i,
         rst_i  => rst_i,
-        din    => m_tready_s,
-        dout   => ready_s
+        din    => m_tready_s(j),
+        dout   => ready_s(j)
       );
 
   end generate;

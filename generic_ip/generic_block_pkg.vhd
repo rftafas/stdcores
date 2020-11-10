@@ -48,7 +48,7 @@ package generic_block_pkg is
 				tdata_size					: positive := 128;
 				tdest_size					: positive := 1;
 				tuser_size					: positive := 1;
-				pipe_num						: positive := 1
+				pipe_num						: positive := 1;
 				type heap_t;
 				procedure block_operation (input : in std_logic_vector; output : out std_logic_vector; config_i : in reg_t; status_o : out reg_t; variable heap_io : inout heap_t )
 			);

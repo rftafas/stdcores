@@ -59,6 +59,6 @@ begin
   end generate;
 
   --if every master port have a valid data, we present valid data. Same for tlast.
-  s_tready_o <= '1' when m_tready_i = all1_c else '0';
+  s_tready_o <= '1' when (and m_tready_i) = '1' else '0';
 
 end behavioral;
