@@ -37,12 +37,12 @@ entity axis_mux is
       clk_i       : in  std_logic;
       rst_i       : in  std_logic;
       --AXIS Slave Port
-      s_tdata_i  : in  vector_array(number_ports-1 downto 0)(tdata_size-1 downto 0);
-      s_tuser_i  : in  vector_array(number_ports-1 downto 0)(tuser_size-1 downto 0);
-      s_tdest_i  : in  vector_array(number_ports-1 downto 0)(tdest_size-1 downto 0);
+      s_tdata_i  : in  std_logic_array(number_ports-1 downto 0)(tdata_size-1 downto 0);
+      s_tuser_i  : in  std_logic_array(number_ports-1 downto 0)(tuser_size-1 downto 0);
+      s_tdest_i  : in  std_logic_array(number_ports-1 downto 0)(tdest_size-1 downto 0);
       s_tready_o : out std_logic_vector(number_ports-1 downto 0);
       s_tvalid_i : in  std_logic_vector(number_ports-1 downto 0);
-      s_tlast_i  : in  std_logic_vector(number_ports-1 downto 0)
+      s_tlast_i  : in  std_logic_vector(number_ports-1 downto 0);
       --AXIS Master port
       m_tdata_o  : out std_logic_vector(tdata_size-1 downto 0);
       m_tuser_o  : out std_logic_vector(tuser_size-1 downto 0);
@@ -100,9 +100,10 @@ begin
     end if;
   end process;
 
-  s0_tready_o   <= s_tready_s(0) and m_tready_i;
-  s1_tready_o   <= s_tready_s(1) and m_tready_i;
-
+  ready_gen : for j in 0 to number_ports-1 generate
+    s_tready_o(j) <= s_tready_s(j) and m_tready_i;
+  end generate;
+    
   priority_engine_i : queueing
     generic map (
       n_elements => number_ports
