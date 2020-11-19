@@ -24,7 +24,7 @@ library stdblocks;
 
 entity axis_packet_fifo is
     generic (
-      ram_type     : fifo_t := blockram;
+      ram_type     : fifo_t   := blockram;
       fifo_size    : positive := 8;
       tdata_size   : positive := 8;
       tdest_size   : natural  := 8;

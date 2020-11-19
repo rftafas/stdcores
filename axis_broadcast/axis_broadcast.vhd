@@ -20,25 +20,27 @@ library expert;
 
 entity axis_broadcast is
     generic (
-      number_masters : positive := 2;
-      tdata_size     : positive := 8;
-      tdest_size     : positive := 8;
-      tuser_size     : positive := 8
+      peripherals_num : positive := 2;
+      tdata_byte_size : positive := 8;
+      tdest_size      : positive := 8;
+      tuser_size      : positive := 8
     );
     port (
       clk_i       : in  std_logic;
       rst_i       : in  std_logic;
       --AXIS Master Port
-      m_tdata_o  : out vector_array(number_ports-1 downto 0)(tdata_size-1 downto 0);
-      m_tuser_o  : out vector_array(number_ports-1 downto 0)(tuser_size-1 downto 0);
-      m_tdest_o  : out vector_array(number_ports-1 downto 0)(tdest_size-1 downto 0);
-      m_tready_i : in  std_logic_vector(number_ports-1 downto 0);
-      m_tvalid_o : out std_logic_vector(number_ports-1 downto 0);
-      m_tlast_o  : out std_logic_vector(number_ports-1 downto 0);
+      m_tdata_o  : out std_logic_array(peripherals_num-1 downto 0)(8*tdata_byte_size-1 downto 0);
+      m_tuser_o  : out std_logic_array(peripherals_num-1 downto 0)(tuser_size-1 downto 0);
+      m_tdest_o  : out std_logic_array(peripherals_num-1 downto 0)(tdest_size-1 downto 0);
+      m_tdest_o  : out std_logic_array(peripherals_num-1 downto 0)(tdata_byte_size-1 downto 0);
+      m_tready_i : in  std_logic_vector(peripherals_num-1 downto 0);
+      m_tvalid_o : out std_logic_vector(peripherals_num-1 downto 0);
+      m_tlast_o  : out std_logic_vector(peripherals_num-1 downto 0);
       --AXIS Slave Port
-      s_tdata_i  : in  std_logic_vector(tdata_size-1 downto 0);
+      s_tdata_i  : in  std_logic_vector(8*tdata_byte_size-1 downto 0);
       s_tuser_i  : in  std_logic_vector(tuser_size-1 downto 0);
       s_tdest_i  : in  std_logic_vector(tdest_size-1 downto 0);
+      s_strb _i  : in  std_logic_vector(tdata_byte_size-1 downto 0);
       s_tready_o : out std_logic;
       s_tvalid_i : in  std_logic;
       s_tlast_i  : in  std_logic
@@ -50,7 +52,7 @@ architecture behavioral of axis_broadcast is
 begin
 
   --Master Connections
-  out_gen : for j in number_masters-1 downto 0 generate
+  out_gen : for j in peripherals_num-1 downto 0 generate
     m_tdata_o(j) <= s_tdata_i;
     m_tuser_o(j) <= s_tuser_i;
     m_tdest_o(j) <= s_tdest_i;
