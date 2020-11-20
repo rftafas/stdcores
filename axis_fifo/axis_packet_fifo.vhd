@@ -24,14 +24,14 @@ library stdblocks;
 
 entity axis_packet_fifo is
     generic (
-      ram_type     : fifo_t := blockram;
-      fifo_size    : integer := 8;
-      tdata_size   : integer := 8;
-      tdest_size   : integer := 8;
-      tuser_size   : integer := 8;
-      tuser_enable : boolean := false;
-      tlast_enable : boolean := false;
-      tdest_enable : boolean := false
+      ram_type     : fifo_t   := blockram;
+      fifo_size    : positive := 8;
+      tdata_size   : positive := 8;
+      tdest_size   : natural  := 8;
+      tuser_size   : natural  := 8;
+      tuser_enable : boolean  := false;
+      tlast_enable : boolean  := false;
+      tdest_enable : boolean  := false
     );
     port (
       --general
@@ -62,7 +62,7 @@ end axis_packet_fifo;
 architecture behavioral of axis_packet_fifo is
 
   constant input_vector_size : integer := s_tdata_i'length + s_tuser_i'length + s_tdest_i'length;
-  constant fifo_size         : integer := get_data_size(tdata_size,tdest_size,tuser_size,tuser_enable,tdest_enable);
+  constant header_fifo_size  : integer := get_data_size(tdata_size,tdest_size,tuser_size,tuser_enable,tdest_enable);
 
   signal   fifo_data_i_s  : std_logic_vector(input_vector_size-1 downto 0);
   signal   fifo_data_i_s  : std_logic_vector(input_vector_size-1 downto 0);

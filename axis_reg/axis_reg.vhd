@@ -25,7 +25,7 @@ library ieee;
 
 entity axis_reg is
     generic (
-      tdata_size      : integer := 8;
+      tdata_byte_size : integer := 8;
       tdest_size      : integer := 8;
       tuser_size      : integer := 8
     );
@@ -34,16 +34,18 @@ entity axis_reg is
       clk_i       : in  std_logic;
       rst_i       : in  std_logic;
 
-      s_tdata_i    : in  std_logic_vector(tdata_size-1 downto 0);
+      s_tdata_i    : in  std_logic_vector(8*tdata_byte_size-1 downto 0);
       s_tuser_i    : in  std_logic_vector(tuser_size-1 downto 0);
       s_tdest_i    : in  std_logic_vector(tdest_size-1 downto 0);
+      s_tstrb_i    : in  std_logic_vector(tdata_byte_size-1 downto 0);
       s_tready_o   : out std_logic;
       s_tvalid_i   : in  std_logic;
       s_tlast_i    : in  std_logic;
 
-      m_tdata_o    : out std_logic_vector(tdata_size-1 downto 0);
+      m_tdata_o    : out std_logic_vector(8*tdata_byte_size-1 downto 0);
       m_tuser_o    : out std_logic_vector(tuser_size-1 downto 0);
       m_tdest_o    : out std_logic_vector(tdest_size-1 downto 0);
+      m_tstrb_o    : out std_logic_vector(tdata_byte_size-1 downto 0);
       m_tready_i   : in  std_logic;
       m_tvalid_o   : out std_logic;
       m_tlast_o    : out std_logic
@@ -102,6 +104,7 @@ begin
         m_tdata_o  <= s_tdata_i;
         m_tuser_o  <= s_tuser_i;
         m_tdest_o  <= s_tdest_i;
+        m_tstrb_o  <= s_tstrb_i;
         m_tlast_o  <= s_tlast_i;
       end if;
     end if;
