@@ -20,12 +20,12 @@ use ieee.math_real.all;
 entity verification_ip_MAXI is
 	generic (
 		-- Users to add parameters here
-        verbose : boolean := false;
+    verbose : boolean := false;
 		-- Width of M_AXI address bus.
-        -- The master generates the read and write addresses of width specified as C_M_AXI_ADDR_WIDTH.
+    -- The master generates the read and write addresses of width specified as C_M_AXI_ADDR_WIDTH.
 		C_M_AXI_ADDR_WIDTH	: integer	:= 32;
 		-- Width of M_AXI data bus.
-        -- The master issues write data and accept read data where the width of the data bus is C_M_AXI_DATA_WIDTH
+    -- The master issues write data and accept read data where the width of the data bus is C_M_AXI_DATA_WIDTH
 		C_M_AXI_DATA_WIDTH	: integer	:= 32
 	);
 	port (

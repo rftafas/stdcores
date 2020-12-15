@@ -19,8 +19,8 @@ use ieee.numeric_std.all;
 entity verification_ip_MAXIS is
 	generic (
 		-- Users to add parameters here
-        test_number     : integer;
-        prbs_sel        : string  := "PRBS23";
+        test_sel        : testtype_t := all_zeroes;
+        prbs_sel        : prbs_t     := prbs23;
         packet          : boolean;
         packet_random   : boolean;
         packet_size_max : integer;
@@ -81,12 +81,12 @@ begin
 	M_AXIS_TVALID	<= axis_tvalid;
 	M_AXIS_TSTRB(M_AXIS_TSTRB'range) <= (others=>'1');
 
-  M_AXIS_TDATA(M_AXIS_TDATA'range) <= (others=>'0')                   when test_number = 0 else
-                  										(others=>'1')                   when test_number = 1 else
-										                  std_logic_vector(packet_data_s) when test_number = 2 else
-										                  stream_data_out                 when test_number = 3 else
-										                  std_logic_vector(packet_data_s) when test_number = 4 else
-										                  std_logic_vector(packet_data_s) when test_number = 5 else
+  M_AXIS_TDATA(M_AXIS_TDATA'range) <= (others=>'0')                   when test_sel = all_zeroes else
+                  										(others=>'1')                   when test_sel = all_ones else
+										                  std_logic_vector(packet_data_s) when test_sel = counter else
+										                  stream_data_out                 when test_sel = prbs else
+										                  std_logic_vector(packet_data_s) when test_sel = slave_valid_test else
+										                  std_logic_vector(packet_data_s) when test_sel = master_ready_test else
 										                  (others=>'-');
 
   M_AXIS_TLAST_s <= axis_tvalid when packet_counter_s = current_packet_size_s-1 and packet else
@@ -146,66 +146,61 @@ begin
 	  variable first_loop : boolean                       := true;
 	  variable prbs       : std_logic_vector(23 downto 1) := (others => '1');
 	begin
-	  if rising_edge(M_AXIS_ACLK) then
-	    if M_AXIS_ARESETN = '0' then
-	      axis_tvalid      <= '0';
-	      prbs             := (others => '1');
-	      packet_counter_s <= 0;
-	      packet_data_s    <= (others => '0');
-	    else
-	      prbs             := (others => '1');
-	      axis_tvalid      <= '0';
-	      stream_data_out  <= (others => 'U');
-	      packet_counter_s <= 0;
-	      packet_data_s    <= (others => '0');
+		if M_AXIS_ARESETN = '0' then
+			axis_tvalid      <= '0';
+			prbs             := (others => '1');
+			packet_counter_s <= 0;
+			packet_data_s    <= (others => '0');
+		elsif rising_edge(M_AXIS_ACLK) then
+      prbs             := (others => '1');
+      axis_tvalid      <= '0';
+      stream_data_out  <= (others => 'U');
+      packet_counter_s <= 0;
+      packet_data_s    <= (others => '0');
+      if TEST_START then
+        axis_tvalid <= '1';
+        if M_AXIS_TREADY = '1' then
+          for j in stream_data_out'range loop
+            prbs               := prbs(22 downto 1) & (prbs(23) xor prbs(18));
+            stream_data_out(j) <= prbs(23);
+          end loop;
+        end if;
 
-	      if TEST_START then
+        if test_sel = slave_valid_test then  --test input and output for gaped valids.
+          if packet then
+            if packet_counter_s = 0 then
+              axis_tvalid <= '0';
+            elsif packet_counter_s = current_packet_size_s/2 then
+              axis_tvalid <= '0';
+            elsif packet_counter_s = current_packet_size_s-1 then
+              axis_tvalid <= '0';
+            end if;
+          elsif packet_counter_s mod 16 = 0 then
+            axis_tvalid <= '0';
+          end if;
+        end if;
 
-	        axis_tvalid <= '1';
+        if M_AXIS_TREADY = '1' then
+          if axis_tvalid = '1' then
+            packet_data_s <= packet_data_s + 1;
+            if packet then
+              packet_counter_s <= packet_counter_s + 1;
+              if packet_counter_s = current_packet_size_s-1 then
+                packet_counter_s <= 0;
+              --packet_data_s    <= (others => '0');
+              end if;
+            end if;
+          end if;
+        end if;
 
-	        if M_AXIS_TREADY = '1' then
-	          for j in stream_data_out'range loop
-	            prbs               := prbs(22 downto 1) & (prbs(23) xor prbs(18));
-	            stream_data_out(j) <= prbs(23);
-	          end loop;
-	        end if;
+        if M_AXIS_TREADY = '0' then
+          first_loop := true;
+        elsif first_loop then
+          first_loop := false;
+        end if;
 
-	        if test_number = 4 then  --test input and output for gaped valids.
-	          if packet then
-	            if packet_counter_s = 0 then
-	              axis_tvalid <= '0';
-	            elsif packet_counter_s = current_packet_size_s/2 then
-	              axis_tvalid <= '0';
-	            elsif packet_counter_s = current_packet_size_s-1 then
-	              axis_tvalid <= '0';
-	            end if;
-	          elsif packet_counter_s mod 16 = 0 then
-	            axis_tvalid <= '0';
-	          end if;
-	        end if;
+        prbs_s <= prbs;
 
-	        if M_AXIS_TREADY = '1' then
-	          if axis_tvalid = '1' then
-	            packet_data_s <= packet_data_s + 1;
-	            if packet then
-	              packet_counter_s <= packet_counter_s + 1;
-	              if packet_counter_s = current_packet_size_s-1 then
-	                packet_counter_s <= 0;
-	              --packet_data_s    <= (others => '0');
-	              end if;
-	            end if;
-	          end if;
-	        end if;
-
-	        if M_AXIS_TREADY = '0' then
-	          first_loop := true;
-	        elsif first_loop then
-	          first_loop := false;
-	        end if;
-
-	        prbs_s <= prbs;
-
-	      end if;
 	    end if;
 	  end if;
 

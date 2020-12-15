@@ -104,6 +104,13 @@ package verification_pkg is
     );
   end component verification_ip_MAXIS;
 
+		type prbs_t is (
+				prbs23, --28 e 23
+				prbs15, --14 e 15
+				prbs11, -- 9 e 11
+				prbs9   -- 5 e  9
+		);
+
     type testtype_t is (
         all_zeroes,
         all_ones,
@@ -112,9 +119,9 @@ package verification_pkg is
         slave_valid_test,
         master_ready_test
     );
-    
+
     type test_list is array (testtype_t'high downto testtype_t'low) of integer;
-    
+
     constant test_decode : test_list := (
         all_zeroes 				=> 0,
         all_ones   				=> 1,

@@ -18,12 +18,12 @@ use ieee.numeric_std.all;
 
 entity verification_ip_SAXIS is
 	generic (
-        test_number     : integer;
-        prbs_sel        : string  := "PRBS23";
-        packet          : boolean := false;
-        packet_random   : boolean := false;
-        packet_size_max : integer := 1;
-        packet_size_min : integer := 1
+        test_sel        : testtype_t := all_zeroes;
+        prbs_sel        : prbs_t     := PRBS23;
+        packet          : boolean    := false;
+        packet_random   : boolean    := false;
+        packet_size_max : integer    := 1;
+        packet_size_min : integer    := 1
 	);
 	port (
 		-- Users to add ports here
@@ -79,14 +79,12 @@ begin
 	  constant all_zeros      : std_logic_vector(S_AXIS_TDATA'range) := (others => '0');
 	  constant all_ones       : std_logic_vector(S_AXIS_TDATA'range) := (others => '1');
 	begin
-
-	  if S_AXIS_ACLK'event and S_AXIS_ACLK = '1' then
-	    if S_AXIS_ARESETN = '0' then
-	      packet_counter := 0;
-	      packet_data    <= (others => '0');
-	      prbs           := (others => '1');
-	      axis_tready    <= '0';
-	    else
+		if S_AXIS_ARESETN = '0' then
+			packet_counter := 0;
+			packet_data    <= (others => '0');
+			prbs           := (others => '1');
+			axis_tready    <= '0';
+		elsif S_AXIS_ACLK'event and S_AXIS_ACLK = '1' then
 	      -- whenever a test stops, clean registers.
 	      packet_counter := 0;
 	      packet_data    <= (others => '0');
@@ -95,7 +93,7 @@ begin
 
 	      if TEST_START then
 
-	        if test_number = 5 then
+	        if test_sel = master_ready_test then
           	axis_tready <= S_AXIS_TVALID;
 	        else
 	          axis_tready <= '1';
@@ -112,26 +110,26 @@ begin
 	          end if;
 
 	          --DATA TESTS
-	          case test_number is
+	          case test_sel is
 	            --may change for VUNIT tests in the future.
-	            when 0 =>
+	            when all_zeroes =>
 	              if S_AXIS_TDATA /= all_zeros then
 	                report "Detected error on All Zeros test.";
 	              end if;
 
-	            when 1 =>
+	            when all_ones =>
 	              if S_AXIS_TDATA /= all_ones then
 	                report "Detected error on All Zeros test.";
 	              end if;
 
-	            when 2 =>
+	            when counter =>
 	              if S_AXIS_TDATA /= std_logic_vector(packet_data) then
 	                report "Error on sequential packet counter.";
 	                --fixes the sequence.
 	                packet_data <= unsigned(S_AXIS_TDATA);
 	              end if;
 
-	            when 3 =>
+	            when prbs =>
 	              for j in S_AXIS_TDATA'range loop
 	                prbs := prbs(22 downto 1) & (prbs(23) xor prbs(18));
 	                if S_AXIS_TDATA(j) /= prbs(23) then
@@ -139,12 +137,12 @@ begin
 	                end if;
 	              end loop;
 
-	            when 4 =>
+	            when slave_valid_test =>
 	              if S_AXIS_TDATA /= std_logic_vector(packet_data) then
 	                report "Error on start/end of sequence.";
 	              end if;
 
-	            when 5 =>
+	            when master_ready_test =>
 	              if packet_counter = current_packet_size_s/2 then
 	                axis_tready <= '0';  --stops data. waits until master present Valid.
 	              elsif packet_counter = current_packet_size_s-2 then
@@ -182,7 +180,6 @@ begin
 	        end if;
 
 	      end if;
-	    end if;
 			int_probe <= packet_number;
 	  end if;
 	end process;

@@ -21,7 +21,7 @@ end tb_verification_ip;
 
 architecture arch_imp of tb_verification_ip is
 
-  constant test_number                      : integer          := 2;
+  constant test_sel                      : integer          := 2;
   constant prbs_sel                         : string           := "PRBS23";
   constant packet                           : boolean          := true;
   constant packet_random                    : boolean          := true;
@@ -39,7 +39,7 @@ architecture arch_imp of tb_verification_ip is
 
   component verification_ip_v1_0 is
     generic (
-      test_number                      : integer := 2;
+      test_sel                      : integer := 2;
       prbs_sel                         : string;
       packet                           : boolean := true;
       packet_random                    : boolean := true;
@@ -162,7 +162,7 @@ begin
 -- I/O Connections assignments
   dut_u : verification_ip_v1_0
     generic map(
-      test_number                      => test_number,
+      test_sel                         => test_sel,
       prbs_sel                         => prbs_sel,
       packet                           => packet,
       packet_random                    => packet_random,

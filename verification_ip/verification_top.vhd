@@ -20,7 +20,7 @@ use ieee.math_real.all;
 entity verification_top is
   generic (
     test_sel                         : testtype_t       := all_ones;
-    prbs_sel                         : string           := "PRBS23";
+    prbs_sel                         : prbs_t           := prbs23;
     packet                           : boolean          := false;
     packet_random                    : boolean          := false;
     packet_size_max                  : integer          := 1023;
