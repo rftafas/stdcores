@@ -12,12 +12,8 @@
 --OR CONDITIONS OF ANY KIND, either express or implied. See the License for
 --the specific language governing permissions and limitations under the License.
 ----------------------------------------------------------------------------------
--- Simple AXI fifo.
--- It supports:
--- 1) Continuous streaming.
--- 2) Cut through packet mode.
--- 3) Full packet mode.
--- Sync or Async.
+-- Simple AXI-S register. Good to use when one need a breake or reduce number of
+-- logic levels without goind inside any module.
 ----------------------------------------------------------------------------------
 library ieee;
   use ieee.std_logic_1164.all;
@@ -25,27 +21,27 @@ library ieee;
 
 entity axis_reg is
     generic (
-      tdata_byte_size : integer := 8;
-      tdest_size      : integer := 8;
-      tuser_size      : integer := 8
+      tdata_byte : integer := 8;
+      tdest_size : integer := 8;
+      tuser_size : integer := 8
     );
     port (
       --general
       clk_i       : in  std_logic;
       rst_i       : in  std_logic;
 
-      s_tdata_i    : in  std_logic_vector(8*tdata_byte_size-1 downto 0);
+      s_tdata_i    : in  std_logic_vector(8*tdata_byte-1 downto 0);
       s_tuser_i    : in  std_logic_vector(tuser_size-1 downto 0);
       s_tdest_i    : in  std_logic_vector(tdest_size-1 downto 0);
-      s_tstrb_i    : in  std_logic_vector(tdata_byte_size-1 downto 0);
+      s_tstrb_i    : in  std_logic_vector(tdata_byte-1 downto 0);
       s_tready_o   : out std_logic;
       s_tvalid_i   : in  std_logic;
       s_tlast_i    : in  std_logic;
 
-      m_tdata_o    : out std_logic_vector(8*tdata_byte_size-1 downto 0);
+      m_tdata_o    : out std_logic_vector(8*tdata_byte-1 downto 0);
       m_tuser_o    : out std_logic_vector(tuser_size-1 downto 0);
       m_tdest_o    : out std_logic_vector(tdest_size-1 downto 0);
-      m_tstrb_o    : out std_logic_vector(tdata_byte_size-1 downto 0);
+      m_tstrb_o    : out std_logic_vector(tdata_byte-1 downto 0);
       m_tready_i   : in  std_logic;
       m_tvalid_o   : out std_logic;
       m_tlast_o    : out std_logic
@@ -74,16 +70,20 @@ begin
 
         when protection =>
           if m_tready_i = '1' then
-            control_mq <= idle;
+            if s_tvalid_i = '1' then
+              control_mq <= idle;
+            else
+              control_mq <= active;
+            end if;
           end if;
 
         when active =>
           if s_tvalid_i = '0' then
-            if m_tready_i = '1' then
-              control_mq <= active;
-            else
-              control_mq <= protection;
-            end if;
+            control_mq <= idle;
+          elsif m_tready_i = '1' then
+            control_mq <= active;
+          else
+            control_mq <= protection;
           end if;
 
         when others =>
@@ -93,14 +93,19 @@ begin
     end if;
   end process;
 
-  s_tready_o <= m_tready_i;
+  m_tvalid_o <= '0' when control_mq = idle else '1';
+  s_tready_o <= '0' when control_mq = protection else '1';
 
-  process(clk_i)
+  process(all)
   begin
-    if rising_edge(clk_i) then
-      if control_mq = active then
-
-        m_tvalid_o <= s_tvalid_i;
+    if rst_i = '1' then
+      m_tdata_o  <= (others=>'0');
+      m_tuser_o  <= (others=>'0');
+      m_tdest_o  <= (others=>'0');
+      m_tstrb_o  <= (others=>'0');
+      m_tlast_o  <= '0';
+    elsif rising_edge(clk_i) then
+      if control_mq = active or control_mq = idle then
         m_tdata_o  <= s_tdata_i;
         m_tuser_o  <= s_tuser_i;
         m_tdest_o  <= s_tdest_i;
