@@ -158,7 +158,9 @@ begin
     variable o : std_logic_vector(8*tdata_byte-1 downto 0);
     variable last : std_logic:='0';
   begin
-    saved <= false;
+    if rst_i = '1' then
+      saved <= false;
+    end if;
     wait until start and rising_edge(clk_i);
     wait for 100 ns;
 
@@ -169,16 +171,11 @@ begin
       if (j = 0) and (last='0') then
         error("Something went wrong. Last misaligned!");
       end if;
-      set(m_O, j, 0, to_integer(signed(o)));
     end loop;
 
-    info("m_O read!");
-
     wait until rising_edge(clk_i);
-    save_csv(m_O, tb_path & csv_o);
 
-    info("m_O saved!");
-
+    info("Test Complete!");
     wait until rising_edge(clk_i);
     saved <= true;
   end process;
