@@ -23,6 +23,7 @@ library stdblocks;
 library vunit_lib;
 	context vunit_lib.vunit_context;
   context vunit_lib.vc_context;
+  use work.prbs_pkg.all;
 
 entity axis_reg_tb is
   generic (
@@ -62,7 +63,7 @@ architecture behavioral of axis_reg_tb is
   end component axis_reg;
 
   constant run_time_c : time    := 100 us;
-  constant tdata_byte : integer := 8;
+  constant tdata_byte : integer := 4;
   constant tdest_size : integer := 8;
   constant tuser_size : integer := 8;
 
@@ -91,11 +92,16 @@ architecture behavioral of axis_reg_tb is
   constant cnt_top_c : integer := 8;
   constant m_O : integer_array_t := new_2d(cnt_top_c, 1, 8*tdata_byte, true);
   constant master_axi_stream : axi_stream_master_t := new_axi_stream_master(
-    data_length => 8*tdata_byte,
+    data_length  => 8*tdata_byte,
+    dest_length  => tdest_size,
+    user_length  => tuser_size,
     stall_config => new_stall_config(0.00, 1, 10)
   );
   constant slave_axi_stream  : axi_stream_slave_t  := new_axi_stream_slave(
-    data_length => 8*tdata_byte,
+    data_length  => 8*tdata_byte,
+    dest_length  => tdest_size,
+    user_length  => tuser_size,
+    id_length    => 1,
     stall_config => new_stall_config(0.00, 1, 10)
   );
 
@@ -136,8 +142,10 @@ begin
 
   stimuli: process
     variable last : std_logic;
+    variable prbs : prbs_t;
   begin
     wait until start and rising_edge(clk_i);
+    last := '0';
     done <= false;
     wait until rising_edge(clk_i);
     info("Sending data.");
@@ -146,17 +154,27 @@ begin
       if j = 0 then
         last := '1';
       end if;
-      push_axi_stream(net, master_axi_stream, std_logic_vector(to_signed(j, 8*tdata_byte)) , tlast => last);
+      push_axi_stream(net, master_axi_stream,
+        tdata => prbs.get_data(8*tdata_byte),
+        tlast => last,
+        tdest => std_logic_vector(to_signed(j, tdest_size)),
+        tuser => std_logic_vector(to_signed(j, tuser_size))
+      );
     end loop;
-
     info("Data sent!");
     wait until rising_edge(clk_i);
     done <= true;
   end process;
 
   save: process
-    variable o : std_logic_vector(8*tdata_byte-1 downto 0);
-    variable last : std_logic:='0';
+    variable tdata_v : std_logic_vector(8*tdata_byte-1 downto 0);
+    variable tdest_v : std_logic_vector(tdest_size-1 downto 0);
+    variable tuser_v : std_logic_vector(tuser_size-1 downto 0);
+    variable last    : std_logic;
+    variable tkeep_v : std_logic_vector(tdata_byte-1 downto 0);
+    variable tstrb_v : std_logic_vector(tdata_byte-1 downto 0);
+    variable tid_v   : std_logic_vector(0 downto 0);
+    variable prbs : prbs_t;
   begin
     if rst_i = '1' then
       saved <= false;
@@ -164,13 +182,24 @@ begin
     wait until start and rising_edge(clk_i);
     wait for 100 ns;
 
-    info("Receiving m_O from UUT...");
+    info("Receiving data from UUT...");
 
     for j in cnt_top_c-1 downto 0 loop
-      pop_axi_stream(net, slave_axi_stream, tdata => o, tlast => last);
+      pop_axi_stream(net, slave_axi_stream,
+        tdata => tdata_v,
+        tlast => last,
+        tkeep => tkeep_v,
+        tstrb => tstrb_v,
+        tid   => tid_v,
+        tdest => tdest_v,
+        tuser => tuser_v
+      );
       if (j = 0) and (last='0') then
         error("Something went wrong. Last misaligned!");
       end if;
+      check_equal(prbs.get_data(tdata_v'length),tdata_v,result("Checking data error") );
+      check_equal(to_integer(tdest_v),j,result("Checking counter value, error at " & to_string(j) ) );
+      check_equal(to_integer(tuser_v),j,result("Checking counter value, error at " & to_string(j) ) );
     end loop;
 
     wait until rising_edge(clk_i);
@@ -189,7 +218,10 @@ begin
       tvalid => s_tvalid_i,
       tready => s_tready_o,
       tdata  => s_tdata_i,
-      tlast  => s_tlast_i
+      tlast  => s_tlast_i,
+      tstrb  => s_tstrb_i,
+      tdest  => s_tdest_i,
+      tuser  => s_tuser_i
     );
 
   vunit_axiss: entity vunit_lib.axi_stream_slave
@@ -201,9 +233,11 @@ begin
       tvalid => m_tvalid_o,
       tready => m_tready_i,
       tdata  => m_tdata_o,
-      tlast  => m_tlast_o
+      tlast  => m_tlast_o,
+      tstrb  => m_tstrb_o,
+      tdest  => m_tdest_o,
+      tuser  => m_tuser_o
     );
-
 
   axis_reg_i : axis_reg
   generic map (
