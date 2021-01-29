@@ -20,44 +20,21 @@ library expert;
 	use expert.std_string.all;
 library stdblocks;
   use stdblocks.sync_lib.all;
+--stdcores
+  use work.axis_fifo_pkg.all
+
 library vunit_lib;
 	context vunit_lib.vunit_context;
   context vunit_lib.vc_context;
   use work.prbs_pkg.all;
 
-entity axis_reg_tb is
+entity axis_fifo_tb is
   generic (
     runner_cfg : string
 	);
-end axis_reg_tb;
+end axis_fifo_tb;
 
-architecture behavioral of axis_reg_tb is
-
-  component axis_reg
-    generic (
-      tdata_byte : integer := 8;
-      tdest_size : integer := 8;
-      tuser_size : integer := 8
-    );
-    port (
-      clk_i      : in  std_logic;
-      rst_i      : in  std_logic;
-      s_tdata_i  : in  std_logic_vector(8*tdata_byte-1 downto 0);
-      s_tuser_i  : in  std_logic_vector(tuser_size-1 downto 0);
-      s_tdest_i  : in  std_logic_vector(tdest_size-1 downto 0);
-      s_tstrb_i  : in  std_logic_vector(tdata_byte-1 downto 0);
-      s_tready_o : out std_logic;
-      s_tvalid_i : in  std_logic;
-      s_tlast_i  : in  std_logic;
-      m_tdata_o  : out std_logic_vector(8*tdata_byte-1 downto 0);
-      m_tuser_o  : out std_logic_vector(tuser_size-1 downto 0);
-      m_tdest_o  : out std_logic_vector(tdest_size-1 downto 0);
-      m_tstrb_o  : out std_logic_vector(tdata_byte-1 downto 0);
-      m_tready_i : in  std_logic;
-      m_tvalid_o : out std_logic;
-      m_tlast_o  : out std_logic
-    );
-  end component axis_reg;
+architecture behavioral of axis_fifo_tb is
 
   constant run_time_c : time    := 100 us;
   constant tdata_byte : integer := 4;
