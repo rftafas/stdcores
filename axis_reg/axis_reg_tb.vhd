@@ -20,10 +20,11 @@ library expert;
 	use expert.std_string.all;
 library stdblocks;
   use stdblocks.sync_lib.all;
+  use stdblocks.prbs_lib.all;
+
 library vunit_lib;
 	context vunit_lib.vunit_context;
   context vunit_lib.vc_context;
-  use work.prbs_pkg.all;
 
 entity axis_reg_tb is
   generic (

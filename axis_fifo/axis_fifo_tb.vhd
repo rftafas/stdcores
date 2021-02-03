@@ -20,13 +20,15 @@ library expert;
 	use expert.std_string.all;
 library stdblocks;
   use stdblocks.sync_lib.all;
+  use stdblocks.fifo_lib.all;
+  use stdblocks.prbs_lib.all;
 --stdcores
-  use work.axis_fifo_pkg.all
+  use work.axis_fifo_pkg.all;
 
 library vunit_lib;
 	context vunit_lib.vunit_context;
   context vunit_lib.vc_context;
-  use work.prbs_pkg.all;
+
 
 entity axis_fifo_tb is
   generic (
@@ -36,10 +38,11 @@ end axis_fifo_tb;
 
 architecture behavioral of axis_fifo_tb is
 
-  constant run_time_c : time    := 100 us;
+  constant run_time_c : time    := 200 ns;
   constant tdata_byte : integer := 4;
   constant tdest_size : integer := 8;
   constant tuser_size : integer := 8;
+  constant fifo_size  : integer := 4;
 
   signal   rst_i       : std_logic;
   signal   clk_i       : std_logic := '0';
@@ -57,14 +60,16 @@ architecture behavioral of axis_fifo_tb is
   signal m_tdest_o  : std_logic_vector(  tdest_size-1 downto 0);
   signal m_tstrb_o  : std_logic_vector(  tdata_byte-1 downto 0);
   signal m_tready_i : std_logic;
+  signal m_tready_s : std_logic;
   signal m_tvalid_o : std_logic;
   signal m_tlast_o  : std_logic := '0';
 
-  signal start : boolean := false;
-  signal done  : boolean := false;
-  signal saved : boolean := false;
+  signal start       : boolean := false;
+  signal done        : boolean := false;
+  signal saved       : boolean := false;
+  signal start_check : boolean := false;
 
-  constant cnt_top_c : integer := 8;
+  constant cnt_top_c : integer := 2**fifo_size+1;
 
   constant master_axi_stream : axi_stream_master_t := new_axi_stream_master(
     data_length  => 8*tdata_byte,
@@ -79,6 +84,9 @@ architecture behavioral of axis_fifo_tb is
     id_length    => 1,
     stall_config => new_stall_config(0.00, 1, 10)
   );
+
+  signal fifo_status_a_o : fifo_status;
+  signal fifo_status_b_o : fifo_status;
 
 begin
 
@@ -105,14 +113,23 @@ begin
         start <= true;
         wait until rising_edge(clk_i);
         start <= false;
-        wait until (done and saved and rising_edge(clk_i));
+        wait until done and rising_edge(clk_i);
+        start_check <= true;
+        wait until saved and rising_edge(clk_i);
         info("Test done");
+        check_passed(result("Free running finished."));
+
+      elsif run("Overflow Simulation") then
+        wait until fifo_status_a_o.overflow = '1';
+        check_passed(result("PRBS simulation Passed."));
 
       end if;
     end loop;
 
     test_runner_cleanup(runner); -- Simulation ends here
   end process;
+
+  test_runner_watchdog(runner, 10 us);
 
 
   stimuli: process
@@ -139,6 +156,9 @@ begin
     info("Data sent!");
     wait until rising_edge(clk_i);
     done <= true;
+    wait until rising_edge(clk_i);
+    done <= false;
+    wait;
   end process;
 
   save: process
@@ -149,12 +169,18 @@ begin
     variable tkeep_v : std_logic_vector(tdata_byte-1 downto 0);
     variable tstrb_v : std_logic_vector(tdata_byte-1 downto 0);
     variable tid_v   : std_logic_vector(0 downto 0);
-    variable prbs : prbs_t;
+    variable prbs    : prbs_t;
   begin
     if rst_i = '1' then
       saved <= false;
+      if not prbs.set_order(23) then
+        wait;
+      end if;
+      if not prbs.reset then
+        wait;
+      end if;
     end if;
-    wait until start and rising_edge(clk_i);
+    wait until start_check and rising_edge(clk_i);
     wait for 100 ns;
 
     info("Receiving data from UUT...");
@@ -184,6 +210,9 @@ begin
     saved <= true;
   end process;
 
+  m_tready_i <= '0' when running_test_case = "Overflow Simulation" else
+                m_tready_s;
+
   vunit_axism: entity vunit_lib.axi_stream_master
     generic map (
       master => master_axi_stream
@@ -206,7 +235,7 @@ begin
     port map (
       aclk   => clk_i,
       tvalid => m_tvalid_o,
-      tready => m_tready_i,
+      tready => m_tready_s,
       tdata  => m_tdata_o,
       tlast  => m_tlast_o,
       tstrb  => m_tstrb_o,
@@ -214,31 +243,44 @@ begin
       tuser  => m_tuser_o
     );
 
-  axis_reg_i : axis_reg
-  generic map (
-    tdata_byte => tdata_byte,
-    tdest_size => tdest_size,
-    tuser_size => tuser_size
-  )
-  port map (
-    clk_i      => clk_i,
-    rst_i      => rst_i,
-    s_tdata_i  => s_tdata_i,
-    s_tuser_i  => s_tuser_i,
-    s_tdest_i  => s_tdest_i,
-    s_tstrb_i  => s_tstrb_i,
-    s_tready_o => s_tready_o,
-    s_tvalid_i => s_tvalid_i,
-    s_tlast_i  => s_tlast_i,
-    m_tdata_o  => m_tdata_o,
-    m_tuser_o  => m_tuser_o,
-    m_tdest_o  => m_tdest_o,
-    m_tstrb_o  => m_tstrb_o,
-    m_tready_i => m_tready_i,
-    m_tvalid_o => m_tvalid_o,
-    m_tlast_o  => m_tlast_o
-  );
-
+    dut_u : axis_fifo
+      generic map (
+        ram_type     => blockram,
+        fifo_size    => fifo_size,
+        tdata_size   => 8*tdata_byte,
+        tdest_size   => tdest_size,
+        tuser_size   => tuser_size,
+        packet_mode  => false,
+        tuser_enable => true,
+        tlast_enable => true,
+        tdest_enable => true,
+        sync_mode    => false,
+        cut_through  => false
+      )
+      port map (
+        --general
+        clka_i       => clk_i,
+        rsta_i       => rst_i,
+        clkb_i       => clk_i,
+        rstb_i       => rst_i,
+  
+        s_tdata_i    => s_tdata_i,
+        s_tuser_i    => s_tuser_i,
+        s_tdest_i    => s_tdest_i,
+        s_tready_o   => s_tready_o,
+        s_tvalid_i   => s_tvalid_i,
+        s_tlast_i    => s_tlast_i,
+  
+        m_tdata_o    => m_tdata_o,
+        m_tuser_o    => m_tuser_o,
+        m_tdest_o    => m_tdest_o,
+        m_tready_i   => m_tready_i,
+        m_tvalid_o   => m_tvalid_o,
+        m_tlast_o    => m_tlast_o,
+  
+        fifo_status_a_o => fifo_status_a_o,
+        fifo_status_b_o => fifo_status_b_o
+      );
 
 
 end behavioral;

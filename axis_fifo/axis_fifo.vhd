@@ -28,7 +28,8 @@ library stdblocks;
   use stdblocks.sync_lib.all;
   use stdblocks.ram_lib.all;
   use stdblocks.fifo_lib.all;
-  use stdblocks.axis_lib.all;
+
+  use work.axis_fifo_pkg.all;
 
 entity axis_fifo is
     generic (
@@ -86,7 +87,7 @@ architecture behavioral of axis_fifo is
     sync_mode    => sync_mode
   );
 
-  constant internal_size_c : integer := fifo_size_f(fifo_param_c);
+  constant internal_size_c : integer := metadata_size_f(fifo_param_c) + tdata_size;
 
   signal fifo_data_i_s   : std_logic_vector(internal_size_c-1 downto 0);
   signal fifo_data_o_s   : std_logic_vector(internal_size_c-1 downto 0);
@@ -107,13 +108,11 @@ architecture behavioral of axis_fifo is
 begin
 
   --input, data to fifo
-  fifo_data_i_s     <= fifo_in_f(fifo_param_c,s_tdata_i,s_tuser_i,s_tdest_i,s_tlast_i);
+  fifo_in_f(fifo_param_c,fifo_data_i_s,s_tdata_i,s_tuser_i,s_tdest_i,s_tlast_i);
 
   --output, data FROM fifo.
-  m_tdata_o   <= tdata_out_f(fifo_param_c,fifo_data_o_s);
-  m_tuser_o   <= tuser_out_f(fifo_param_c,fifo_data_o_s);
-  m_tdest_o   <= tdest_out_f(fifo_param_c,fifo_data_o_s);
-  m_tlast_o   <= tlast_out_f(fifo_param_c,fifo_data_o_s);
+  fifo_out_f(fifo_param_c,fifo_data_o_s,m_tdata_o,m_tuser_o,m_tdest_o,m_tlast_o_s);
+  m_tlast_o <= m_tlast_o_s;
 
   s_tready_o      <= not fifo_status_a_s.full;
   ena_i_s         <= not fifo_status_a_s.full and s_tvalid_i;
@@ -192,7 +191,7 @@ begin
 
   end generate;
 
-  count_dn_s  <= tlast_out_f(fifo_param_c,fifo_data_o_s) and enb_i_s;
+  count_dn_s  <= m_tlast_o_s and enb_i_s;
 
   packet_proc : process(clk_s)
   begin

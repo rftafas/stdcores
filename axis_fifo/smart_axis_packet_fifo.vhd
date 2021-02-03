@@ -21,7 +21,8 @@ library stdblocks;
   use stdblocks.sync_lib.all;
   use stdblocks.ram_lib.all;
   use stdblocks.fifo_lib.all;
-  use stdblocks.axis_lib.all;
+  
+  use work.axis_fifo_pkg.all;
 
   entity smart_axis_packet_fifo is
       generic (
@@ -78,10 +79,10 @@ architecture behavioral of smart_axis_packet_fifo is
     sync_mode    => true
   );
 
-  constant meta_port_size : integer := fifo_size_f(meta_param_c);
+  constant metadata_size : integer := metadata_size_f(meta_param_c) + fifo_size;
 
-  signal meta_data_i_s    : std_logic_vector(meta_port_size-1 downto 0);
-  signal meta_data_o_s    : std_logic_vector(meta_port_size-1 downto 0);
+  signal meta_data_i_s    : std_logic_vector(metadata_size-1 downto 0);
+  signal meta_data_o_s    : std_logic_vector(metadata_size-1 downto 0);
 
   signal rd_pointer_s     : std_logic_vector(fifo_size-1 downto 0) := (others=>'0');
   signal wr_pointer_s     : std_logic_vector(fifo_size-1 downto 0) := (others=>'0');
@@ -99,15 +100,17 @@ architecture behavioral of smart_axis_packet_fifo is
   signal fifo_status_s    : fifo_status;
   signal meta_status_s    : fifo_status;
 
+  signal dead_end_s       : std_logic;
+
+  
 begin
 
   --input, data to fifo
-  meta_data_i_s <= fifo_in_f(meta_param_c,wr_pointer_s,s_tuser_i,s_tdest_i,'0');
+  fifo_in_f(meta_param_c,meta_data_i_s,wr_pointer_s,s_tuser_i,s_tdest_i,s_tlast_i);
 
   --output, data FROM fifo.
-  end_pointer_s <= tdata_out_f(meta_param_c,meta_data_o_s);
-  m_tuser_o     <= tuser_out_f(meta_param_c,meta_data_o_s);
-  m_tdest_o     <= tdest_out_f(meta_param_c,meta_data_o_s);
+  fifo_out_f(meta_param_c,meta_data_o_s,end_pointer_s,m_tuser_o,m_tdest_o,dead_end_s);
+
   m_tlast_o     <= m_tlast_o_s;
 
   meta_ena_i_s <= '0' when abort_i     = '1'                   else
@@ -123,7 +126,7 @@ begin
     generic map(
       ram_type  => distributed,
       fifo_size => meta_size,
-      port_size => meta_port_size
+      port_size => metadata_size
     )
     port map(
       --general

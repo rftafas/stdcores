@@ -25,7 +25,7 @@ stdblocks.add_source_files(join(root, "../../stdblocks/prbs_lib/*.vhd"))
 
 stdcores = vu.add_library("stdcores")
 stdcores.add_source_files(join(root, "./*.vhd"))
-test_tb = stdcores.entity("axis_reg_tb")
-test_tb.scan_tests_from_file(join(root, "axis_reg_tb.vhd"))
+test_tb = stdcores.entity("axis_fifo_tb")
+test_tb.scan_tests_from_file(join(root, "axis_fifo_tb.vhd"))
 
 vu.main()
