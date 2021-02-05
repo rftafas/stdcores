@@ -38,7 +38,7 @@ end axis_fifo_tb;
 
 architecture behavioral of axis_fifo_tb is
 
-  constant run_time_c : time    := 200 ns;
+  constant run_time_c : time    := 1 us;
   constant tdata_byte : integer := 4;
   constant tdest_size : integer := 8;
   constant tuser_size : integer := 8;
@@ -62,14 +62,16 @@ architecture behavioral of axis_fifo_tb is
   signal m_tready_i : std_logic;
   signal m_tready_s : std_logic;
   signal m_tvalid_o : std_logic;
+  signal m_tvalid_s : std_logic;
   signal m_tlast_o  : std_logic := '0';
 
-  signal start       : boolean := false;
-  signal done        : boolean := false;
-  signal saved       : boolean := false;
-  signal start_check : boolean := false;
+  signal fifo_control_s  : std_logic := '1'; 
 
-  constant cnt_top_c : integer := 2**fifo_size+1;
+  signal saved        : boolean := false;
+  signal start_check  : boolean := false;
+  signal simple_timer : boolean := true;
+
+  constant cnt_top_c : integer := 2**fifo_size;
 
   constant master_axi_stream : axi_stream_master_t := new_axi_stream_master(
     data_length  => 8*tdata_byte,
@@ -91,8 +93,12 @@ architecture behavioral of axis_fifo_tb is
 begin
 
   clk_i   <= not   clk_i after 5 ns;
+  simple_timer <= true, false after run_time_c;
 
   main : process
+    variable prbs     : prbs_t;
+    variable last     : std_logic := '0';
+    variable pckt_num : integer := 0;
   begin
     test_runner_setup(runner, runner_cfg);
 
@@ -102,74 +108,97 @@ begin
     rst_i     <= '0';
 
     while test_suite loop
-      if run("Free running simulation") then
-        report "Will run for " & to_string(run_time_c);
-        wait for run_time_c;
-        check_passed(result("Free running finished."));
+      if run("Sanity Test") then
+        check_passed(result("Sanity check."));
 
-      elsif run("PRBS simulation") then
-        info("Init test");
-        wait until rising_edge(clk_i);
-        start <= true;
-        wait until rising_edge(clk_i);
-        start <= false;
-        wait until done and rising_edge(clk_i);
+      elsif run("Data Packet simulation") then
+        info("Single data Packet with " & to_string(cnt_top_c) & " words.");
         start_check <= true;
+        wait until rising_edge(clk_i);
+        for j in 0 to cnt_top_c-1 loop
+          if j = cnt_top_c-1 then
+            last := '1';
+          end if;
+          push_axi_stream(net, master_axi_stream,
+            tdata => prbs.get_data(8*tdata_byte),
+            tlast => last,
+            tdest => std_logic_vector(to_signed(j, tdest_size)),
+            tuser => std_logic_vector(to_signed(j, tuser_size))
+          );
+        end loop;
+        wait until rising_edge(clk_i);
+        start_check <= false;
         wait until saved and rising_edge(clk_i);
-        info("Test done");
+        check_passed(result("Data Packet Test."));
+
+      elsif run("Free running simulation") then
+        info("Will run for " & to_string(run_time_c));
+        start_check <= true;
+        while simple_timer loop
+          if (pckt_num > 0) and (pckt_num mod (cnt_top_c-1) = 0) then
+            last := '1';
+          else
+            last := '0';
+          end if;
+          push_axi_stream(net, master_axi_stream,
+            tdata => prbs.get_data(8*tdata_byte),
+            tlast => last,
+            tdest => std_logic_vector(to_signed(pckt_num, tdest_size)),
+            tuser => std_logic_vector(to_signed(pckt_num, tuser_size))
+          );
+          pckt_num := pckt_num + 1;
+          wait until rising_edge(clk_i);
+        end loop;
         check_passed(result("Free running finished."));
-
+      
       elsif run("Overflow Simulation") then
-        wait until fifo_status_a_o.overflow = '1';
-        check_passed(result("PRBS simulation Passed."));
+        info("Sending data until fifo is full.");
+        fifo_control_s <= '0';
+        start_check      <= true;
 
+        while true loop
+          if (pckt_num > 0) and (pckt_num mod (cnt_top_c-1) = 0) then
+            last := '1';
+          else
+            last := '0';
+          end if;
+          push_axi_stream(net, master_axi_stream,
+            tdata => prbs.get_data(8*tdata_byte),
+            tlast => last,
+            tdest => std_logic_vector(to_signed(pckt_num, tdest_size)),
+            tuser => std_logic_vector(to_signed(pckt_num, tuser_size))
+          );
+          pckt_num := pckt_num + 1;
+          wait until rising_edge(clk_i);
+          if last = '1' and fifo_status_a_o.full = '1' then
+            exit;
+          end if;
+        end loop;
+        for j in 0 to 3 loop
+          wait until rising_edge(clk_i);
+        end loop;
+        fifo_control_s <= '1';
+        wait until m_tvalid_o = '0';
+        start_check      <= false;
+        check_passed(result("Overflow test."));
       end if;
     end loop;
 
     test_runner_cleanup(runner); -- Simulation ends here
   end process;
 
-  test_runner_watchdog(runner, 10 us);
-
-
-  stimuli: process
-    variable last : std_logic;
-    variable prbs : prbs_t;
-  begin
-    wait until start and rising_edge(clk_i);
-    last := '0';
-    done <= false;
-    wait until rising_edge(clk_i);
-    info("Sending data.");
-    for j in cnt_top_c-1 downto 0 loop
-      wait until rising_edge(clk_i);
-      if j = 0 then
-        last := '1';
-      end if;
-      push_axi_stream(net, master_axi_stream,
-        tdata => prbs.get_data(8*tdata_byte),
-        tlast => last,
-        tdest => std_logic_vector(to_signed(j, tdest_size)),
-        tuser => std_logic_vector(to_signed(j, tuser_size))
-      );
-    end loop;
-    info("Data sent!");
-    wait until rising_edge(clk_i);
-    done <= true;
-    wait until rising_edge(clk_i);
-    done <= false;
-    wait;
-  end process;
+  test_runner_watchdog(runner, 2*run_time_c);
 
   save: process
-    variable tdata_v : std_logic_vector(8*tdata_byte-1 downto 0);
-    variable tdest_v : std_logic_vector(tdest_size-1 downto 0);
-    variable tuser_v : std_logic_vector(tuser_size-1 downto 0);
-    variable last    : std_logic;
-    variable tkeep_v : std_logic_vector(tdata_byte-1 downto 0);
-    variable tstrb_v : std_logic_vector(tdata_byte-1 downto 0);
-    variable tid_v   : std_logic_vector(0 downto 0);
-    variable prbs    : prbs_t;
+    variable tdata_v  : std_logic_vector(8*tdata_byte-1 downto 0);
+    variable tdest_v  : std_logic_vector(tdest_size-1 downto 0);
+    variable tuser_v  : std_logic_vector(tuser_size-1 downto 0);
+    variable last     : std_logic;
+    variable tkeep_v  : std_logic_vector(tdata_byte-1 downto 0);
+    variable tstrb_v  : std_logic_vector(tdata_byte-1 downto 0);
+    variable tid_v    : std_logic_vector(0 downto 0);
+    variable prbs     : prbs_t;
+    variable pckt_num : integer := 0;
   begin
     if rst_i = '1' then
       saved <= false;
@@ -181,11 +210,8 @@ begin
       end if;
     end if;
     wait until start_check and rising_edge(clk_i);
-    wait for 100 ns;
-
-    info("Receiving data from UUT...");
-
-    for j in cnt_top_c-1 downto 0 loop
+    
+    while start_check loop
       pop_axi_stream(net, slave_axi_stream,
         tdata => tdata_v,
         tlast => last,
@@ -195,23 +221,21 @@ begin
         tdest => tdest_v,
         tuser => tuser_v
       );
-      if (j = 0) and (last='0') then
-        error("Something went wrong. Last misaligned!");
+      check_equal(prbs.get_data(tdata_v'length),tdata_v,result("Checking data error.") );
+      check_equal(to_integer(tdest_v),pckt_num,result("TDEST out of order, error at " & to_string(pckt_num) ) );
+      check_equal(to_integer(tuser_v),pckt_num,result("TUSER out of order, error at " & to_string(pckt_num) ) );
+      if (pckt_num > 0) and (pckt_num mod (cnt_top_c-1) = 0) then
+        check_equal(last,std_logic'('1'),result("TLAST Missing.") );
       end if;
-      check_equal(prbs.get_data(tdata_v'length),tdata_v,result("Checking data error") );
-      check_equal(to_integer(tdest_v),j,result("Checking counter value, error at " & to_string(j) ) );
-      check_equal(to_integer(tuser_v),j,result("Checking counter value, error at " & to_string(j) ) );
+      pckt_num := pckt_num + 1;
     end loop;
-
-    wait until rising_edge(clk_i);
-
     info("Test Complete!");
     wait until rising_edge(clk_i);
     saved <= true;
   end process;
 
-  m_tready_i <= '0' when running_test_case = "Overflow Simulation" else
-                m_tready_s;
+  m_tready_i <= fifo_control_s and m_tready_s;
+  m_tvalid_s <= fifo_control_s and m_tvalid_o;
 
   vunit_axism: entity vunit_lib.axi_stream_master
     generic map (
@@ -234,7 +258,7 @@ begin
     )
     port map (
       aclk   => clk_i,
-      tvalid => m_tvalid_o,
+      tvalid => m_tvalid_s,
       tready => m_tready_s,
       tdata  => m_tdata_o,
       tlast  => m_tlast_o,
@@ -258,7 +282,6 @@ begin
         cut_through  => false
       )
       port map (
-        --general
         clka_i       => clk_i,
         rsta_i       => rst_i,
         clkb_i       => clk_i,

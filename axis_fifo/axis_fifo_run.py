@@ -8,7 +8,6 @@ except:
     print("Also, make sure to have either GHDL or Modelsim installed.")
     exit()
 
-
 root = dirname(__file__)
 
 vu = VUnit.from_argv()
