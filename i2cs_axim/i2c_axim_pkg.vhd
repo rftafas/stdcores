@@ -16,34 +16,13 @@ library IEEE;
 	use IEEE.std_logic_1164.all;
 	use IEEE.numeric_std.all;
 
-package spi_axim_pkg is
+package i2c_axim_pkg is
 
-	constant WRITE_c       : std_logic_vector(7 downto 0) := x"02";
-  constant READ_c        : std_logic_vector(7 downto 0) := x"03";
-  constant FAST_WRITE_c  : std_logic_vector(7 downto 0) := x"0A";
-  constant FAST_READ_c   : std_logic_vector(7 downto 0) := x"0B";
-  constant WRITE_BURST_c : std_logic_vector(7 downto 0) := x"42";
-  constant READ_BURST_c  : std_logic_vector(7 downto 0) := x"4B";
-  constant EDIO_c        : std_logic_vector(7 downto 0) := x"3B";
-  constant EQIO_c        : std_logic_vector(7 downto 0) := x"38";
-  constant RSTIO_c       : std_logic_vector(7 downto 0) := x"FF";
-  constant RDMR_c        : std_logic_vector(7 downto 0) := x"05";
-  constant WRMR_c        : std_logic_vector(7 downto 0) := x"01";
-  constant RDID_c        : std_logic_vector(7 downto 0) := x"9F";
-  constant RUID_c        : std_logic_vector(7 downto 0) := x"4C";
-  constant WRSN_c        : std_logic_vector(7 downto 0) := x"C2";
-  constant RDSN_c        : std_logic_vector(7 downto 0) := x"C3";
-  constant DPD_c         : std_logic_vector(7 downto 0) := x"BA";
-  constant HBN_c         : std_logic_vector(7 downto 0) := x"B9";
-  constant IRQRD_c       : std_logic_vector(7 downto 0) := x"A2";
-  constant IRQWR_c       : std_logic_vector(7 downto 0) := x"A3";
-  constant IRQMRD_c      : std_logic_vector(7 downto 0) := x"D2";
-  constant IRQMWR_c      : std_logic_vector(7 downto 0) := x"D3";
-  constant STAT_c        : std_logic_vector(7 downto 0) := x"A5";
+	constant WRITE_c       : std_logic := '1';
+  constant READ_c        : std_logic := '0';
 
-	type spi_clock_t is (native, oversampled);
 
-    component spi_axi_top
+  component spi_axi_top
     generic (
       CPOL          : std_logic   := '0';
       CPHA          : std_logic   := '0';
@@ -178,58 +157,30 @@ package spi_axim_pkg is
       );
     end component spi_axi_master;
 
-    component spi_slave
-			generic (
-      	edge       : std_logic    := '0';
-      	clock_mode : spi_clock_t := native
+    component i2c_slave
+      generic (
+        stop_hold   : positive := 4; --number of mck after scl edge up for SDA edge up.
       );
       port (
-        rst_i        : in  std_logic;
-        mclk_i       : in  std_logic;
-        spck_i       : in  std_logic;
-        mosi_i       : in  std_logic;
-        miso_o       : out std_logic;
-        spcs_i       : in  std_logic;
-        spi_busy_o   : out std_logic;
-        spi_rxen_o   : out std_logic;
-        spi_txen_o   : out std_logic;
-        spi_rxdata_o : out std_logic_vector(7 downto 0);
-        spi_txdata_i : in  std_logic_vector(7 downto 0)
+        --general
+        rst_i  : in  std_logic;
+        mclk_i : in  std_logic;
+        --I2C
+        scl_i  : in  std_logic;
+        sda_i  : in  std_logic;
+        sda_o  : out std_logic;
+        --Internal
+        i2c_busy_o      : out std_logic;
+        i2c_rxen_o      : out std_logic;
+        i2c_rxdata_o    : out std_logic_vector(7 downto 0);
+        i2c_txen_i      : in  std_logic;
+        i2c_txdata_i    : in  std_logic_vector(7 downto 0)
       );
-    end component spi_slave;
+    end component i2c_slave;
 
-    component spi_irq_ctrl
-      port (
-        rst_i        : in  std_logic;
-        mclk_i       : in  std_logic;
-        master_irq_o : out std_logic;
-        vector_irq_o : out std_logic_vector(7 downto 0);
-        vector_irq_i : in  std_logic_vector(7 downto 0);
-        vector_clr_i : in  std_logic_vector(7 downto 0);
-        vector_msk_i : in  std_logic_vector(7 downto 0)
-      );
-    end component spi_irq_ctrl;
-
-		function edge_config (CPOL : std_logic;       CPHA : std_logic  ) return std_logic;
-		function edge_set    (edge : std_logic; clock_mode : spi_clock_t) return std_logic;
-
-end spi_axim_pkg;
+end i2c_axim_pkg;
 
 --a arquitetura
-package body spi_axim_pkg is
+package body i2c_axim_pkg is
 
-	function edge_config (CPOL : std_logic; CPHA: std_logic) return std_logic is
-	begin
-		return CPOL xnor CPHA;
-	end edge_config;
-
-	function edge_set(edge : std_logic; clock_mode : spi_clock_t) return std_logic is
-  begin
-    if clock_mode = native then
-      return edge;
-    else
-      return '1';
-    end if;
-  end edge_set;
-
-end spi_axim_pkg;
+end i2c_axim_pkg;
