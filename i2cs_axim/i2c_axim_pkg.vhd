@@ -178,9 +178,31 @@ package i2c_axim_pkg is
       );
     end component i2c_slave;
 
+    procedure tri_state (
+      signal   from_pin : out   std_logic;
+      signal   to_pin   : in    std_logic;
+      signal   pin      : inout std_logic
+    );
+
 end i2c_axim_pkg;
 
 --a arquitetura
 package body i2c_axim_pkg is
+
+  procedure tri_state (
+    signal   from_pin : out   std_logic;
+    signal   to_pin   : in    std_logic;
+    signal   pin      : inout std_logic
+  ) is
+  begin
+
+    from_pin   <= pin;
+    if to_pin = '0' then
+      pin <= '0';
+    else
+      pin <= 'Z';
+    end if;
+
+  end procedure;
 
 end i2c_axim_pkg;

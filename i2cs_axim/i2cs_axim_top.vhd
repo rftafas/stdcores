@@ -34,7 +34,6 @@ entity i2cs_axim_top is
     --spi
     sda_i   : in  std_logic;
     sda_o   : out std_logic;
-    sda_t_i : in  std_logic;
     scl_i   : in  std_logic;
     --AXI-MM
     M_AXI_AWID    : out std_logic_vector(ID_WIDTH-1 downto 0);
