@@ -53,10 +53,6 @@ architecture behavioral of i2c_slave is
   signal sda_up_en : std_logic;
   signal sda_dn_en : std_logic;
 
-  signal rx_en     : std_logic;
-  signal data_en   : std_logic_vector(7 downto 0) := "00000001";
-  signal rxdata_en : std_logic;
-  signal busy_s    : std_logic;
 
   type i2c_mq_t is (idle_st, send_ack_st, detect_stop_st, data_st);
   signal i2c_mq : i2c_mq_t := idle_st;

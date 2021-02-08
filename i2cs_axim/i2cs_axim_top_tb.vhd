@@ -17,15 +17,15 @@ library ieee;
 library stdblocks;
     use stdblocks.sync_lib.all;
 library stdcores;
-    use stdcores.spi_axim_pkg.all;
+    use stdcores.i2cs_axim_pkg.all;
 
 entity spi_axi_top_tb is
 end spi_axi_top_tb;
 
 architecture simulation of spi_axi_top_tb is
 
-  constant  spi_cpol      : std_logic := '0';
-  constant  spi_cpha      : std_logic := '0';
+  constant  my_addr : std_logic_vector(2 downto 0) := "011";
+  constant  opcode  : std_logic_vector(3 downto 0) := "1010";
 
   constant  ID_WIDTH      : integer := 1;
   constant  ID_VALUE      : integer := 0;
@@ -35,17 +35,8 @@ architecture simulation of spi_axi_top_tb is
 
   signal    rst_i         : std_logic;
   signal    mclk_i        : std_logic := '0';
-  signal    mosi_i        : std_logic;
-  signal    miso_o        : std_logic;
-  signal    spck_i        : std_logic;
-  signal    spcs_i        : std_logic;
-  signal    RSTIO_o       : std_logic;
-
-  constant  DID_i         : std_logic_vector(DATA_BYTE_NUM*8-1 downto 0) := x"76543210";
-  constant  UID_i         : std_logic_vector(DATA_BYTE_NUM*8-1 downto 0) := x"AAAAAAAA";
-  constant  serial_num_i  : std_logic_vector(DATA_BYTE_NUM*8-1 downto 0) := x"A4A4A4A4";
-  signal    irq_i         : std_logic_vector(7 downto 0)                 := x"86";
-  signal    irq_o         : std_logic;
+  signal    sda           : std_logic;
+  signal    scl           : std_logic;
 
   signal    M_AXI_AWID    : std_logic_vector(ID_WIDTH-1 downto 0);
   signal    M_AXI_AWVALID : std_logic;
@@ -77,94 +68,118 @@ architecture simulation of spi_axi_top_tb is
   constant spi_period      : time := ( 1.000 / frequency_mhz) * 1 us;
   constant spi_half_period : time := spi_period;
 
-  type spi_buffer_t is array (NATURAL RANGE <>) of std_logic_vector(7 downto 0);
-  signal RDSN_c        : spi_buffer_t(4 downto 0) := (x"C3", others => x"00");
-  signal WRSN_c        : spi_buffer_t(4 downto 0) := (x"C2", x"89", x"AB", x"CD", x"EF" );
-  signal RDID_c        : spi_buffer_t(4 downto 0) := (x"9F", others => x"00");
-  signal RUID_c        : spi_buffer_t(4 downto 0) := (x"4C", others => x"00");
-
-  signal IRQRD_c       : spi_buffer_t(1 downto 0) := (x"A2", x"00");
-  signal IRQWR_c       : spi_buffer_t(1 downto 0) := (x"A3", x"0F");
-  signal IRQMRD_c      : spi_buffer_t(1 downto 0) := (x"D2", x"00");
-  signal IRQMWR_c      : spi_buffer_t(1 downto 0) := (x"D3", x"F0");
-
-  --read/write
-  signal SIMPLE_READ_c   : spi_buffer_t(8 downto 0) := (READ_c, others => x"00");
-  signal SIMPLE_WRITE_c  : spi_buffer_t(8 downto 0) := (
-    WRITE_c,
-    x"00",
-    x"00",
-    x"00",
-    x"00",
-    x"AB",
-    x"CD",
-    x"12",
-    x"34"
-  );
-
-  signal SIMPLE_READ_2_c   : spi_buffer_t(12 downto 0) := (READ_c, others => x"00");
-  signal SIMPLE_WRITE_2_c  : spi_buffer_t(12 downto 0) := (
-    WRITE_c,
-    x"00",
-    x"00",
-    x"00",
-    x"00",
-    x"AB",
-    x"CD",
-    x"12",
-    x"34",
-    x"56",
-    x"78",
-    x"9A",
-    x"BC"
-  );
-
-  --read/write
-  signal FAST_READ_WORD_c     : spi_buffer_t(13 downto 0) := (FAST_READ_c, others => x"00");
-  signal FAST_WRITE_WORD_c    : spi_buffer_t(13 downto 0) := (
-    FAST_WRITE_c,
-    x"00",
-    x"00",
-    x"00",
-    x"00",
-    X"UU",--intentional trash
-    x"AB",
-    x"CD",
-    x"12",
-    x"34",
-    x"56",
-    x"78",
-    x"9A",
-    x"BC"
-  );
-
   signal spi_rxdata_s    : spi_buffer_t(15 downto 0);
   signal spi_rxdata_en   : std_logic;
 
-  procedure spi_bus (
-    signal data_i  : in  spi_buffer_t;
-    signal data_o  : out spi_buffer_t;
-    signal spcs    : out std_logic;
-    signal spck    : out std_logic;
-    signal miso    : in  std_logic;
-    signal mosi    : out std_logic
+  function to_H ( input : std_logic ) return std_logic is
+  begin
+    if input = '1' then
+      return 'H';
+    else
+      return input;
+    end if;
+  end to_H;
+
+  procedure i2c_start (
+    signal sda     : inout std_logic;
+    signal scl     : out   std_logic;
   ) is
   begin
-    for k in data_i'range loop
-      for j in 7 downto 0 loop
-        spcs <= '0';
-        spck <= '0';
-        mosi <= data_i(k)(j);
-        wait for spi_half_period;
-        spck      <= '1';
-        data_o(k)(j) <= miso;
-        wait for spi_half_period;
-      end loop;
-    end loop;
-    spcs <= '1';
-    spck <= '0';
-    mosi <= 'H';
+    --start
+    scl <= '1';
+    sda <= 'H';
+    wait for 50 ns;
+    sda <= '0';
+    wait for 50 ns;
   end procedure;
+
+  procedure i2c_send (
+    signal sda     : inout std_logic;
+    signal scl     : out   std_logic;
+    signal data_i  : in    std_logic_vector(7 downto 0)
+  ) is
+  begin
+    scl <= '0';
+    for j in 7 downto 0 loop
+      sda <= to_H(data_i(j));
+      wait for 50 ns;
+      scl <= '1';
+      wait for 50 ns;
+      scl <= '0';
+    end loop;
+    wait for 50 ns;
+    wait until sda = '0';
+    scl <= '1';
+    wait for 50 ns;
+  end i2c_send;
+
+  procedure i2c_get (
+    signal data_o  : out   std_logic_vector(7 downto 0);
+    signal ack     : in    boolean;
+    signal sda     : inout std_logic;
+    signal scl     : out   std_logic;
+  ) is
+  begin
+    scl <= '0';
+    for j in 7 downto 0 loop
+      wait for 50 ns
+      scl <= '1';
+      wait for 50 ns;
+      data_o(j) <= to_X01(sda);
+      scl <= '0';
+    end loop;
+
+    if ack then
+      sda <= '0';
+    else
+      sda <= '1';
+    end if;
+
+    wait for 50 ns;
+    scl <= '1';
+    wait for 50 ns;
+  end i2c_send;
+
+  procedure i2c_stop (
+    signal sda     : inout std_logic;
+    signal scl     : out   std_logic;
+  ) is
+  begin
+    sda <= '1';
+    wait for 50 ns;
+  end i2c_send;
+
+  procedure i2c_send_buffer (
+    signal sda         : inout std_logic;
+    signal scl         : out   std_logic;
+    signal data_buffer : in    std_logic_array
+  ) is
+  begin
+    i2c_start(sda,scl);
+    i2c_send(sda,scl, opcode & my_addr & write_c);
+    for j in data_buffer'range loop
+      i2c_send(sda,scl,data_buffer(j));
+    end loop;
+    i2c_stop(sda,scl);
+  end send_buffer;
+
+  procedure i2c_get_buffer (
+    signal sda         : inout std_logic;
+    signal scl         : out   std_logic;
+    signal address     : in    std_logic_vector(15 downto 0);
+    signal data_buffer : in    std_logic_array
+  ) is
+  begin
+    i2c_start(sda,scl);
+    i2c_send(sda,scl, opcode & my_addr & write_c);
+    for j in data_buffer'range loop
+      if j = data_buffer'right then
+        i2c_get(sda,scl,data_buffer(j));
+      else
+
+    end loop;
+    i2c_stop(sda,scl);
+  end read_buffer;
 
 begin
 
