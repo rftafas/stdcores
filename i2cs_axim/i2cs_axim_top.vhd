@@ -20,12 +20,15 @@ use ieee.std_logic_1164.all;
 library stdblocks;
 use stdblocks.sync_lib.all;
 library stdcores;
-use stdcores.spi_axim_pkg.all;
+use stdcores.i2cs_axim_pkg.all;
 
 entity i2cs_axim_top is
   generic (
-    ADDR_BYTE_NUM : integer := 4;
-    DATA_BYTE_NUM : integer := 4
+    ID_WIDTH      : integer := 1;
+    ID_VALUE      : integer := 0;
+    ADDR_BYTE_NUM : integer := 2;
+    DATA_BYTE_NUM : integer := 4;
+    opcode_c      : std_logic_vector(3 downto 0) := "1010"
   );
   port (
     --general
@@ -34,6 +37,7 @@ entity i2cs_axim_top is
     --i2c
     sda_i     : in std_logic;
     sda_o     : out std_logic;
+    sda_oen_o : out std_logic;
     scl_i     : in std_logic;
     my_addr_i : in std_logic_vector(2 downto 0);
     --AXI-MM
@@ -71,13 +75,6 @@ end i2cs_axim_top;
 
 architecture behavioral of i2cs_axim_top is
 
-  signal irq_s       : std_logic_vector(7 downto 0);
-  signal irq_clear_s : std_logic_vector(7 downto 0);
-  signal irq_mask_s  : std_logic_vector(7 downto 0);
-
-  signal spick_en : std_logic;
-  signal spick_s  : std_logic;
-
   signal bus_write_s  : std_logic;
   signal bus_read_s   : std_logic;
   signal bus_done_s   : std_logic;
@@ -85,40 +82,36 @@ architecture behavioral of i2cs_axim_top is
   signal bus_data_o_s : std_logic_vector(DATA_BYTE_NUM * 8 - 1 downto 0);
   signal bus_addr_s   : std_logic_vector(ADDR_BYTE_NUM * 8 - 1 downto 0);
 
-  signal spi_busy_s   : std_logic;
-  signal spi_rxen_s   : std_logic;
-  signal spi_txen_s   : std_logic;
-  signal spi_rxdata_s : std_logic_vector(7 downto 0);
-  signal spi_txdata_s : std_logic_vector(7 downto 0);
-
-  constant edge : std_logic := edge_config(CPOL, CPHA);
+  signal i2c_busy_s   : std_logic;
+  signal i2c_rxen_s   : std_logic;
+  signal i2c_txen_s   : std_logic;
+  signal i2c_rxdata_s : std_logic_vector(7 downto 0);
+  signal i2c_txdata_s : std_logic_vector(7 downto 0);
 
 begin
 
-  spi_slave_u : spi_slave
-  generic map(
-    edge       => edge,
-    clock_mode => clock_mode
-  )
-  port map(
-    rst_i        => rst_i,
-    mclk_i       => mclk_i,
-    spck_i       => spck_i,
-    mosi_i       => mosi_i,
-    miso_o       => miso_o,
-    spcs_i       => spcs_i,
-    spi_busy_o   => spi_busy_s,
-    spi_rxen_o   => spi_rxen_s,
-    spi_txen_o   => spi_txen_s,
-    spi_rxdata_o => spi_rxdata_s,
-    spi_txdata_i => spi_txdata_s
-  );
+  i2c_slave_u : i2c_slave
+    generic map(
+      stop_hold => 4
+    )
+    port map(
+      rst_i        => rst_i,
+      mclk_i       => mclk_i,
+      scl_i        => scl_i,
+      sda_i        => sda_i,
+      sda_o        => sda_o,
+      i2c_busy_o   => i2c_busy_s,
+      i2c_rxen_o   => i2c_rxen_s,
+      i2c_rxdata_o => i2c_rxdata_s,
+      i2c_txen_i   => i2c_txen_s,
+      i2c_txdata_i => i2c_txdata_s
+    );
 
-  spi_mq_u : i2c_control_mq
+  spi_mq_u : i2cs_control_mq
   generic map(
     addr_word_size => ADDR_BYTE_NUM,
     data_word_size => DATA_BYTE_NUM,
-    serial_num_rw  => serial_num_rw
+    opcode_c       => opcode_c
   )
   port map(
     rst_i        => rst_i,
@@ -129,15 +122,16 @@ begin
     bus_data_i   => bus_data_o_s,
     bus_data_o   => bus_data_i_s,
     bus_addr_o   => bus_addr_s,
-    i2c_busy_i   => spi_busy_s,
-    i2c_rxen_i   => spi_rxen_s,
-    i2c_txen_o   => spi_txen_s,
-    i2c_txdata_o => spi_txdata_s,
-    i2c_rxdata_i => spi_rxdata_s,
+    i2c_busy_i   => i2c_busy_s,
+    i2c_rxen_i   => i2c_rxen_s,
+    i2c_txen_o   => i2c_txen_s,
+    i2c_txdata_o => i2c_txdata_s,
+    i2c_rxdata_i => i2c_rxdata_s,
+    i2c_oen_o    => sda_oen_o,
     my_addr_i    => my_addr_i
   );
 
-  axi_master_u : i2c_axi_master
+  axi_master_u : i2cs_axi_master
   generic map(
     ID_WIDTH      => ID_WIDTH,
     ID_VALUE      => ID_VALUE,

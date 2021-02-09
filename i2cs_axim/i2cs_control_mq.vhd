@@ -20,11 +20,11 @@ library expert;
 library stdblocks;
     use stdblocks.sync_lib.all;
 library stdcores;
-    use stdcores.spi_axim_pkg.all;
+    use stdcores.i2cs_axim_pkg.all;
 library stdblocks;
     use stdblocks.sync_lib.all;
 
-entity spi_control_mq is
+entity i2cs_control_mq is
     generic (
       addr_word_size : integer := 2;
       data_word_size : integer := 4;
@@ -51,9 +51,9 @@ entity spi_control_mq is
       --config
       my_addr_i    : in  std_logic_vector(2 downto 0)
     );
-end spi_control_mq;
+end i2cs_control_mq;
 
-architecture behavioral of spi_control_mq is
+architecture behavioral of i2cs_control_mq is
 
   signal modereg_s   : std_logic_vector(7 downto 0) := (others=>'0');
   signal irq_mask_s  : std_logic_vector(7 downto 0) := (others=>'0');
@@ -85,11 +85,11 @@ architecture behavioral of spi_control_mq is
     wait_forever_st
   );
 
-  record i2c_param_t is
+  type i2c_param_t is record
     command  : std_logic;
     opcode   : std_logic_vector(3 downto 0);
-    slv_addr : std_logic_vector(2 downto 0)
-  end record i2c_handler_r;
+    slave_addr : std_logic_vector(2 downto 0);
+  end record i2c_param_t;
 
 
   signal i2c_mq      : i2c_control_t := idle_st;
@@ -100,13 +100,12 @@ architecture behavioral of spi_control_mq is
   procedure next_state (
     variable i2c_data : in    i2c_param_t;
     signal   my_addr  : in    std_logic_vector(2 downto 0);
-    signal   aux_cnt  : in    integer;
-    signal   state    : inout spi_control_t
-  )
-  return spi_control_t is
-    variable tmp        : spi_control_t;
-    variable slave_addr : std_logic_vector(3 downto 0);
-    variable opcode     : std_logic_vector(2 downto 0);
+             aux_cnt  : in    integer;
+    signal   state    : inout i2c_control_t
+  ) is
+    variable tmp        : i2c_control_t;
+    variable slave_addr : std_logic_vector(2 downto 0);
+    variable opcode     : std_logic_vector(3 downto 0);
     variable command    : std_logic;
   begin
 
@@ -161,7 +160,7 @@ architecture behavioral of spi_control_mq is
 
     end case;
 
-    state := tmp;
+    state <= tmp;
 
   end procedure;
 
@@ -175,9 +174,9 @@ begin
   i2c_mq_p : process(all)
     variable aux_cnt     : integer range -1 to buffer_size := 0;
     variable i2c_param_v : i2c_param_t := (
-      command  => '0';
-      opcode   => "0000";
-      slv_addr => "000"
+      command    => '0',
+      opcode     => "0000",
+      slave_addr => "000"
     );
     variable buffer_v    : std_logic_vector(8*buffer_size-1 downto 0);
     variable addr_v      : std_logic_vector(8*addr_word_size-1 downto 0);
@@ -191,9 +190,9 @@ begin
       bus_read_o   <= '0';
       bus_write_o  <= '0';
       bus_addr_o   <= (others=>'0');
-      i2c_param_v.command  => '0';
-      i2c_param_v.opcode   => "0000";
-      i2c_param_v.slv_addr => "000"
+      i2c_param_v.command    := '0';
+      i2c_param_v.opcode     := "0000";
+      i2c_param_v.slave_addr := "000";
     elsif mclk_i = '1' and mclk_i'event then
       case i2c_mq is
           when idle_st  =>
@@ -204,7 +203,7 @@ begin
             i2c_oen_o    <= '0';
             i2c_txdata_o <= (others=>'1');
             buffer_v     := (others=>'0');
-            next_state(i2c_data, my_addr_i, aux_cnt, i2c_mq);
+            next_state(i2c_param_v, my_addr_i, aux_cnt, i2c_mq);
 
           when wait_command_st  =>
             i2c_txdata_o <= (others=>'1');
@@ -220,7 +219,7 @@ begin
               aux_cnt  := aux_cnt + 1;
               buffer_v := buffer_v sll 8;
               buffer_v := set_slice(buffer_v, i2c_rxdata_i, 0);
-              next_state(i2c_rxdata_i, my_addr_i, aux_cnt, i2c_mq);
+              next_state(i2c_param_v, my_addr_i, aux_cnt, i2c_mq);
               addr_v     := buffer_v(addr_v'range);
               if aux_cnt = addr_word_size then
                 aux_cnt    := 0;
@@ -230,22 +229,20 @@ begin
 
           when wait4i2c_st =>
             if i2c_rxen_i = '1' then
-                    aux_cnt      := aux_cnt + 1;
-                    i2c_mq <= next_state(i2c_param_v, my_addr_i, aux_cnt, i2c_mq);
-                    buffer_v     := buffer_v sll 8;
-                    buffer_v     := set_slice(buffer_v, i2c_rxdata_i, 0);
-                  elsif spi_txen_i = '0' then
-                  elsif spi_txen_i = '1' then
-                    i2c_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
-                  end if;
-
+              aux_cnt      := aux_cnt + 1;
+              next_state(i2c_param_v, my_addr_i, aux_cnt, i2c_mq);
+              buffer_v     := buffer_v sll 8;
+              buffer_v     := set_slice(buffer_v, i2c_rxdata_i, 0);
+            --elsif spi_txen_i = '0' then
+            --elsif spi_txen_i = '1' then
+              i2c_txdata_o <= get_slice(buffer_v,8,buffer_size-1);
             end if;
             if (aux_cnt = data_word_size) then
               aux_cnt := 0;
             end if;
 
           when act_st =>
-            if command = READ_c then
+            if i2c_param_v.command = READ_c then
                 i2c_oen_o  <= '1';
                 bus_read_o <= '1';
                 if bus_done_i = '1' then
@@ -260,7 +257,7 @@ begin
                 i2c_txdata_o <= (others=>'0');
                 bus_write_o  <= '1';
                 if bus_done_i = '1' then
-                  i2c_mq      <= next_state(i2c_param_v, my_addr_i, aux_cnt, i2c_mq);
+                  next_state(i2c_param_v, my_addr_i, aux_cnt, i2c_mq);
                   bus_write_o <= '0';
                 end if;
 
@@ -273,7 +270,7 @@ begin
 
           when others   =>
             --i2c_txdata_o <= x"FF";
-            i2c_mq  <= next_state(i2c_param_v,my_addr_i, aux_cnt, i2c_mq);
+            next_state(i2c_param_v,my_addr_i, aux_cnt, i2c_mq);
 
         end case;
 

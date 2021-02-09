@@ -20,7 +20,7 @@ use expert.std_logic_expert.all;
 library stdblocks;
 use stdblocks.sync_lib.all;
 
-entity i2c_axi_master is
+entity i2cs_axi_master is
 	generic (
 		-- Thread ID Width and value
 		ID_WIDTH : integer := 1;
@@ -34,11 +34,11 @@ entity i2c_axi_master is
 		M_AXI_RESET : in std_logic;
 		M_AXI_ACLK  : in std_logic;
 		--internal bus
-		bus_addr_i  : in std_logic_vector(ADDR_BYTE_NUM * 8 - 1 downto 0);
-		bus_data_i  : in std_logic_vector(DATA_BYTE_NUM * 8 - 1 downto 0);
+		bus_addr_i  : in  std_logic_vector(ADDR_BYTE_NUM * 8 - 1 downto 0);
+		bus_data_i  : in  std_logic_vector(DATA_BYTE_NUM * 8 - 1 downto 0);
 		bus_data_o  : out std_logic_vector(DATA_BYTE_NUM * 8 - 1 downto 0);
-		bus_write_i : in std_logic;
-		bus_read_i  : in std_logic;
+		bus_write_i : in  std_logic;
+		bus_read_i  : in  std_logic;
 		bus_done_o  : out std_logic;
 		bus_error_o : out std_logic;
 		--Write addr channel
@@ -72,9 +72,9 @@ entity i2c_axi_master is
 		M_AXI_RID    : in std_logic_vector(ID_WIDTH - 1 downto 0);
 		M_AXI_RLAST  : in std_logic
 	);
-end i2c_axi_master;
+end i2cs_axi_master;
 
-architecture implementation of i2c_axi_master is
+architecture implementation of i2cs_axi_master is
 
 	type state is (IDLE, INIT_WRITE, INIT_READ, BUS_DONE);
 	signal mst_exec_state : state;

@@ -20,11 +20,11 @@ library expert;
 library stdblocks;
     use stdblocks.sync_lib.all;
 library stdcores;
-    use stdcores.spi_axim_pkg.all;
+    use stdcores.i2cs_axim_pkg.all;
 
 entity i2c_slave is
   generic (
-    stop_hold   : positive := 4; --number of mck after scl edge up for SDA edge up.
+    stop_hold   : positive := 4 --number of mck after scl edge up for SDA edge up.
   );
   port (
     --general
@@ -63,35 +63,35 @@ architecture behavioral of i2c_slave is
 
 begin
 
-  sync_busy_u : sync_r
+  sync_scl_u : sync_r
   generic map (2)
   port map ('0',mclk_i,scl_i,scl_s);
 
-  det_rxen_u : det_up
+  det_up_scl_u : det_up
   port map ('0',mclk_i,scl_s,scl_up_en);
 
-  det_rxen_u : det_down
+  det_dn_scl_u : det_down
   port map ('0',mclk_i,scl_s,scl_dn_en);
 
-  sync_busy_u : sync_r
+  sync_sda_u : sync_r
   generic map (2)
   port map ('0',mclk_i,sda_i,sda_s);
 
-  det_rxen_u : det_up
+  det_up_sda_u : det_up
   port map ('0',mclk_i,sda_s,sda_up_en);
 
-  det_rxen_u : det_down
+  det_dn_sda_u : det_down
   port map ('0',mclk_i,sda_s,sda_dn_en);
 
 
 
-  control_p : process(spcs_s, spck_s)
+  control_p : process(all)
     variable counter_v : integer := 8;
   begin
     if rst_i = '1' then
       i2c_mq    <= idle_st;
       counter_v := 8;
-    elsif spck_s = edge_c and spck_s'event then
+    elsif rising_edge(mclk_i) then
       case i2c_mq is
         when idle_st =>
           counter_v := 8;
@@ -102,7 +102,7 @@ begin
         when data_st =>
           if scl_dn_en = '1' then
             counter_v := counter_v - 1;
-            if counter_v := 0 then
+            if counter_v = 0 then
               i2c_mq <= send_ack_st;
             end if;
           end if;
@@ -122,7 +122,7 @@ begin
         when others =>
           i2c_mq <= idle_st;
 
-      end if;
+      end case;
     end if;
   end process;
            
@@ -150,11 +150,10 @@ begin
     if rst_i = '1' then
       output_sr(6 downto 0) <= "1111111";
     elsif mclk_i = '1' and mclk_i'event then
-        if i2c_txen_i = '1' then
-          output_sr <= i2c_txdata_i;
-        elsif scl_dn_en = '1' then
-          output_sr <= output_sr(6 downto 0) & '1';
-        end if;
+      if i2c_txen_i = '1' then
+        output_sr <= i2c_txdata_i;
+      elsif scl_dn_en = '1' then
+        output_sr <= output_sr(6 downto 0) & '1';
       end if;
     end if;
   end process;

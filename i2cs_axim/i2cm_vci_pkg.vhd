@@ -15,7 +15,9 @@
 library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
-
+library vunit_lib;
+	context vunit_lib.vunit_context;
+  
 package i2cm_vci_pkg is
 
   constant buffer_size        : integer    := 256;
@@ -25,6 +27,8 @@ package i2cm_vci_pkg is
   constant i2c_bulk_read_msg  : msg_type_t := new_msg_type("bulk read");
   constant i2c_ram_write_msg  : msg_type_t := new_msg_type("ram write");
   constant i2c_ram_read_msg   : msg_type_t := new_msg_type("ram read");
+  constant i2c_timeout        : time := 500 us;
+
 
   type i2c_master_t is protected
     procedure set_slave_address (input : std_logic_vector);
@@ -35,7 +39,6 @@ package i2cm_vci_pkg is
       signal sda : inout std_logic;
       signal scl : out   std_logic;
     );
-
   end protected i2c_master_t;
 
   procedure i2c_start (
@@ -210,6 +213,7 @@ package body i2c_axim_pkg is
     signal scl  : out std_logic;
     signal data : in std_logic_vector(7 downto 0)
   ) is
+    variable end_time : time;
   begin
     scl <= '0';
     for j in 7 downto 0 loop
@@ -220,7 +224,13 @@ package body i2c_axim_pkg is
       scl <= '0';
     end loop;
     wait for 50 ns;
-    wait until sda = '0';
+
+    end_time := now + i2c_timeout;
+    check_ack : loop
+      check(now < end_time,result("I2C Master: Slave ACK Timeout."));
+      exit when sda = '0';
+    end loop;
+    sda = '0';
     scl <= '1';
     wait for 50 ns;
   end i2c_send;
