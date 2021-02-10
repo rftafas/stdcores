@@ -20,6 +20,10 @@ library stdcores;
   use stdcores.i2cs_axim_pkg.all;
 library vunit_lib;
   context vunit_lib.vunit_context;
+  context vunit_lib.com_context;
+
+  use stdcores.i2cm_vci_pkg.all;
+
 
 entity i2cs_axim_top_tb is
   generic (
@@ -89,6 +93,13 @@ architecture simulation of i2cs_axim_top_tb is
 
   shared variable i2c_controller : i2c_master_t;
 
+  constant i2c_message_write_c : i2c_message_vector(3 downto 0) := (
+    x"AA",
+    x"12",
+    x"AA",
+    x"23"
+  );
+
 begin
 
   --clock e reset
@@ -99,10 +110,8 @@ begin
     test_runner_setup(runner, runner_cfg);
 
     rst_i     <= '1';
-    request_i <= (others => '0');
-    ack_i     <= (others => '0');
-    wait until rising_edge(clk_i);
-    wait until rising_edge(clk_i);
+    wait until rising_edge(mclk_i);
+    wait until rising_edge(mclk_i);
     rst_i <= '0';
 
     while test_suite loop
@@ -111,7 +120,11 @@ begin
         check_true(true, result("Sanity check for system."));
       
       elsif run("Basic Write Test") then
-
+        i2c_controller.set_opcode(opcode);
+        i2c_controller.set_slave_address(slave_addr);  
+        i2c_controller.ram_write(net,x"0000",i2c_message_write_c);
+        wait for 100 us;
+        check_true(true, result("Ok."));
           
       end if;
     end loop;
@@ -121,18 +134,14 @@ begin
   test_runner_watchdog(runner, 2 us);
 
   i2c_master_p: process
-    if rst_i = '1';
-      i2c_controller.set_opcode(opcode);
-      i2c_controller.set_slave_address(slave_addr);
-    end if;
-    i2c_controller.run(sda,scl);
   begin
-    
+    i2c_controller.run(net,sda,scl);   
   end process i2c_master_p;
 
   tri_state(sda_i_s,sda_o_s,sda);
+  scl_s <= scl;
 
-  i2cs_axim_top : i2cs_axim_top
+  i2cs_axim_top_u : i2cs_axim_top
     generic map(
       ID_WIDTH      => ID_WIDTH,
       ID_VALUE      => ID_VALUE,
@@ -146,7 +155,7 @@ begin
       sda_o         => sda_o_s,
       sda_oen_o     => sda_oen_s,
       scl_i         => scl_s,
-      my_addr_i     => my_addr,
+      my_addr_i     => slave_addr,
       M_AXI_AWID    => M_AXI_AWID,
       M_AXI_AWVALID => M_AXI_AWVALID,
       M_AXI_AWREADY => M_AXI_AWREADY,

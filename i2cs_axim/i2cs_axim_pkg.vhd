@@ -36,6 +36,7 @@ package i2cs_axim_pkg is
       sda_i     : in std_logic;
       sda_o     : out std_logic;
       scl_i     : in std_logic;
+      sda_oen_o : out std_logic;
       my_addr_i : in std_logic_vector(2 downto 0);
       --AXI-MM
       M_AXI_AWID    : out std_logic_vector(ID_WIDTH - 1 downto 0);

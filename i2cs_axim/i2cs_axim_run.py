@@ -13,6 +13,7 @@ root = dirname(__file__)
 
 vu = VUnit.from_argv()
 vu.add_verification_components()
+vu.add_com()
 
 expert = vu.add_library("expert")
 expert.add_source_files(join(root, "../../stdexpert/src/*.vhd"))

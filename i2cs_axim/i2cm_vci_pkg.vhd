@@ -13,80 +13,107 @@
 --the specific language governing permissions and limitations under the License.
 ----------------------------------------------------------------------------------
 library IEEE;
-use IEEE.std_logic_1164.all;
-use IEEE.numeric_std.all;
+  use IEEE.std_logic_1164.all;
+  use IEEE.numeric_std.all;
+library expert;
+  use expert.std_logic_expert.all;
 library vunit_lib;
-	context vunit_lib.vunit_context;
-  
+  context vunit_lib.vunit_context;
+  context vunit_lib.com_context;
+
 package i2cm_vci_pkg is
 
-  constant buffer_size        : integer    := 256;
-  constant WRITE_c            : std_logic  := '1';
-  constant READ_c             : std_logic  := '0';
-  constant i2c_bulk_write_msg : msg_type_t := new_msg_type("bulk write");
-  constant i2c_bulk_read_msg  : msg_type_t := new_msg_type("bulk read");
-  constant i2c_ram_write_msg  : msg_type_t := new_msg_type("ram write");
-  constant i2c_ram_read_msg   : msg_type_t := new_msg_type("ram read");
-  constant i2c_timeout        : time := 500 us;
+  type i2c_message_vector is array (natural range <>) of std_logic_vector(7 downto 0);
 
+  constant WRITE_c                : std_logic  := '1';
+  constant READ_c                 : std_logic  := '0';
+  constant i2c_bulk_write_msg     : msg_type_t := new_msg_type("bulk write");
+  constant i2c_bulk_read_msg      : msg_type_t := new_msg_type("bulk read");
+  constant i2c_ram_write_msg      : msg_type_t := new_msg_type("ram write");
+  constant i2c_ram_read_msg       : msg_type_t := new_msg_type("ram read");
+  constant i2c_ram_read_reply_msg : msg_type_t := new_msg_type("ram read reply");
+  constant i2c_timeout            : time       := 500 us;
 
   type i2c_master_t is protected
+    procedure set_opcode        (input : std_logic_vector);
     procedure set_slave_address (input : std_logic_vector);
-    procedure set_slave_address (input : std_logic_vector);
-    procedure i2c_ram_write(addr : in std_logic_vector; data : in  std_logic_array);
-    procedure i2c_ram_read (addr : in std_logic_vector; data : out std_logic_array);
-    procedure i2c_run (
+    procedure ram_write(signal net : inout network_t; addr : in std_logic_vector; data : in i2c_message_vector);
+    procedure ram_read (signal net : inout network_t; addr : in std_logic_vector; data : out i2c_message_vector);
+    procedure run (
+      signal net : inout network_t;
       signal sda : inout std_logic;
-      signal scl : out   std_logic;
+      signal scl : out std_logic
     );
   end protected i2c_master_t;
 
   procedure i2c_start (
     signal sda : inout std_logic;
     signal scl : out std_logic;
+    constant clk_period : time
   );
+
   procedure i2c_send (
-    signal sda    : inout std_logic;
-    signal scl    : out std_logic;
-    signal data_i : in std_logic_vector(7 downto 0)
+    signal sda : inout std_logic;
+    signal scl : out std_logic;
+    data       : in std_logic_vector(7 downto 0);
+    constant clk_period : time
   );
+
   procedure i2c_get (
-    signal data_o : out std_logic_vector(7 downto 0);
-    signal ack    : in boolean;
-    signal sda    : inout std_logic;
-    signal scl    : out std_logic;
+    signal sda : inout std_logic;
+    signal scl : out std_logic;
+    data       : out std_logic_vector(7 downto 0);
+    ack        : in boolean;
+    constant clk_period : time
   );
+
   procedure i2c_stop (
     signal sda : inout std_logic;
     signal scl : out std_logic;
+    constant clk_period : time
   );
+
   procedure i2c_send_buffer (
-    signal sda         : inout std_logic;
-    signal scl         : out std_logic;
-    signal data_buffer : in std_logic_array
+    signal sda  : inout std_logic;
+    signal scl  : out std_logic;
+    data_buffer : in i2c_message_vector;
+    opcode      : in std_logic_vector(3 downto 0);
+    slave_addr  : in std_logic_vector(2 downto 0);
+    constant clk_period : time
   );
+
   procedure i2c_get_buffer (
-    signal sda         : inout std_logic;
-    signal scl         : out std_logic;
-    signal address     : in std_logic_vector(15 downto 0);
-    signal data_buffer : in std_logic_array
+    signal sda  : inout std_logic;
+    signal scl  : out std_logic;
+    data_buffer : out i2c_message_vector;
+    opcode      : in std_logic_vector(3 downto 0);
+    slave_addr  : in std_logic_vector(2 downto 0);
+    constant clk_period : time
   );
-end i2c_axim_pkg;
+
+  function to_H (input : std_logic) return std_logic;
+
+end i2cm_vci_pkg;
 
 --a arquitetura
-package body i2c_axim_pkg is
+package body i2cm_vci_pkg is
 
   type i2c_master_t is protected body
 
-    constant queue         : actor_t := new_actor("i2c queue");
-    variable opcode        : std_logic_vector(4 downto 0);
-    variable slave_address : std_logic_vector(9 downto 0);
+    constant queue : actor_t := new_actor("i2c queue");
+    --variable opcode        : std_logic_vector(4 downto 0);
+    --variable slave_address : std_logic_vector(9 downto 0);
+    variable opcode        : std_logic_vector(3 downto 0);
+    variable slave_address : std_logic_vector(2 downto 0);
     variable add10bitmode  : boolean := false;
+    constant clk_period  : time := 200 ns;
 
     procedure set_opcode (input : std_logic_vector) is
     begin
       if input'length = 4 then
         opcode(3 downto 0) := input;
+        info(to_string(input));
+        info(to_string(opcode));
       elsif input'length = 5 then
         opcode := input;
       else
@@ -105,7 +132,10 @@ package body i2c_axim_pkg is
       end if;
     end set_slave_address;
 
-    procedure i2c_ram_write (addr : in std_logic_vector; data : in std_logic_array) is
+    procedure ram_write (
+      signal net       : inout network_t;
+      addr             : in std_logic_vector;
+      data             : in i2c_message_vector) is
       variable i2c_msg : msg_t                         := new_msg(i2c_ram_write_msg);
       variable size    : integer                       := data'length;
       variable addr_v  : std_logic_vector(15 downto 0) := (others => '0');
@@ -114,8 +144,8 @@ package body i2c_axim_pkg is
       report "i2c_ram_write: input must be 16 bits or less."
         severity failure;
 
-      addr_v(15 downto 8) := get_slice(addr, 8, 1)
-      addr_v(7 downto 0)  := get_slice(addr, 8, 0)
+      addr_v(15 downto 8) := get_slice(addr, 8, 1);
+      addr_v(7 downto 0)  := get_slice(addr, 8, 0);
 
       push(i2c_msg, addr_v);
       push(i2c_msg, size);
@@ -123,9 +153,12 @@ package body i2c_axim_pkg is
         push(i2c_msg, data(j));
       end loop;
       send(net, queue, i2c_msg);
-    end i2c_ram_write;
+    end ram_write;
 
-    procedure i2c_ram_read (addr : in std_logic_vector; data : out std_logic_array) is
+    procedure ram_read (
+      signal net             : inout network_t;
+      addr                   : in std_logic_vector;
+      data                   : out i2c_message_vector) is
       variable i2c_msg       : msg_t                         := new_msg(i2c_ram_write_msg);
       variable i2c_reply_msg : msg_t                         := new_msg(i2c_ram_write_msg);
       variable size          : integer                       := data'length;
@@ -135,8 +168,8 @@ package body i2c_axim_pkg is
       report "i2c_ram_write: input must be 16 bits or less."
         severity failure;
 
-      addr_v(15 downto 8) := get_slice(addr, 8, 1)
-      addr_v(7 downto 0)  := get_slice(addr, 8, 0)
+      addr_v(15 downto 8) := get_slice(addr, 8, 1);
+      addr_v(7 downto 0)  := get_slice(addr, 8, 0);
 
       push(i2c_msg, addr_v);
       push(i2c_msg, size);
@@ -148,107 +181,112 @@ package body i2c_axim_pkg is
       for j in size - 1 downto 0 loop
         data(j) := pop(i2c_reply_msg);
       end loop;
-    end i2c_ram_read;
+    end ram_read;
 
-    procedure i2c_run (
+    procedure run (
+      signal net : inout network_t;
       signal sda : inout std_logic;
-      signal scl : out std_logic;
+      signal scl : out std_logic
     ) is
       variable request_msg : msg_t;
       variable reply_msg   : msg_t;
       variable msg_type    : msg_type_t;
-      variable addr        : std_logic_vector;
+      variable addr        : std_logic_vector(15 downto 0);
       variable size        : integer;
-      variable data        : std_logic_array(buffer_size - 1 downto 0)(7 downto 0);
-    begin
+      variable data        : i2c_message_vector(255 downto 0);
+      variable slave_addr  : std_logic_vector(2 downto 0);
+    begin    
       receive(net, queue, request_msg);
-      msg_type := message_type(request_msg);
+      msg_type   := message_type(request_msg);
+      slave_addr := slave_address(2 downto 0);
+      if msg_type = i2c_ram_write_msg then
+        addr := pop(request_msg);
+        size := pop(request_msg);
+        for j in size - 1 downto 0 loop
+          data(j) := pop(request_msg);
+        end loop;
+        data(size + 1) := get_slice(addr, 8, 1);
+        data(size)     := get_slice(addr, 8, 0);
+        i2c_send_buffer(sda, scl, data, opcode, slave_addr, clk_period);
 
-      case msg_type is
-        when i2c_ram_write_msg =>
-          addr := pop(request_msg);
-          size := pop(request_msg);
-          for j in size - 1 downto 0 loop
-            data(j) := pop(request_msg);
-          end loop;
-          data_size(size + 1) := get_slice(addr, 8, 1);
-          data_size(size)     := get_slice(addr, 8, 0);
-          i2c_send_buffer(sda, scl, data, opcode, slave_addr);
+      elsif msg_type = i2c_ram_read_msg then
+        addr    := pop(request_msg);
+        size    := pop(request_msg);
+        data(1) := get_slice(addr, 8, 1);
+        data(0) := get_slice(addr, 8, 0);
+        i2c_send_buffer(sda, scl, data(1 downto 0), opcode, slave_addr, clk_period);
+        i2c_get_buffer (sda, scl, data(size - 1 downto 0), opcode, slave_addr, clk_period);
 
-        elsif msg_type = read_msg then
-          addr         := pop(request_msg);
-          size         := pop(request_msg);
-          data_size(1) := get_slice(addr, 8, 1);
-          data_size(0) := get_slice(addr, 8, 0);
-          i2c_send_buffer(sda, scl, data(1 downto 0), opcode, slave_addr);
-          i2c_get_buffer (sda, scl, data(size - 1 downto 0), opcode, slave_addr);
+        for j in size - 1 downto 0 loop
+          push(reply_msg, data(j));
+        end loop;
 
-          for j in size - 1 downto 0 loop
-            push(reply_msg, data(j));
-          end loop;
+        reply_msg := new_msg(i2c_ram_read_reply_msg);
+        reply(net, request_msg, reply_msg);
 
-          reply_msg := new_msg(read_reply_msg);
-          reply(net, request_msg, reply_msg);
+      else
+        unexpected_msg_type(msg_type);
 
-        else
-          unexpected_msg_type(msg_type);
       end if;
-    end i2c_run;
+    end run;
 
   end protected body i2c_master_t;
+
   procedure i2c_start (
     signal sda : inout std_logic;
     signal scl : out std_logic;
+    constant clk_period : time
   ) is
   begin
     scl <= '1';
     sda <= 'H';
-    wait for 50 ns;
+    wait for clk_period/2;
     sda <= '0';
-    wait for 50 ns;
+    wait for clk_period/2;
   end procedure;
 
   procedure i2c_send (
-    signal sda  : inout std_logic;
-    signal scl  : out std_logic;
-    signal data : in std_logic_vector(7 downto 0)
+    signal sda : inout std_logic;
+    signal scl : out std_logic;
+    data       : in std_logic_vector(7 downto 0);
+    constant clk_period : time
   ) is
     variable end_time : time;
   begin
     scl <= '0';
     for j in 7 downto 0 loop
       sda <= to_H(data(j));
-      wait for 50 ns;
+      wait for clk_period/2;
       scl <= '1';
-      wait for 50 ns;
+      wait for clk_period/2;
       scl <= '0';
     end loop;
-    wait for 50 ns;
-
+    wait for clk_period/2;
     end_time := now + i2c_timeout;
     check_ack : loop
-      check(now < end_time,result("I2C Master: Slave ACK Timeout."));
+      --check(now < end_time, result("I2C Master: Slave ACK Timeout."));
       exit when sda = '0';
     end loop;
-    sda = '0';
+    sda <= '0';
     scl <= '1';
-    wait for 50 ns;
+    wait for clk_period/2;
   end i2c_send;
 
   procedure i2c_get (
-    signal sda  : inout std_logic;
-    signal scl  : out std_logic;
-    signal data : out std_logic_vector(7 downto 0);
-    signal ack  : in boolean
+    signal sda : inout std_logic;
+    signal scl : out std_logic;
+    data       : out std_logic_vector(7 downto 0);
+    ack        : in boolean;
+    constant clk_period : time
   ) is
   begin
     scl <= '0';
     for j in 7 downto 0 loop
-      wait for 50 ns
+      wait for clk_period/2;
       scl <= '1';
-      wait for 50 ns;
-      data(j) <= to_X01(sda);
-      scl     <= '0';
+      wait for clk_period/2;
+      data(j) := to_X01(sda);
+      scl <= '0';
     end loop;
 
     if ack then
@@ -257,55 +295,65 @@ package body i2c_axim_pkg is
       sda <= '1';
     end if;
 
-    wait for 50 ns;
+    wait for clk_period/2;
     scl <= '1';
-    wait for 50 ns;
-  end i2c_send;
+    wait for clk_period/2;
+  end i2c_get;
 
   procedure i2c_stop (
     signal sda : inout std_logic;
     signal scl : out std_logic;
+    constant clk_period : time
   ) is
   begin
     sda <= '1';
-    wait for 50 ns;
-  end i2c_send;
+    wait for clk_period/2;
+  end i2c_stop;
 
   procedure i2c_send_buffer (
-    signal sda         : inout std_logic;
-    signal scl         : out std_logic;
-    signal data_buffer : in std_logic_array;
-    signal opcode      : in std_logic_vector(3 downto 0);
-    signal slave_addr  : in std_logic_vector(2 downto 0)
+    signal sda  : inout std_logic;
+    signal scl  : out std_logic;
+    data_buffer : in i2c_message_vector;
+    opcode      : in std_logic_vector(3 downto 0);
+    slave_addr  : in std_logic_vector(2 downto 0);
+    constant clk_period : time
   ) is
   begin
-    i2c_start(sda, scl);
-    i2c_send(sda, scl, opcode & slave_addr & write_c);
+    i2c_start(sda, scl, clk_period);
+    i2c_send(sda, scl, opcode & slave_addr & write_c, clk_period);
     for j in data_buffer'range loop
-      i2c_send(sda, scl, data_buffer(j));
+      i2c_send(sda, scl, data_buffer(j), clk_period);
     end loop;
-    i2c_stop(sda, scl);
-  end send_buffer;
+    i2c_stop(sda, scl, clk_period);
+  end i2c_send_buffer;
 
   procedure i2c_get_buffer (
-    signal sda         : inout std_logic;
-    signal scl         : out std_logic;
-    signal address     : in std_logic_vector(15 downto 0);
-    signal data_buffer : in std_logic_array;
-    signal opcode      : in std_logic_vector(3 downto 0);
-    signal slave_addr  : in std_logic_vector(2 downto 0)
+    signal sda  : inout std_logic;
+    signal scl  : out std_logic;
+    data_buffer : out i2c_message_vector;
+    opcode      : in std_logic_vector(3 downto 0);
+    slave_addr  : in std_logic_vector(2 downto 0);
+    constant clk_period : time
   ) is
   begin
-    i2c_start(sda, scl);
-    i2c_send(sda, scl, opcode & slave_addr & read_c);
+    i2c_start(sda, scl, clk_period);
+    i2c_send(sda, scl, opcode & slave_addr & read_c, clk_period);
     for j in data_buffer'range loop
       if j = data_buffer'right then
-        i2c_get(sda, scl, data_buffer(j), '1');
+        i2c_get(sda, scl, data_buffer(j), false, clk_period);
       else
-        i2c_get(sda, scl, data_buffer(j), '0');
+        i2c_get(sda, scl, data_buffer(j), true, clk_period);
       end if;
     end loop;
-    i2c_stop(sda, scl);
-  end read_buffer;
+    i2c_stop(sda, scl, clk_period);
+  end i2c_get_buffer;
 
-end i2c_axim_pkg;
+  function to_H (input : std_logic) return std_logic is
+  begin
+    if input = '1' then
+      return 'H';
+    end if;
+    return input;
+  end to_H;
+
+end i2cm_vci_pkg;

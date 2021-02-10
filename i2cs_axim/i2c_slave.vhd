@@ -100,11 +100,12 @@ begin
           end if;
 
         when data_st =>
-          if scl_dn_en = '1' then
-            counter_v := counter_v - 1;
-            if counter_v = 0 then
+          if counter_v = 0 then
+            if scl_s = '0' then
               i2c_mq <= send_ack_st;
             end if;
+          elsif scl_dn_en = '1' then
+            counter_v := counter_v - 1;
           end if;
 
         when send_ack_st =>
