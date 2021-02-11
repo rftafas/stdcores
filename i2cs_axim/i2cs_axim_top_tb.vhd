@@ -14,6 +14,8 @@
 ----------------------------------------------------------------------------------
 library ieee;
   use ieee.std_logic_1164.all;
+library expert;
+  use expert.std_logic_expert.all;
 library stdblocks;
   use stdblocks.sync_lib.all;
 library stdcores;
@@ -105,6 +107,9 @@ begin
   mclk_i <= not mclk_i after 10 ns;
 
   main : process
+    variable stat     : axi_statistics_t;
+    variable addr_v   : std_logic_vector(15 downto 0);
+    variable buffer_v : buffer_t;
   begin
     test_runner_setup(runner, runner_cfg);
 
@@ -120,13 +125,21 @@ begin
       
       elsif run("Basic Write Test") then
         i2c_controller.set_opcode(opcode);
-        i2c_controller.set_slave_address(slave_addr);  
-        i2c_controller.ram_write(net,x"0000",i2c_message_write_c);
+        i2c_controller.set_slave_address(slave_addr);
+        addr_v := x"0000";
+
+        buffer_v := allocate(memory, 4, alignment => 4096);
+        for j in 3 downto 0 loop
+          set_expected_byte(memory, base_address(buffer_v) + j, to_integer(i2c_message_write_c(j)) );
+        end loop;
+
+        i2c_controller.ram_write(net,addr_v,i2c_message_write_c);
         wait_i2c : loop
           exit when i2c_controller.status = ready;
           wait for 10 ns;
         end loop;
         wait for 1 us;
+
         check_passed("Basic Write Ok.");
           
       end if;
