@@ -93,8 +93,10 @@ architecture simulation of i2cs_axim_top_tb is
     x"23"
   );
 
+  --first we create a memory for the AXI4 VCI.
   constant memory : memory_t := new_memory;
 
+  --then, the handlers.
   constant axi_rd_slave : axi_slave_t := new_axi_slave(memory => memory,
   logger => get_logger("axi_rd_slave"));
 
@@ -110,6 +112,7 @@ begin
     variable stat     : axi_statistics_t;
     variable addr_v   : std_logic_vector(15 downto 0);
     variable buffer_v : buffer_t;
+    variable data_v   : i2c_message_vector(3 downto 0);
   begin
     test_runner_setup(runner, runner_cfg);
 
@@ -128,21 +131,46 @@ begin
         i2c_controller.set_slave_address(slave_addr);
         addr_v := x"0000";
 
+        --now before writing anything, we tell write slave on what to look.
         buffer_v := allocate(memory, 4, alignment => 4096);
         for j in 3 downto 0 loop
           set_expected_byte(memory, base_address(buffer_v) + j, to_integer(i2c_message_write_c(j)) );
         end loop;
 
         i2c_controller.ram_write(net,addr_v,i2c_message_write_c);
-        wait_i2c : loop
+        wait_write_i2c : loop
           exit when i2c_controller.status = ready;
           wait for 10 ns;
         end loop;
         wait for 1 us;
 
         check_passed("Basic Write Ok.");
-          
+
+      elsif run("Basic Read Test") then
+        i2c_controller.set_opcode(opcode);
+        i2c_controller.set_slave_address(slave_addr);
+        addr_v := x"0000";
+
+        buffer_v := allocate(memory, 4, alignment => 4096);
+        -- for j in 3 downto 0 loop
+        --   set_expected_byte(memory, base_address(buffer_v) + j, to_integer(i2c_message_write_c(j)) );
+        -- end loop;
+
+        i2c_controller.ram_read(net,addr_v,data_v);
+        wait_read_i2c : loop
+           exit when i2c_controller.status = ready;
+           wait for 10 ns;
+        end loop;
+        
+        for j in data_v'range loop
+          check_equal(i2c_message_write_c(j), read_byte(memory, to_integer(addr_v) + j), result("Read ok.") );
+        end loop;
+
+        wait for 1 us;
+
+        check_passed("Basic Write Ok.");          
       end if;
+
     end loop;
     test_runner_cleanup(runner); -- Simulation ends here
   end process;
@@ -180,6 +208,27 @@ begin
       bid     => M_AXI_BID,
       bresp   => M_AXI_BRESP
     );
+
+    axi_read_slave_inst: entity vunit_lib.axi_read_slave
+      generic map (
+        axi_slave => axi_rd_slave
+      )
+      port map (
+        aclk    => mclk_i,
+        arvalid => M_AXI_ARVALID,
+        arready => M_AXI_ARREADY,
+        arid    => M_AXI_ARID,
+        araddr  => M_AXI_ARADDR,
+        arlen   => "00000000",
+        arsize  => "000",
+        arburst => "00",
+        rvalid  => M_AXI_RVALID,
+        rready  => M_AXI_RREADY,
+        rid     => M_AXI_RID,
+        rdata   => M_AXI_RDATA,
+        rresp   => M_AXI_RRESP,
+        rlast   => M_AXI_RLAST
+      );
 
   --Connection between VCI and DUT.
   --Note that tristate function can be used for device connection to external IO.
@@ -229,18 +278,5 @@ begin
       M_AXI_RID     => M_AXI_RID,
       M_AXI_RLAST   => M_AXI_RLAST
     );
-
-  M_AXI_AWREADY <= '1';
-  M_AXI_WREADY  <= '1';
-  M_AXI_BVALID  <= '1';
-  M_AXI_BRESP   <= "00";
-  M_AXI_BID     <= (others => '0');
-  M_AXI_ARREADY <= '1';
-  M_AXI_RVALID  <= '1';
-  M_AXI_RDATA   <= x"4321ABCD" when M_AXI_ARADDR(2) = '0' else
-    x"56789ABC";
-  M_AXI_RRESP <= "00";
-  M_AXI_RID   <= (others => '0');
-  M_AXI_RLAST <= '0';
 
 end simulation;

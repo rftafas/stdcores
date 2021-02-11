@@ -145,7 +145,8 @@ package body i2cm_vci_pkg is
     procedure ram_write (
       signal net       : inout network_t;
       addr             : in std_logic_vector;
-      data             : in i2c_message_vector) is
+      data             : in i2c_message_vector
+    ) is
       variable i2c_msg : msg_t                         := new_msg(i2c_ram_write_msg);
       variable size    : integer                       := data'length;
       variable addr_v  : std_logic_vector(15 downto 0) := (others => '0');
@@ -168,7 +169,8 @@ package body i2cm_vci_pkg is
     procedure ram_read (
       signal net             : inout network_t;
       addr                   : in std_logic_vector;
-      data                   : out i2c_message_vector) is
+      data                   : out i2c_message_vector
+    ) is
       variable i2c_msg       : msg_t                         := new_msg(i2c_ram_write_msg);
       variable i2c_reply_msg : msg_t                         := new_msg(i2c_ram_write_msg);
       variable size          : integer                       := data'length;
@@ -308,21 +310,22 @@ package body i2cm_vci_pkg is
     constant clk_period : time
   ) is
   begin
-    scl <= '0';
     for j in 7 downto 0 loop
+      scl <= '0';
+      sda <= 'Z';
       wait for clk_period/2;
       scl <= 'Z';
+      sda <= 'Z';
       wait for clk_period/2;
       data(j) := to_X01(sda);
-      scl <= '0';
     end loop;
 
+    scl <= '0';
     if ack then
       sda <= '0';
     else
       sda <= 'Z';
     end if;
-
     wait for clk_period/2;
     scl <= 'Z';
     wait for clk_period/2;
