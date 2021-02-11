@@ -47,7 +47,6 @@ entity i2cs_control_mq is
       i2c_rxdata_i : in  std_logic_vector(7 downto 0);
       i2c_txen_o   : out std_logic;
       i2c_txdata_o : out std_logic_vector(7 downto 0);
-      i2c_oen_o    : out std_logic;
       --config
       my_addr_i    : in  std_logic_vector(2 downto 0)
     );
@@ -196,11 +195,9 @@ begin
     elsif mclk_i = '1' and mclk_i'event then
       case i2c_mq is
           when idle_st  =>
-            i2c_oen_o    <= '0';
             bus_read_o   <= '0';
             bus_write_o  <= '0';
             aux_cnt      := 0;
-            i2c_oen_o    <= '0';
             i2c_txdata_o <= (others=>'1');
             buffer_v     := (others=>'0');
             next_state(i2c_param_v, my_addr_i, aux_cnt, i2c_mq);
@@ -243,7 +240,6 @@ begin
 
           when act_st =>
             if i2c_param_v.command = READ_c then
-                i2c_oen_o  <= '1';
                 bus_read_o <= '1';
                 if bus_done_i = '1' then
                   bus_read_o <= '0';

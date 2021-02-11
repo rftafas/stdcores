@@ -24,16 +24,18 @@ library stdcores;
 
 entity i2c_slave is
   generic (
-    stop_hold   : positive := 4 --number of mck after scl edge up for SDA edge up.
+    stop_hold : positive := 4;    --number of mck after scl edge up for SDA edge up.
+    hs_mode   : boolean  := false --high speed mode, includes a latch on output.
   );
   port (
     --general
     rst_i  : in  std_logic;
     mclk_i : in  std_logic;
     --I2C
-    scl_i  : in  std_logic;
-    sda_i  : in  std_logic;
-    sda_o  : out std_logic;
+    scl_i   : in  std_logic;
+    sda_i   : in  std_logic;
+    sda_o   : out std_logic;
+    sda_t_o : out std_logic;
     --Internal
     i2c_busy_o      : out std_logic;
     i2c_rxen_o      : out std_logic;
@@ -53,6 +55,7 @@ architecture behavioral of i2c_slave is
   signal sda_up_en : std_logic;
   signal sda_dn_en : std_logic;
 
+  signal sda_o_s   : std_logic;
 
   type i2c_mq_t is (idle_st, send_ack_st, detect_stop_st, data_st);
   signal i2c_mq : i2c_mq_t := idle_st;
@@ -90,7 +93,7 @@ begin
   begin
     if rst_i = '1' then
       i2c_mq    <= idle_st;
-      counter_v := 8;
+      counter_v := 0;
     elsif rising_edge(mclk_i) then
       case i2c_mq is
         when idle_st =>
@@ -100,24 +103,28 @@ begin
           end if;
 
         when data_st =>
-          if counter_v = 0 then
-            if scl_s = '0' then
+          if scl_up_en = '1' then
+            counter_v := counter_v - 1;
+            if counter_v = 0 and hs_mode then
               i2c_mq <= send_ack_st;
             end if;
           elsif scl_dn_en = '1' then
-            counter_v := counter_v - 1;
+            if counter_v = 0 and not hs_mode then
+              i2c_mq <= send_ack_st;
+            end if;
           end if;
 
         when send_ack_st =>
+          counter_v := 8;
           if scl_up_en = '1' then
             i2c_mq <= detect_stop_st;
           end if;
 
         when detect_stop_st =>
-          if sda_up_en = '1' then
+          if scl_dn_en = '1' then
+            i2c_mq <= data_st;  
+          elsif sda_up_en = '1' then
             i2c_mq <= idle_st;
-          elsif scl_dn_en = '1' then
-            i2c_mq <= data_st;
           end if;          
 
         when others =>
@@ -159,9 +166,28 @@ begin
     end if;
   end process;
 
-  sda_o <=  output_sr(7) when i2c_mq = data_st     else
-            '0'          when i2c_mq = send_ack_st else
-            '1';
+  sda_o_s <=  output_sr(7) when i2c_mq = data_st     else
+              '0'          when i2c_mq = send_ack_st else
+              '1';
+
+  sda_t_o <= '1' when i2c_mq = data_st     else
+             '1' when i2c_mq = send_ack_st else
+             '0';
+
+
+  hs_mode_gen : if HS_mode generate
+    output_latch_p : process(all)
+    begin
+      if i2c_mq = idle_st then
+        sda_o <= '1';
+      elsif falling_edge(scl_i) then
+        sda_o <= sda_o_s;
+      end if;
+    end process;
+  else generate
+    sda_o <= sda_o_s;
+  end generate;
+
 
   i2c_busy_o <= '0' when i2c_mq = idle_st else
                 '1';

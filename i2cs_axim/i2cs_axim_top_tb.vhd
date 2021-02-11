@@ -20,6 +20,7 @@ library stdcores;
   use stdcores.i2cs_axim_pkg.all;
 library vunit_lib;
   context vunit_lib.vunit_context;
+  context vunit_lib.vc_context;
   context vunit_lib.com_context;
 
   use stdcores.i2cm_vci_pkg.all;
@@ -79,17 +80,7 @@ architecture simulation of i2cs_axim_top_tb is
   signal M_AXI_RLAST   : std_logic;
 
   constant frequency_mhz   : real := 10.0000;
-  constant spi_period      : time := (1.000 / frequency_mhz) * 1 us;
-  constant spi_half_period : time := spi_period;
-
-  function to_H (input : std_logic) return std_logic is
-  begin
-    if input = '1' then
-      return 'H';
-    else
-      return input;
-    end if;
-  end to_H;
+  constant i2c_period      : time := (1.000 / frequency_mhz) * 1 us;
 
   shared variable i2c_controller : i2c_master_t;
 
@@ -99,6 +90,14 @@ architecture simulation of i2cs_axim_top_tb is
     x"AA",
     x"23"
   );
+
+  constant memory : memory_t := new_memory;
+
+  constant axi_rd_slave : axi_slave_t := new_axi_slave(memory => memory,
+  logger => get_logger("axi_rd_slave"));
+
+  constant axi_wr_slave : axi_slave_t := new_axi_slave(memory => memory,
+    logger => get_logger("axi_wr_slave"));
 
 begin
 
@@ -117,30 +116,65 @@ begin
     while test_suite loop
       if run("Sanity check for system.") then
         report "System Sane. Begin tests.";
-        check_true(true, result("Sanity check for system."));
+        check_passed("Sanity check for system.");
       
       elsif run("Basic Write Test") then
         i2c_controller.set_opcode(opcode);
         i2c_controller.set_slave_address(slave_addr);  
         i2c_controller.ram_write(net,x"0000",i2c_message_write_c);
-        wait for 100 us;
-        check_true(true, result("Ok."));
+        wait_i2c : loop
+          exit when i2c_controller.status = ready;
+          wait for 10 ns;
+        end loop;
+        wait for 1 us;
+        check_passed("Basic Write Ok.");
           
       end if;
     end loop;
     test_runner_cleanup(runner); -- Simulation ends here
   end process;
 
-  test_runner_watchdog(runner, 2 us);
+  test_runner_watchdog(runner, 100 us);
 
+  --VCI
   i2c_master_p: process
   begin
     i2c_controller.run(net,sda,scl);   
   end process i2c_master_p;
 
-  tri_state(sda_i_s,sda_o_s,sda);
-  scl_s <= scl;
+  aximm_slave_u: entity vunit_lib.axi_write_slave
+    generic map (
+      axi_slave => axi_wr_slave
+    )
+    port map (
+      aclk    => mclk_i,
+      awvalid => M_AXI_AWVALID,
+      awready => M_AXI_AWREADY,
+      awid    => M_AXI_AWID,
+      awaddr  => M_AXI_AWADDR,
+      awlen   => "00000000",
+      awsize  => "000",
+      awburst => "00",
 
+      wvalid  => M_AXI_WVALID,
+      wready  => M_AXI_WREADY,
+      wdata   => M_AXI_WDATA,
+      wstrb   => M_AXI_WSTRB,
+      wlast   => M_AXI_WLAST,
+
+      bvalid  => M_AXI_BVALID,
+      bready  => M_AXI_BREADY,
+      bid     => M_AXI_BID,
+      bresp   => M_AXI_BRESP
+    );
+
+  --Connection between VCI and DUT.
+  --Note that tristate function can be used for device connection to external IO.
+  tri_state(sda_i_s,sda_o_s,sda,sda_oen_s);
+  sda   <= 'H';
+  scl   <= 'H';
+
+  --DUT
   i2cs_axim_top_u : i2cs_axim_top
     generic map(
       ID_WIDTH      => ID_WIDTH,
@@ -154,7 +188,7 @@ begin
       sda_i         => sda_i_s,
       sda_o         => sda_o_s,
       sda_oen_o     => sda_oen_s,
-      scl_i         => scl_s,
+      scl_i         => scl,
       my_addr_i     => slave_addr,
       M_AXI_AWID    => M_AXI_AWID,
       M_AXI_AWVALID => M_AXI_AWVALID,

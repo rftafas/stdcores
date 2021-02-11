@@ -97,9 +97,10 @@ begin
     port map(
       rst_i        => rst_i,
       mclk_i       => mclk_i,
-      scl_i        => scl_i,
-      sda_i        => sda_i,
+      scl_i        => to_01(scl_i),
+      sda_i        => to_01(sda_i),
       sda_o        => sda_o,
+      sda_t_o      => sda_oen_o,
       i2c_busy_o   => i2c_busy_s,
       i2c_rxen_o   => i2c_rxen_s,
       i2c_rxdata_o => i2c_rxdata_s,
@@ -127,7 +128,6 @@ begin
     i2c_txen_o   => i2c_txen_s,
     i2c_txdata_o => i2c_txdata_s,
     i2c_rxdata_i => i2c_rxdata_s,
-    i2c_oen_o    => sda_oen_o,
     my_addr_i    => my_addr_i
   );
 

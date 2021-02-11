@@ -91,7 +91,6 @@ package i2cs_axim_pkg is
       i2c_txen_o   : out std_logic;
       i2c_txdata_o : out std_logic_vector(7 downto 0);
       i2c_rxdata_i : in  std_logic_vector(7 downto 0);
-      i2c_oen_o    : out std_logic;
       my_addr_i    : in  std_logic_vector(2 downto 0)
     );
   end component i2cs_control_mq;
@@ -150,9 +149,10 @@ package i2cs_axim_pkg is
       rst_i  : in std_logic;
       mclk_i : in std_logic;
       --I2C
-      scl_i : in std_logic;
-      sda_i : in std_logic;
-      sda_o : out std_logic;
+      scl_i   : in std_logic;
+      sda_i   : in std_logic;
+      sda_o   : out std_logic;
+      sda_t_o : out std_logic;
       --Internal
       i2c_busy_o   : out std_logic;
       i2c_rxen_o   : out std_logic;
@@ -163,9 +163,10 @@ package i2cs_axim_pkg is
   end component i2c_slave;
 
   procedure tri_state (
-    signal from_pin : out std_logic;
-    signal to_pin   : in std_logic;
-    signal pin      : inout std_logic
+    signal from_pin : out   std_logic;
+    signal to_pin   : in    std_logic;
+    signal pin      : inout std_logic;
+    signal oe       : in    std_logic
   );
 
 end i2cs_axim_pkg;
@@ -174,15 +175,20 @@ end i2cs_axim_pkg;
 package body i2cs_axim_pkg is
 
   procedure tri_state (
-    signal from_pin : out std_logic;
-    signal to_pin   : in std_logic;
-    signal pin      : inout std_logic
+    signal from_pin : out   std_logic;
+    signal to_pin   : in    std_logic;
+    signal pin      : inout std_logic;
+    signal oe       : in    std_logic
   ) is
   begin
 
     from_pin <= pin;
-    if to_pin = '0' then
-      pin <= '0';
+    if oe = '1' then
+      if to_pin = '0' then
+        pin <= '0';
+      else
+        pin <= 'Z';
+      end if;
     else
       pin <= 'Z';
     end if;
