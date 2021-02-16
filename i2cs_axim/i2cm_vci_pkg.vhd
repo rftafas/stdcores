@@ -23,8 +23,11 @@ library vunit_lib;
 
 package i2cm_vci_pkg is
 
+
+  constant INTERNAL_BUFFER_SIZE : integer := 8;
+
   type i2c_message_vector is array (natural range <>) of std_logic_vector(7 downto 0);
-  type vci_status_t is ( busy, ready, done );
+  type vci_status_t is ( busy, ready );
 
   constant WRITE_c                : std_logic  := '1';
   constant READ_c                 : std_logic  := '0';
@@ -94,8 +97,9 @@ package i2cm_vci_pkg is
   );
 
   function to_H (input : std_logic) return std_logic;
+  procedure wait_for ( constant period : time ); 
+  procedure wait_for_i2c ( variable i2c_bus : inout i2c_master_t; constant timeout : time );
 
-  procedure wait_for ( constant period : time );
 
 end i2cm_vci_pkg;
 
@@ -107,11 +111,12 @@ package body i2cm_vci_pkg is
     constant queue : actor_t := new_actor("i2c queue");
     --variable opcode        : std_logic_vector(4 downto 0);
     --variable slave_address : std_logic_vector(9 downto 0);
-    variable opcode        : std_logic_vector(3 downto 0);
-    variable slave_address : std_logic_vector(2 downto 0);
-    variable add10bitmode  : boolean := false;
-    variable status_v      : vci_status_t := ready;
-    constant clk_period    : time := 200 ns;
+    variable internal_buffer : i2c_message_vector(INTERNAL_BUFFER_SIZE+1 downto 0);
+    variable opcode          : std_logic_vector(3 downto 0);
+    variable slave_address   : std_logic_vector(2 downto 0);
+    variable add10bitmode    : boolean := false;
+    variable status_v        : vci_status_t := ready;
+    constant clk_period      : time := 200 ns;
     
     impure function status return vci_status_t is
     begin
@@ -171,8 +176,8 @@ package body i2cm_vci_pkg is
       addr                   : in std_logic_vector;
       data                   : out i2c_message_vector
     ) is
-      variable i2c_msg       : msg_t                         := new_msg(i2c_ram_write_msg);
-      variable i2c_reply_msg : msg_t                         := new_msg(i2c_ram_write_msg);
+      variable i2c_msg       : msg_t                         := new_msg(i2c_ram_read_msg);
+      variable i2c_reply_msg : msg_t                         := new_msg(i2c_ram_read_reply_msg);
       variable size          : integer                       := data'length;
       variable addr_v        : std_logic_vector(15 downto 0) := (others => '0');
     begin
@@ -208,7 +213,6 @@ package body i2cm_vci_pkg is
       variable msg_type    : msg_type_t;
       variable addr        : std_logic_vector(15 downto 0);
       variable size        : integer;
-      variable data        : i2c_message_vector(255 downto 0);
       variable slave_addr  : std_logic_vector(2 downto 0);
     begin
       if has_message(queue) then
@@ -218,32 +222,33 @@ package body i2cm_vci_pkg is
         if msg_type = i2c_ram_write_msg then
           addr := pop(request_msg);
           size := pop(request_msg);
-          for j in size - 1 downto 0 loop
-            data(j) := pop(request_msg);
+          for j in size + 1 downto 2 loop
+            internal_buffer(j) := pop(request_msg);
           end loop;
-          data(size + 1) := get_slice(addr, 8, 1);
-          data(size)     := get_slice(addr, 8, 0);
+          internal_buffer(1) := get_slice(addr, 8, 1);
+          internal_buffer(0) := get_slice(addr, 8, 0);
           status_v := busy;
-          i2c_send_buffer(sda, scl, data(size + 1 downto 0), opcode, slave_addr, clk_period);
+          i2c_send_buffer(sda, scl, internal_buffer(size + 1 downto 0), opcode, slave_addr, clk_period);
           status_v := ready;
 
         elsif msg_type = i2c_ram_read_msg then
           addr    := pop(request_msg);
           size    := pop(request_msg);
-          data(1) := get_slice(addr, 8, 1);
-          data(0) := get_slice(addr, 8, 0);
+          internal_buffer(1) := get_slice(addr, 8, 1);
+          internal_buffer(0) := get_slice(addr, 8, 0);
           status_v := busy;
-          i2c_send_buffer(sda, scl, data(1 downto 0), opcode, slave_addr, clk_period);
-          i2c_get_buffer (sda, scl, data(size - 1 downto 0), opcode, slave_addr, clk_period);
-          status_v := done;
-
-          for j in size - 1 downto 0 loop
-            push(reply_msg, data(j));
-          end loop;
+          i2c_send_buffer(sda, scl, internal_buffer(1 downto 0), opcode, slave_addr, clk_period);
+          i2c_get_buffer (sda, scl, internal_buffer(size - 1 downto 0), opcode, slave_addr, clk_period);
 
           reply_msg := new_msg(i2c_ram_read_reply_msg);
+
+          for j in size - 1 downto 0 loop
+            push(reply_msg, internal_buffer(j));
+          end loop;
+          
           reply(net, request_msg, reply_msg);
           status_v := ready;
+          
         else
           unexpected_msg_type(msg_type);
 
@@ -255,13 +260,6 @@ package body i2cm_vci_pkg is
 
   end protected body i2c_master_t;
 
-  procedure wait_for (
-    constant period : time
-  ) is
-  begin
-    wait for period;
-  end procedure;
-
   procedure i2c_start (
     signal sda : inout std_logic;
     signal scl : out std_logic;
@@ -269,7 +267,7 @@ package body i2cm_vci_pkg is
   ) is
   begin
     scl <= 'Z';
-    sda <= 'H';
+    sda <= 'Z';
     info("Starting I2C Transfer.");
     wait for clk_period/2;
     sda <= '0';
@@ -291,7 +289,6 @@ package body i2cm_vci_pkg is
       check_equal(to_H(data(j)), sda, result("I2C Bus: SDA Value Error."));
       scl <= 'Z';
       wait for clk_period/2;
-      check_equal(to_H(data(j)), sda, result("I2C Bus: SDA Value Error."));
       
     end loop;
     scl <= '0';
@@ -319,7 +316,6 @@ package body i2cm_vci_pkg is
       wait for clk_period/2;
       data(j) := to_X01(sda);
     end loop;
-
     scl <= '0';
     if ack then
       sda <= '0';
@@ -338,7 +334,9 @@ package body i2cm_vci_pkg is
   ) is
   begin
     info("Ending I2C Transfer.");
+    scl <= 'Z';
     sda <= 'Z';
+    wait for clk_period/2;
   end i2c_stop;
 
   procedure i2c_send_buffer (
@@ -349,11 +347,13 @@ package body i2cm_vci_pkg is
     slave_addr  : in std_logic_vector(2 downto 0);
     constant clk_period : time
   ) is
+    variable tmp_buffer : i2c_message_vector(data_buffer'length-1 downto 0);
   begin
+    tmp_buffer := data_buffer;
     i2c_start(sda, scl, clk_period);
     i2c_send(sda, scl, opcode & slave_addr & write_c, clk_period);
-    for j in data_buffer'range loop
-      i2c_send(sda, scl, data_buffer(j), clk_period);
+    for j in 0 to data_buffer'length-1 loop
+      i2c_send(sda, scl, tmp_buffer(j), clk_period);
     end loop;
     i2c_stop(sda, scl, clk_period);
   end i2c_send_buffer;
@@ -386,5 +386,30 @@ package body i2cm_vci_pkg is
     end if;
     return input;
   end to_H;
+
+  procedure wait_for (
+    constant period : time
+  ) is
+  begin
+    wait for period;
+  end procedure;
+
+  procedure wait_for_i2c ( variable i2c_bus : inout i2c_master_t; constant timeout : time ) is
+    variable timer_cnt : integer := timeout/(10 ns);
+  begin
+    while true loop
+      exit when timer_cnt = 0;
+      exit when i2c_bus.status = busy;
+      wait for 10 ns;
+      timer_cnt := timer_cnt - 1;
+    end loop;
+    while true loop
+      exit when timer_cnt = 0;
+      exit when i2c_bus.status = ready;
+      wait for 10 ns;
+      timer_cnt := timer_cnt - 1;
+    end loop;
+    check_false(timer_cnt = 0, result("I2C Master timeout."));
+  end procedure;
 
 end i2cm_vci_pkg;

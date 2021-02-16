@@ -18,6 +18,7 @@ library expert;
   use expert.std_logic_expert.all;
 library stdblocks;
   use stdblocks.sync_lib.all;
+  use stdblocks.prbs_lib.all;
 library stdcores;
   use stdcores.i2cs_axim_pkg.all;
 library vunit_lib;
@@ -85,6 +86,7 @@ architecture simulation of i2cs_axim_top_tb is
   constant i2c_period      : time := (1.000 / frequency_mhz) * 1 us;
 
   shared variable i2c_controller : i2c_master_t;
+  shared variable prbs           : prbs_t;
 
   constant i2c_message_write_c : i2c_message_vector(3 downto 0) := (
     x"AA",
@@ -94,7 +96,7 @@ architecture simulation of i2cs_axim_top_tb is
   );
 
   --first we create a memory for the AXI4 VCI.
-  constant memory : memory_t := new_memory;
+  constant memory  : memory_t := new_memory;
 
   --then, the handlers.
   constant axi_rd_slave : axi_slave_t := new_axi_slave(memory => memory,
@@ -111,16 +113,23 @@ begin
   main : process
     variable stat     : axi_statistics_t;
     variable addr_v   : std_logic_vector(15 downto 0);
-    variable buffer_v : buffer_t;
-    variable data_v   : i2c_message_vector(3 downto 0);
+    variable buffer_v       : buffer_t;
+    variable bytes_2_write  : integer := 8;
+    variable bytes_2_read   : integer := 8;
+    variable data_v         : i2c_message_vector(maximum(bytes_2_write,bytes_2_read) downto 0);
   begin
     test_runner_setup(runner, runner_cfg);
+    check_true(bytes_2_write mod 4 = 0,result("Currently only on 32 bits."));
+    check_true(bytes_2_read  mod 4 = 0,result("Currently only on 32 bits."));
 
     rst_i     <= '1';
     wait until rising_edge(mclk_i);
     wait until rising_edge(mclk_i);
     rst_i <= '0';
-
+    prbs.set_seed(x"44444444");
+    prbs.reset;
+    wait for 65 ns;
+    
     while test_suite loop
       if run("Sanity check for system.") then
         report "System Sane. Begin tests.";
@@ -132,18 +141,16 @@ begin
         addr_v := x"0000";
 
         --now before writing anything, we tell write slave on what to look.
-        buffer_v := allocate(memory, 4, alignment => 4096);
-        for j in 3 downto 0 loop
-          set_expected_byte(memory, base_address(buffer_v) + j, to_integer(i2c_message_write_c(j)) );
+        buffer_v := allocate(memory, bytes_2_write, "write buffer", alignment => 4);
+        for j in base_address(buffer_v) to last_address(buffer_v) loop
+          data_v(j) := prbs.get_data(8);
+          
+          set_expected_byte(memory, j, to_integer(data_v(j)) );
         end loop;
 
-        i2c_controller.ram_write(net,addr_v,i2c_message_write_c);
-        wait_write_i2c : loop
-          exit when i2c_controller.status = ready;
-          wait for 10 ns;
-        end loop;
-        wait for 1 us;
-
+        i2c_controller.ram_write(net,addr_v,data_v(bytes_2_write-1 downto 0));
+        wait_for_i2c(i2c_controller,100 us);
+        clear(memory);
         check_passed("Basic Write Ok.");
 
       elsif run("Basic Read Test") then
@@ -151,24 +158,56 @@ begin
         i2c_controller.set_slave_address(slave_addr);
         addr_v := x"0000";
 
-        buffer_v := allocate(memory, 4, alignment => 4096);
-        -- for j in 3 downto 0 loop
-        --   set_expected_byte(memory, base_address(buffer_v) + j, to_integer(i2c_message_write_c(j)) );
-        -- end loop;
+        --we create a buffer, and add data to it so AXI will have something to give.
+        --yet to be explained: why we have to add +1 to constant bytes to read?
+        buffer_v := allocate(memory, bytes_2_read+1, "read buffer", alignment => 4);
 
-        i2c_controller.ram_read(net,addr_v,data_v);
-        wait_read_i2c : loop
-           exit when i2c_controller.status = ready;
-           wait for 10 ns;
+        --yet to be explained: we had to add +1 to constant bytes to read, but for goes ok with -1
+        --this means: last_address = bytes_2_read+1, our takes the +1 out.
+        for j in base_address(buffer_v) to last_address(buffer_v)-1 loop
+          write_byte( memory, j, to_integer(prbs.get_data(8)) );
         end loop;
+
+        --we order the I2C controller VCI to read some data.
+        i2c_controller.ram_read(net,addr_v,data_v(bytes_2_read-1 downto 0));
+        wait_for_i2c(i2c_controller,100 us);
         
-        for j in data_v'range loop
-          check_equal(i2c_message_write_c(j), read_byte(memory, to_integer(addr_v) + j), result("Read ok.") );
+        --we get data from buffer with a read function. 
+        --same awkard behavior of buffer size.
+        for j in base_address(buffer_v) to last_address(buffer_v)-1 loop
+          check_true(prbs.check_data(to_std_logic_vector(read_byte(memory,j),8)),result("Read ok."));
         end loop;
 
         wait for 1 us;
+        clear(memory);
+        check_passed("Basic Read Ok.");         
 
-        check_passed("Basic Write Ok.");          
+      elsif run("Write to Read Test") then
+        i2c_controller.set_opcode(opcode);
+        i2c_controller.set_slave_address(slave_addr);
+        addr_v := x"0000";
+
+        buffer_v := allocate(memory, bytes_2_write+1, "write buffer", alignment => 4);
+        for j in base_address(buffer_v) to last_address(buffer_v)-1 loop
+          data_v(j) := prbs.get_data(8);
+          set_expected_byte(memory, j, to_integer(data_v(j)) );
+        end loop;
+
+        i2c_controller.ram_write(net,addr_v,data_v(bytes_2_write-1 downto 0));
+        wait_for_i2c(i2c_controller,100 us);
+
+        wait for 1 us;
+
+        i2c_controller.ram_read(net,addr_v,data_v(bytes_2_write-1 downto 0));
+        wait_for_i2c(i2c_controller,100 us);
+
+        for j in base_address(buffer_v) to last_address(buffer_v)-1 loop
+          check_true(prbs.check_data(to_std_logic_vector(read_byte(memory,j),8)),result("Read ok."));
+        end loop;
+        
+        clear(memory);
+        check_passed("Write to Read Ok.");    
+
       end if;
 
     end loop;
@@ -183,7 +222,7 @@ begin
     i2c_controller.run(net,sda,scl);   
   end process i2c_master_p;
 
-  aximm_slave_u: entity vunit_lib.axi_write_slave
+  aximm_w_slave_u: entity vunit_lib.axi_write_slave
     generic map (
       axi_slave => axi_wr_slave
     )
@@ -209,26 +248,26 @@ begin
       bresp   => M_AXI_BRESP
     );
 
-    axi_read_slave_inst: entity vunit_lib.axi_read_slave
-      generic map (
-        axi_slave => axi_rd_slave
-      )
-      port map (
-        aclk    => mclk_i,
-        arvalid => M_AXI_ARVALID,
-        arready => M_AXI_ARREADY,
-        arid    => M_AXI_ARID,
-        araddr  => M_AXI_ARADDR,
-        arlen   => "00000000",
-        arsize  => "000",
-        arburst => "00",
-        rvalid  => M_AXI_RVALID,
-        rready  => M_AXI_RREADY,
-        rid     => M_AXI_RID,
-        rdata   => M_AXI_RDATA,
-        rresp   => M_AXI_RRESP,
-        rlast   => M_AXI_RLAST
-      );
+  aximm_r_slave_u: entity vunit_lib.axi_read_slave
+    generic map (
+      axi_slave => axi_rd_slave
+    )
+    port map (
+      aclk    => mclk_i,
+      arvalid => M_AXI_ARVALID,
+      arready => M_AXI_ARREADY,
+      arid    => M_AXI_ARID,
+      araddr  => M_AXI_ARADDR,
+      arlen   => "00000000",
+      arsize  => "000",
+      arburst => "00",
+      rvalid  => M_AXI_RVALID,
+      rready  => M_AXI_RREADY,
+      rid     => M_AXI_RID,
+      rdata   => M_AXI_RDATA,
+      rresp   => M_AXI_RRESP,
+      rlast   => M_AXI_RLAST
+    );
 
   --Connection between VCI and DUT.
   --Note that tristate function can be used for device connection to external IO.

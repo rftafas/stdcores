@@ -24,10 +24,10 @@ use stdcores.i2cs_axim_pkg.all;
 
 entity i2cs_axim_top is
   generic (
-    ID_WIDTH      : integer := 1;
-    ID_VALUE      : integer := 0;
-    ADDR_BYTE_NUM : integer := 2;
-    DATA_BYTE_NUM : integer := 4;
+    ID_WIDTH      : integer                      := 1;
+    ID_VALUE      : integer                      := 0;
+    ADDR_BYTE_NUM : integer                      := 2;
+    DATA_BYTE_NUM : integer                      := 4;
     opcode_c      : std_logic_vector(3 downto 0) := "1010"
   );
   port (
@@ -82,11 +82,13 @@ architecture behavioral of i2cs_axim_top is
   signal bus_data_o_s : std_logic_vector(DATA_BYTE_NUM * 8 - 1 downto 0);
   signal bus_addr_s   : std_logic_vector(ADDR_BYTE_NUM * 8 - 1 downto 0);
 
-  signal i2c_busy_s   : std_logic;
-  signal i2c_rxen_s   : std_logic;
-  signal i2c_txen_s   : std_logic;
-  signal i2c_rxdata_s : std_logic_vector(7 downto 0);
-  signal i2c_txdata_s : std_logic_vector(7 downto 0);
+  signal i2c_direction_s : std_logic;
+  signal i2c_busy_s      : std_logic;
+  signal i2c_rxen_s      : std_logic;
+  signal i2c_txvalid_s      : std_logic;
+  signal i2c_txready_s      : std_logic;
+  signal i2c_rxdata_s    : std_logic_vector(7 downto 0);
+  signal i2c_txdata_s    : std_logic_vector(7 downto 0);
 
 begin
 
@@ -95,83 +97,88 @@ begin
       stop_hold => 4
     )
     port map(
-      rst_i        => rst_i,
-      mclk_i       => mclk_i,
-      scl_i        => to_01(scl_i),
-      sda_i        => to_01(sda_i),
-      sda_o        => sda_o,
-      sda_t_o      => sda_oen_o,
-      i2c_busy_o   => i2c_busy_s,
-      i2c_rxen_o   => i2c_rxen_s,
-      i2c_rxdata_o => i2c_rxdata_s,
-      i2c_txen_i   => i2c_txen_s,
-      i2c_txdata_i => i2c_txdata_s
+      rst_i           => rst_i,
+      mclk_i          => mclk_i,
+      scl_i           => to_01(scl_i),
+      sda_i           => to_01(sda_i),
+      sda_o           => sda_o,
+      sda_t_o         => sda_oen_o,
+      i2c_direction_i => i2c_direction_s,
+      i2c_busy_o      => i2c_busy_s,
+      i2c_rxen_o      => i2c_rxen_s,
+      i2c_rxdata_o    => i2c_rxdata_s,
+      i2c_txvalid_i   => i2c_txvalid_s,
+      i2c_txready_o   => i2c_txready_s,
+      i2c_txdata_i    => i2c_txdata_s
     );
 
   spi_mq_u : i2cs_control_mq
-  generic map(
-    addr_word_size => ADDR_BYTE_NUM,
-    data_word_size => DATA_BYTE_NUM,
-    opcode_c       => opcode_c
-  )
-  port map(
-    rst_i        => rst_i,
-    mclk_i       => mclk_i,
-    bus_write_o  => bus_write_s,
-    bus_read_o   => bus_read_s,
-    bus_done_i   => bus_done_s,
-    bus_data_i   => bus_data_o_s,
-    bus_data_o   => bus_data_i_s,
-    bus_addr_o   => bus_addr_s,
-    i2c_busy_i   => i2c_busy_s,
-    i2c_rxen_i   => i2c_rxen_s,
-    i2c_txen_o   => i2c_txen_s,
-    i2c_txdata_o => i2c_txdata_s,
-    i2c_rxdata_i => i2c_rxdata_s,
-    my_addr_i    => my_addr_i
-  );
+    generic map(
+      addr_word_size => ADDR_BYTE_NUM,
+      data_word_size => DATA_BYTE_NUM,
+      opcode_c       => opcode_c
+    )
+    port map(
+      rst_i         => rst_i,
+      mclk_i        => mclk_i,
+      bus_write_o   => bus_write_s,
+      bus_read_o    => bus_read_s,
+      bus_done_i    => bus_done_s,
+      bus_data_i    => bus_data_o_s,
+      bus_data_o    => bus_data_i_s,
+      bus_addr_o    => bus_addr_s,
+      i2c_direction_o => i2c_direction_s,
+      i2c_busy_i    => i2c_busy_s,
+      i2c_rxen_i    => i2c_rxen_s,
+      i2c_txvalid_o => i2c_txvalid_s,
+      i2c_txready_i => i2c_txready_s,
+      i2c_txdata_o  => i2c_txdata_s,
+      i2c_rxdata_i  => i2c_rxdata_s,
+      my_addr_i     => my_addr_i
+    );
 
   axi_master_u : i2cs_axi_master
-  generic map(
-    ID_WIDTH      => ID_WIDTH,
-    ID_VALUE      => ID_VALUE,
-    ADDR_BYTE_NUM => ADDR_BYTE_NUM,
-    DATA_BYTE_NUM => DATA_BYTE_NUM
-  )
-  port map(
-    M_AXI_RESET   => rst_i,
-    M_AXI_ACLK    => mclk_i,
-    bus_addr_i    => bus_addr_s,
-    bus_data_i    => bus_data_i_s,
-    bus_data_o    => bus_data_o_s,
-    bus_write_i   => bus_write_s,
-    bus_read_i    => bus_read_s,
-    bus_done_o    => bus_done_s,
-    bus_error_o   => open,
-    M_AXI_AWID    => M_AXI_AWID,
-    M_AXI_AWVALID => M_AXI_AWVALID,
-    M_AXI_AWREADY => M_AXI_AWREADY,
-    M_AXI_AWADDR  => M_AXI_AWADDR,
-    M_AXI_AWPROT  => M_AXI_AWPROT,
-    M_AXI_WVALID  => M_AXI_WVALID,
-    M_AXI_WREADY  => M_AXI_WREADY,
-    M_AXI_WDATA   => M_AXI_WDATA,
-    M_AXI_WSTRB   => M_AXI_WSTRB,
-    M_AXI_WLAST   => M_AXI_WLAST,
-    M_AXI_BVALID  => M_AXI_BVALID,
-    M_AXI_BREADY  => M_AXI_BREADY,
-    M_AXI_BRESP   => M_AXI_BRESP,
-    M_AXI_BID     => M_AXI_BID,
-    M_AXI_ARVALID => M_AXI_ARVALID,
-    M_AXI_ARREADY => M_AXI_ARREADY,
-    M_AXI_ARADDR  => M_AXI_ARADDR,
-    M_AXI_ARPROT  => M_AXI_ARPROT,
-    M_AXI_ARID    => M_AXI_ARID,
-    M_AXI_RVALID  => M_AXI_RVALID,
-    M_AXI_RREADY  => M_AXI_RREADY,
-    M_AXI_RDATA   => M_AXI_RDATA,
-    M_AXI_RRESP   => M_AXI_RRESP,
-    M_AXI_RID     => M_AXI_RID,
-    M_AXI_RLAST   => M_AXI_RLAST
-  );
+    generic map(
+      ID_WIDTH      => ID_WIDTH,
+      ID_VALUE      => ID_VALUE,
+      ADDR_BYTE_NUM => ADDR_BYTE_NUM,
+      DATA_BYTE_NUM => DATA_BYTE_NUM
+    )
+    port map(
+      M_AXI_RESET   => rst_i,
+      M_AXI_ACLK    => mclk_i,
+      bus_addr_i    => bus_addr_s,
+      bus_data_i    => bus_data_i_s,
+      bus_data_o    => bus_data_o_s,
+      bus_write_i   => bus_write_s,
+      bus_read_i    => bus_read_s,
+      bus_done_o    => bus_done_s,
+      bus_error_o   => open,
+      M_AXI_AWID    => M_AXI_AWID,
+      M_AXI_AWVALID => M_AXI_AWVALID,
+      M_AXI_AWREADY => M_AXI_AWREADY,
+      M_AXI_AWADDR  => M_AXI_AWADDR,
+      M_AXI_AWPROT  => M_AXI_AWPROT,
+      M_AXI_WVALID  => M_AXI_WVALID,
+      M_AXI_WREADY  => M_AXI_WREADY,
+      M_AXI_WDATA   => M_AXI_WDATA,
+      M_AXI_WSTRB   => M_AXI_WSTRB,
+      M_AXI_WLAST   => M_AXI_WLAST,
+      M_AXI_BVALID  => M_AXI_BVALID,
+      M_AXI_BREADY  => M_AXI_BREADY,
+      M_AXI_BRESP   => M_AXI_BRESP,
+      M_AXI_BID     => M_AXI_BID,
+      M_AXI_ARVALID => M_AXI_ARVALID,
+      M_AXI_ARREADY => M_AXI_ARREADY,
+      M_AXI_ARADDR  => M_AXI_ARADDR,
+      M_AXI_ARPROT  => M_AXI_ARPROT,
+      M_AXI_ARID    => M_AXI_ARID,
+      M_AXI_RVALID  => M_AXI_RVALID,
+      M_AXI_RREADY  => M_AXI_RREADY,
+      M_AXI_RDATA   => M_AXI_RDATA,
+      M_AXI_RRESP   => M_AXI_RRESP,
+      M_AXI_RID     => M_AXI_RID,
+      M_AXI_RLAST   => M_AXI_RLAST
+    );
+
 end behavioral;
