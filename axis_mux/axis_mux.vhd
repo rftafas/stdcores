@@ -23,7 +23,7 @@ library stdblocks;
 entity axis_mux is
     generic (
       controllers_num : positive := 2;
-      tdata_byte_size : positive := 8;
+      tdata_byte      : positive := 1;
       tdest_size      : positive := 8;
       tuser_size      : positive := 8;
       select_auto     : boolean  := false;
@@ -37,18 +37,18 @@ entity axis_mux is
       clk_i      : in  std_logic;
       rst_i      : in  std_logic;
       --AXIS Slave Port
-      s_tdata_i  : in  std_logic_array(controllers_num-1 downto 0)(8*tdata_byte_size-1 downto 0);
+      s_tdata_i  : in  std_logic_array(controllers_num-1 downto 0)(8*tdata_byte-1 downto 0);
       s_tuser_i  : in  std_logic_array(controllers_num-1 downto 0)(tuser_size-1 downto 0);
       s_tdest_i  : in  std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0);
-      s_tstrb_i  : in  std_logic_array(controllers_num-1 downto 0)(tdata_byte_size-1 downto 0);
+      s_tstrb_i  : in  std_logic_array(controllers_num-1 downto 0)(tdata_byte-1 downto 0);
       s_tready_o : out std_logic_vector(controllers_num-1 downto 0);
       s_tvalid_i : in  std_logic_vector(controllers_num-1 downto 0);
       s_tlast_i  : in  std_logic_vector(controllers_num-1 downto 0);
       --AXIS Master port
-      m_tdata_o  : out std_logic_vector(8*tdata_byte_size-1 downto 0);
+      m_tdata_o  : out std_logic_vector(8*tdata_byte-1 downto 0);
       m_tuser_o  : out std_logic_vector(tuser_size-1 downto 0);
       m_tdest_o  : out std_logic_vector(tdest_size-1 downto 0);
-      m_tstrb_o  : out std_logic_vector(tdata_byte_size-1 downto 0);
+      m_tstrb_o  : out std_logic_vector(tdata_byte-1 downto 0);
       m_tready_i : in  std_logic;
       m_tvalid_o : out std_logic;
       m_tlast_o  : out std_logic
@@ -61,46 +61,34 @@ architecture behavioral of axis_mux is
   signal index_s    : natural range 0 to controllers_num-1;
   signal ack_s      : std_logic_vector(controllers_num-1 downto 0);
 
-  type axi_tdata_array is array (controllers_num-1 downto 0) of std_logic_vector(tdata_size-1 downto 0);
-  type axi_tuser_array is array (controllers_num-1 downto 0) of std_logic_vector(tuser_size-1 downto 0);
-  type axi_tdest_array is array (controllers_num-1 downto 0) of std_logic_vector(tdest_size-1 downto 0);
-
-  signal axi_tdata_s : std_logic_array(controllers_num-1 downto 0)(8*tdata_byte_size-1 downto 0);;
+  signal axi_tdata_s : std_logic_array(controllers_num-1 downto 0)(8*tdata_byte-1 downto 0);
   signal axi_tuser_s : std_logic_array(controllers_num-1 downto 0)(tuser_size-1 downto 0);
   signal axi_tdest_s : std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0);
-  signal axi_tstrb_s : std_logic_array(controllers_num-1 downto 0)(tdata_byte_size-1 downto 0);
+  signal axi_tstrb_s : std_logic_array(controllers_num-1 downto 0)(tdata_byte-1 downto 0);
   signal s_tvalid_s  : std_logic_vector(controllers_num-1 downto 0);
-  signal s_tlast_s   : std_logic_vector(controllers_num-1 downto 0);
-  signal s_tready_s  : std_logic_vector(controllers_num-1 downto 0);
 
+  signal en_i_s       : std_logic_vector(controllers_num-1 downto 0);
+  signal en_o_s       : std_logic_vector(controllers_num-1 downto 0);
   signal last_data_en : std_logic_vector(controllers_num-1 downto 0);
-  signal timeout_s    : std_logic_vector(15 downto 0);
+  signal timeout_s    : std_logic_vector(15 downto 0) := (others=>'0');
 
 begin
 
-  --output selection
-  m_tdata_o  <= s_tdata_i(index_s);
-  m_tdest_o  <= s_tdest_i(index_s);
-  m_tstrb_o  <= s_tstrb_i(index_s);
-  m_tuser_o  <= s_tuser_i(index_s);
-  m_tvalid_o <= s_tvalid_i(index_s);
-  m_tlast_o  <= s_tlast_i(index_s);
+  m_tdata_o  <= s_tdata_i(index_s)  when en_o_s(index_s) = '1' else (others=>'0');
+  m_tuser_o  <= s_tuser_i(index_s)  when en_o_s(index_s) = '1' else (others=>'0');
+  m_tdest_o  <= s_tdest_i(index_s)  when en_o_s(index_s) = '1' else (others=>'0');
+  m_tstrb_o  <= s_tstrb_i(index_s)  when en_o_s(index_s) = '1' else (others=>'0');
+  m_tvalid_o <= s_tvalid_i(index_s) when en_o_s(index_s) = '1' else '0';
+  m_tlast_o  <= s_tlast_i(index_s)  when en_o_s(index_s) = '1' else '0';
 
   process(all)
   begin
     if rst_i = '1' then
       tx_count_s <= 0;
+      timeout_s  <= (others=>'0');
     elsif rising_edge(clk_i) then
-      --max size count
-      if (s_tready_s(index_s) and s_tvalid_i(index_s)) = '1' then
+      if ( en_o_s(index_s) and s_tvalid_i(index_s) ) = '1' then
         timeout_s <= x"0001";
-        if ack_s(index_s) = '1' then
-          tx_count_s <= 0;
-        elsif tx_count_s = max_tx_size-1 then
-          tx_count_s <= 0;
-        else
-          tx_count_s <= tx_count_s + 1;
-        end if;
       else
         timeout_s <= timeout_s sll 1;
       end if;
@@ -108,7 +96,8 @@ begin
   end process;
 
   ready_gen : for j in 0 to controllers_num-1 generate
-    s_tready_o(j) <= s_tready_s(j) and m_tready_i;
+    s_tready_o(j) <= m_tready_i when en_o_s(j) = '1' else '0';
+    en_i_s(j)     <= s_tvalid_i(j);
   end generate;
 
   schedulling_engine_u : queueing
@@ -118,14 +107,14 @@ begin
     port map (
       clk_i     => clk_i,
       rst_i     => rst_i,
-      request_i => s_tvalid_s,
+      request_i => en_i_s,
       ack_i     => ack_s,
-      grant_o   => s_tready_s,
+      grant_o   => en_o_s,
       index_o   => index_s
     );
 
     ack_gen : for j in controllers_num-1 downto 0 generate
-      last_data_en(j) <= m_tready_i and s_tready_s(j) and s_tlast_i(j);
+      last_data_en(j) <= m_tready_i and s_tready_o(j) and s_tlast_i(j);
       ack_s(j) <= last_data_en(j) when switch_tlast               else
                   '1'             when timeout_s(15) = '1'        else
                   '1'             when tx_count_s = max_tx_size-1 else

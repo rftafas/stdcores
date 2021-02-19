@@ -22,10 +22,11 @@ library stdblocks;
 
 entity axis_aligner is
     generic (
-      number_ports : positive := 2;
-      tdata_byte   : positive := 8;
-      tdest_size   : positive := 8;
-      tuser_size   : positive := 8
+      number_ports    : positive := 2;
+      tdata_byte      : positive := 8;
+      tdest_size      : positive := 8;
+      tuser_size      : positive := 8;
+      switch_on_tlast : boolean  := false
     );
     port (
       clk_i      : in  std_logic;
@@ -59,40 +60,44 @@ architecture behavioral of axis_aligner is
 
 begin
 
-  --Master Connections
-  m_tlast_o  <= s_tlast_i;
-  m_tdata_o  <= s_tdata_i;
-  m_tuser_o  <= s_tuser_i;
-  m_tdest_o  <= s_tdest_i;
-  m_tstrb_o  <= s_tstrb_i;
-
-  m_tready_s <= m_tready_i;
-  s_tready_o  <= s_tready_s;
+  pulse_align_i : pulse_align
+    generic map (
+      port_size => number_ports
+    )
+    port map (
+      rst_i  => rst_i,
+      mclk_i => clk_i,
+      en_i   => en_i_s,
+      en_o   => en_o_s
+    );
 
   ready_gen : for j in number_ports-1 downto 0 generate
 
-    pulse_align_i : pulse_align
-      generic map (
-        port_size => number_ports
-      )
-      port map (
-        rst_i  => rst_i,
-        mclk_i => clk_i,
-        en_i   => en_i_s,
-        en_o   => en_o_s
-      );
+    trigger_gen : if switch_on_tlast generate
+      trigger_p: process(all)
+        variable lock : boolean := false;
+      begin   
+        if rst_i = '1' then
+          en_i_s(j) <= '0';
+        elsif rising_edge(clk_i) then
+          if s_tvalid_i(j) = '1' and s_tready_o(j) = '1' and s_tlast_i(j) = '1' then
+            en_i_s(j) <= '0';
+          elsif s_tvalid_i(j) = '1' then
+            en_i_s(j) <= '1';
+          end if;
+        end if;
+      end process trigger_p;
+    else generate
+      en_i_s(j) <= s_tvalid_i(j);
+    end generate;
 
-    en_i_s(j)     <= s_tvalid_i(j) and ready_s(j);
-    s_tready_s(j) <= en_o_s(j);
-    m_tvalid_o(j) <= en_o_s(j);
-
-    det_down_i : det_down
-      port map (
-        mclk_i => clk_i,
-        rst_i  => rst_i,
-        din    => m_tready_s(j),
-        dout   => ready_s(j)
-      );
+    m_tdata_o(j)  <= s_tdata_i(j)  when en_o_s(j) = '1' else (others=>'0');
+    m_tuser_o(j)  <= s_tuser_i(j)  when en_o_s(j) = '1' else (others=>'0');
+    m_tdest_o(j)  <= s_tdest_i(j)  when en_o_s(j) = '1' else (others=>'0');
+    m_tstrb_o(j)  <= s_tstrb_i(j)  when en_o_s(j) = '1' else (others=>'0');
+    s_tready_o(j) <= m_tready_i(j) when en_o_s(j) = '1' else '0';
+    m_tvalid_o(j) <= s_tvalid_i(j) when en_o_s(j) = '1' else '0';
+    m_tlast_o(j)  <= s_tlast_i(j)  when en_o_s(j) = '1' else '0';
 
   end generate;
 

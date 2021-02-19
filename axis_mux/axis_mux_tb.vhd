@@ -21,57 +21,62 @@ library expert;
 library stdblocks;
   use stdblocks.sync_lib.all;
   use stdblocks.prbs_lib.all;
+  use stdblocks.scheduler_lib.all;
 
-library vunit_lib;
+  library vunit_lib;
 	context vunit_lib.vunit_context;
   context vunit_lib.vc_context;
 
-entity axis_aligner_tb is
+entity axis_mux_tb is
   generic (
     runner_cfg      : string
 	);
-end axis_aligner_tb;
+end axis_mux_tb;
 
-architecture behavioral of axis_aligner_tb is
+architecture behavioral of axis_mux_tb is
 
-  constant peripherals_num : positive := 2;
-  constant packet_size_c   : integer := 8;
-  constant packet_number_c : integer := 8;
+  constant run_time_c      : time     := 100 us;
+  constant tdata_byte      : integer  := 1;
+  constant tdest_size      : integer  := 8;
+  constant tuser_size      : integer  := 8;
+  constant peripherals_num : positive := 4;
+  constant packet_size_c   : integer  := 8;
+  constant packet_number_c : integer  := 8;
 
-  component axis_aligner is
+  component axis_mux is
     generic (
-      number_ports    : positive := 2;
+      controllers_num : positive := 2;
       tdata_byte      : positive := 8;
       tdest_size      : positive := 8;
       tuser_size      : positive := 8;
-      switch_on_tlast : boolean  := true
+      select_auto     : boolean  := false;
+      switch_tlast    : boolean  := false;
+      interleaving    : boolean  := false;
+      max_tx_size     : positive := 10;
+      mode            : integer  := 10
     );
     port (
+      --general
       clk_i      : in  std_logic;
       rst_i      : in  std_logic;
-        --AXIS Master Port
-      m_tdata_o  : out std_logic_array (number_ports-1 downto 0)(8*tdata_byte-1 downto 0);
-      m_tuser_o  : out std_logic_array (number_ports-1 downto 0)(tuser_size-1 downto 0);
-      m_tdest_o  : out std_logic_array (number_ports-1 downto 0)(tdest_size-1 downto 0);
-      m_tstrb_o  : out std_logic_array (number_ports-1 downto 0)(tdata_byte-1 downto 0);
-      m_tready_i : in  std_logic_vector(number_ports-1 downto 0);
-      m_tvalid_o : out std_logic_vector(number_ports-1 downto 0);
-      m_tlast_o  : out std_logic_vector(number_ports-1 downto 0);
-        --AXIS Slave Port
-      s_tdata_i  : in  std_logic_array (number_ports-1 downto 0)(8*tdata_byte-1 downto 0);
-      s_tuser_i  : in  std_logic_array (number_ports-1 downto 0)(tuser_size-1 downto 0);
-      s_tdest_i  : in  std_logic_array (number_ports-1 downto 0)(tdest_size-1 downto 0);
-      s_tstrb_i  : in  std_logic_array (number_ports-1 downto 0)(tdata_byte-1 downto 0);
-      s_tready_o : out std_logic_vector(number_ports-1 downto 0);
-      s_tvalid_i : in  std_logic_vector(number_ports-1 downto 0);
-      s_tlast_i  : in  std_logic_vector(number_ports-1 downto 0)
+      --AXIS Slave Port
+      s_tdata_i  : in  std_logic_array(controllers_num-1 downto 0)(8*tdata_byte-1 downto 0);
+      s_tuser_i  : in  std_logic_array(controllers_num-1 downto 0)(tuser_size-1 downto 0);
+      s_tdest_i  : in  std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0);
+      s_tstrb_i  : in  std_logic_array(controllers_num-1 downto 0)(tdata_byte-1 downto 0);
+      s_tready_o : out std_logic_vector(controllers_num-1 downto 0);
+      s_tvalid_i : in  std_logic_vector(controllers_num-1 downto 0);
+      s_tlast_i  : in  std_logic_vector(controllers_num-1 downto 0);
+      --AXIS Master port
+      m_tdata_o  : out std_logic_vector(8*tdata_byte-1 downto 0);
+      m_tuser_o  : out std_logic_vector(tuser_size-1 downto 0);
+      m_tdest_o  : out std_logic_vector(tdest_size-1 downto 0);
+      m_tstrb_o  : out std_logic_vector(tdata_byte-1 downto 0);
+      m_tready_i : in  std_logic;
+      m_tvalid_o : out std_logic;
+      m_tlast_o  : out std_logic
     );
-  end component axis_aligner;
-
-  constant run_time_c : time    := 100 us;
-  constant tdata_byte : integer := 4;
-  constant tdest_size : integer := 8;
-  constant tuser_size : integer := 8;
+  end component axis_mux;
 
   signal   rst_i       : std_logic;
   signal   clk_i       : std_logic := '0';
@@ -84,36 +89,25 @@ architecture behavioral of axis_aligner_tb is
   signal s_tvalid_i : std_logic_vector(peripherals_num-1 downto 0);
   signal s_tlast_i  : std_logic_vector(peripherals_num-1 downto 0) := (others=>'0');
 
-  signal m_tdata_o  : std_logic_array(peripherals_num-1 downto 0)(8*tdata_byte-1 downto 0);
-  signal m_tuser_o  : std_logic_array(peripherals_num-1 downto 0)(tuser_size-1 downto 0);
-  signal m_tdest_o  : std_logic_array(peripherals_num-1 downto 0)(tdest_size-1 downto 0);
-  signal m_tstrb_o  : std_logic_array(peripherals_num-1 downto 0)(tdata_byte-1 downto 0);
-  signal m_tready_i : std_logic_vector(peripherals_num-1 downto 0);
-  signal m_tvalid_o : std_logic_vector(peripherals_num-1 downto 0);
-  signal m_tlast_o  : std_logic_vector(peripherals_num-1 downto 0);
+  signal m_tdata_o  : std_logic_vector(8*tdata_byte-1 downto 0);
+  signal m_tuser_o  : std_logic_vector(tuser_size-1 downto 0);
+  signal m_tdest_o  : std_logic_vector(tdest_size-1 downto 0);
+  signal m_tstrb_o  : std_logic_vector(tdata_byte-1 downto 0);
+  signal m_tready_i : std_logic;
+  signal m_tvalid_o : std_logic;
+  signal m_tlast_o  : std_logic;
 
   signal start : boolean := false;
-  signal done  : boolean_vector(peripherals_num-1 downto 0) := (others=>false);
-  signal saved : boolean_vector(peripherals_num-1 downto 0) := (others=>false);
+  signal done  : boolean := false;
+  signal saved : boolean := false;
 
-  type axi_slave_array_t is array (peripherals_num-1 downto 0) of axi_stream_slave_t;
-
-  impure function new_slave_array return axi_slave_array_t is
-    variable tmp : axi_slave_array_t;
-  begin
-    for j in peripherals_num-1 downto 0 loop
-      tmp(j) := new_axi_stream_slave(
-        data_length  => 8*tdata_byte,
-        dest_length  => tdest_size,
-        user_length  => tuser_size,
-        id_length    => 1,
-        stall_config => new_stall_config(0.00, 1, 10)
-      );
-    end loop;
-    return tmp;
-  end new_slave_array;
-
-  constant slave_axi_stream  : axi_slave_array_t := new_slave_array;
+  constant slave_axi_stream  : axi_stream_slave_t := new_axi_stream_slave (
+    data_length  => 8*tdata_byte,
+    dest_length  => tdest_size,
+    user_length  => tuser_size,
+    id_length    => 1,
+    stall_config => new_stall_config(0.00, 1, 10)
+  );
 
   type axi_master_array_t is array (peripherals_num-1 downto 0) of axi_stream_master_t;
 
@@ -149,7 +143,7 @@ begin
 
     while test_suite loop
       if run("Free running simulation") then
-        report "Will run for " & to_string(run_time_c);
+        info("Will run for " & to_string(run_time_c));
         wait for run_time_c;
         check_passed(result("Free running finished."));
 
@@ -159,7 +153,7 @@ begin
         start <= true;
         wait until rising_edge(clk_i);
         start <= false;
-        wait until ( (and done) and (and saved) and rising_edge(clk_i));
+        wait until ( done and saved) and rising_edge(clk_i);
         info("Test done");
 
       end if;
@@ -168,26 +162,28 @@ begin
     test_runner_cleanup(runner); -- Simulation ends here
   end process;
 
-  stream_chec_gen : for k in 0 to peripherals_num-1 generate
+
 
     stimuli: process
-      variable last       : std_logic := '0';
-      variable prbs       : prbs_t;
+      variable last        : std_logic := '0';
+      variable prbs        : prbs_t;
+      variable slave_index : integer := 0;
     begin
 
-      done(k) <= false;
+      done <= false;
       last := '0';
       wait until start and rising_edge(clk_i);
-      wait for (k * 100 ns);
-      info("VCI_" & to_string(k) & ": Writing data.");
+      info("VCI: Writing data.");
 
-      for i in 1 to packet_number_c loop
+      for dest in (packet_number_c*peripherals_num-1) downto 0 loop
+        slave_index := dest mod peripherals_num;
+        
         for j in packet_size_c-1 downto 0 loop
           wait until rising_edge(clk_i);
           if j = 0 then
             last := '1';
           end if;
-          push_axi_stream(net, master_axi_stream(k),
+          push_axi_stream(net, master_axi_stream(slave_index),
             tdata => prbs.get_data(8*tdata_byte),
             tlast => last,
             tdest => std_logic_vector(to_signed(j, tdest_size)),
@@ -195,14 +191,13 @@ begin
           );
         end loop;
         last := '0';
-        wait for (k * 250 ns);
       end loop;
 
-      info("VCI_" & to_string(k) & ": Sendind data.");
-      done(k) <= true;
-      wait until rising_edge(clk_i) and s_tvalid_i(k) = '1';
-      wait until rising_edge(clk_i) and s_tvalid_i(k) = '0';
-      info("VCI_" & to_string(k) & ": Data sent.");
+      info("VCI: Sendind data.");
+      done <= true;
+      wait until rising_edge(clk_i) and (or s_tvalid_i) = '1';
+      wait until rising_edge(clk_i) and (or s_tvalid_i) = '0';
+      info("VCI: Data sent.");
       wait;
 
     end process;
@@ -216,17 +211,20 @@ begin
       variable tstrb_v : std_logic_vector(tdata_byte-1 downto 0);
       variable tid_v   : std_logic_vector(0 downto 0);
       variable prbs    : prbs_t;
+      variable slave_index : integer := 0;
     begin
       if rst_i = '1' then
-        saved(k) <= false;
+        saved <= false;
       end if;
       wait until start and rising_edge(clk_i);
 
-      info("Reading data from VCI_" & to_string(k) & ".");
+      info("Reading data from VCI.");
 
-      for j in 1 to packet_number_c loop
+      for dest in 0 to (packet_number_c*peripherals_num-1) loop
+        slave_index := dest mod peripherals_num;
+
         for j in packet_size_c-1 downto 0 loop
-          pop_axi_stream(net, slave_axi_stream(k),
+          pop_axi_stream(net, slave_axi_stream,
             tdata => tdata_v,
             tlast => last,
             tkeep => tkeep_v,
@@ -236,7 +234,7 @@ begin
             tuser => tuser_v
           );
           if (j = 0) and (last='0') then
-            --error("Something went wrong. Last misaligned!");
+            error("Something went wrong. Last misaligned!");
           end if;
           check_equal(prbs.get_data(tdata_v'length),tdata_v,result("Checking data error") );
           check_equal(to_integer(tdest_v),j,result("Checking counter value, error at " & to_string(j) ) );
@@ -244,25 +242,27 @@ begin
         end loop;
       end loop;
 
-      info("VCI_" & to_string(k) & " Readout Complete!");
-      saved(k) <= true;
+      info("VCI: Readout Complete!");
+      saved <= true;
       wait;
     end process;
 
     vunit_axiss: entity vunit_lib.axi_stream_slave
       generic map (
-        slave => slave_axi_stream(k)
+        slave => slave_axi_stream
       )
       port map (
         aclk   => clk_i,
-        tvalid => m_tvalid_o(k),
-        tready => m_tready_i(k),
-        tdata  => m_tdata_o(k),
-        tlast  => m_tlast_o(k),
-        tstrb  => m_tstrb_o(k),
-        tdest  => m_tdest_o(k),
-        tuser  => m_tuser_o(k)
+        tvalid => m_tvalid_o,
+        tready => m_tready_i,
+        tdata  => m_tdata_o,
+        tlast  => m_tlast_o,
+        tstrb  => m_tstrb_o,
+        tdest  => m_tdest_o,
+        tuser  => m_tuser_o
       );
+
+  stream_chec_gen : for k in 0 to peripherals_num-1 generate
 
     vunit_axism: entity vunit_lib.axi_stream_master
       generic map (
@@ -282,13 +282,17 @@ begin
   end generate;
 
 
-  dut : axis_aligner
+  dut : axis_mux
   generic map (
-    number_ports    => peripherals_num,
+    controllers_num => peripherals_num,
     tdata_byte      => tdata_byte,
     tdest_size      => tdest_size,
     tuser_size      => tuser_size,
-    switch_on_tlast => true
+    select_auto     => false,
+    switch_tlast    => true,
+    interleaving    => false,
+    max_tx_size     => 10,
+    mode            => 10
   )
   port map (
     clk_i      => clk_i,
