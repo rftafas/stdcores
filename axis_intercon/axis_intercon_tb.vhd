@@ -35,10 +35,10 @@ end axis_intercon_tb;
 architecture behavioral of axis_intercon_tb is
 
   constant run_time_c      : time     := 100 us;
-  constant tdata_byte      : integer  := 4;
+  constant tdata_byte      : integer  := 1;
   constant tdest_size      : integer  := 8;
   constant tuser_size      : integer  := 8;
-  constant peripherals_num : positive := 2;
+  constant peripherals_num : positive := 4;
   constant controllers_num : positive := 8;
   constant packet_size_c   : integer  := 8;
   constant packet_number_c : integer  := 8;
@@ -47,7 +47,7 @@ architecture behavioral of axis_intercon_tb is
     generic (
       controllers_num : positive := 8;
       peripherals_num : positive := 8;
-      tdata_byte : positive := 8;
+      tdata_byte      : positive := 8;
       tdest_size      : positive := 8;
       tuser_size      : positive := 8;
       select_auto     : boolean  := false;
@@ -81,13 +81,13 @@ architecture behavioral of axis_intercon_tb is
   signal   rst_i       : std_logic;
   signal   clk_i       : std_logic := '0';
 
-  signal s_tdata_i  : std_logic_array(peripherals_num-1 downto 0)(8*tdata_byte-1 downto 0);
-  signal s_tuser_i  : std_logic_array(peripherals_num-1 downto 0)(tuser_size-1 downto 0);
-  signal s_tdest_i  : std_logic_array(peripherals_num-1 downto 0)(tdest_size-1 downto 0);
-  signal s_tstrb_i  : std_logic_array(peripherals_num-1 downto 0)(tdata_byte-1 downto 0) := (others=>(others=>'1'));
-  signal s_tready_o : std_logic_vector(peripherals_num-1 downto 0);
-  signal s_tvalid_i : std_logic_vector(peripherals_num-1 downto 0);
-  signal s_tlast_i  : std_logic_vector(peripherals_num-1 downto 0) := (others=>'0');
+  signal s_tdata_i  : std_logic_array(controllers_num-1 downto 0)(8*tdata_byte-1 downto 0);
+  signal s_tuser_i  : std_logic_array(controllers_num-1 downto 0)(tuser_size-1 downto 0);
+  signal s_tdest_i  : std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0);
+  signal s_tstrb_i  : std_logic_array(controllers_num-1 downto 0)(tdata_byte-1 downto 0) := (others=>(others=>'1'));
+  signal s_tready_o : std_logic_vector(controllers_num-1 downto 0);
+  signal s_tvalid_i : std_logic_vector(controllers_num-1 downto 0);
+  signal s_tlast_i  : std_logic_vector(controllers_num-1 downto 0) := (others=>'0');
 
   signal m_tdata_o  : std_logic_array(peripherals_num-1 downto 0)(8*tdata_byte-1 downto 0);
   signal m_tuser_o  : std_logic_array(peripherals_num-1 downto 0)(tuser_size-1 downto 0);
@@ -140,7 +140,7 @@ architecture behavioral of axis_intercon_tb is
 begin
 
   clk_i   <= not   clk_i after 5 ns;
-  test_runner_watchdog(runner, 200 us);
+  test_runner_watchdog(runner, 10 us);
 
   main : process
     variable tdata_v : std_logic_vector(8*tdata_byte-1 downto 0);
@@ -152,6 +152,51 @@ begin
     variable tid_v   : std_logic_vector(0 downto 0);
     variable master_index : integer := 0;
     variable slave_index  : integer := 0;
+
+    procedure send_axis_packet ( packet_number : integer; packet_size : integer ) is
+    begin
+      for i in 0 to packet_number_c loop
+        for j in packet_size_c-1 downto 0 loop
+          if j = 0 then
+            last := '1';
+          end if;
+          push_axi_stream(net, master_axi_stream(master_index),
+            tdata => prbs.get_data(8*tdata_byte),
+            tlast => last,
+            tdest => std_logic_vector(to_signed(slave_index, tdest_size)),
+            tuser => std_logic_vector(to_signed(master_index, tuser_size))
+          );
+        end loop;
+        last := '0';
+      end loop;
+    end procedure send_axis_packet;
+
+    procedure get_axis_packet ( packet_number : integer; packet_size : integer; check : boolean ) is
+    begin
+      for i in 0 to packet_number_c-1 loop
+        for j in packet_size_c-1 downto 0 loop
+          pop_axi_stream(net, slave_axi_stream(slave_index),
+            tdata => tdata_v,
+            tlast => last,
+            tkeep => tkeep_v,
+            tstrb => tstrb_v,
+            tid   => tid_v,
+            tdest => tdest_v,
+            tuser => tuser_v
+          );
+          if check then
+            if (j = 0) and (last='0') then
+              error("Something went wrong. Last misaligned!");
+            end if;
+            check_equal(prbs.get_data(tdata_v'length),tdata_v,result("Checking data error") );
+            check_equal(to_integer(tdest_v),slave_index,result("Checking counter value, error at " & to_string(j) ) );
+            check_equal(to_integer(tuser_v),master_index,result("Checking counter value, error at " & to_string(j) ) );
+          end if;
+        end loop;
+      end loop;
+    end procedure get_axis_packet;
+
+
   begin
     test_runner_setup(runner, runner_cfg);
 
@@ -163,57 +208,87 @@ begin
     while test_suite loop
       if run("Free running simulation") then
         info("Will run for " & to_string(run_time_c));
+        set_timeout(runner, now + run_time_c + 1 us);
         wait for run_time_c;
         check_passed(result("Free running finished."));
 
       elsif run("1:1 Master-Slave") then
         info("VCI: Writing data.");
-        for i in 0 to packet_number_c*controllers_num-1 loop
-          master_index := i mod controllers_num;
-          slave_index  := i mod peripherals_num;
-          for j in packet_size_c-1 downto 0 loop
-            if j = 0 then
-              last := '1';
-            end if;
-            push_axi_stream(net, master_axi_stream(master_index),
-              tdata => prbs.get_data(8*tdata_byte),
-              tlast => last,
-              tdest => std_logic_vector(to_signed(slave_index, tdest_size)),
-              tuser => std_logic_vector(to_signed(i, tuser_size))
-            );
-          end loop;
-          last := '0';
+        for j in minimum(controllers_num,peripherals_num)-1 downto 0 loop
+          master_index := j;
+          slave_index  := j;
+          send_axis_packet(packet_number_c,packet_size_c);
         end loop;
-
         info("VCI: Saving data.");
-        for i in 0 to packet_number_c*peripherals_num-1 loop
-          master_index := i mod controllers_num;
-          slave_index  := i mod peripherals_num;
-          for j in packet_size_c-1 downto 0 loop
-            pop_axi_stream(net, slave_axi_stream(slave_index),
-              tdata => tdata_v,
-              tlast => last,
-              tkeep => tkeep_v,
-              tstrb => tstrb_v,
-              tid   => tid_v,
-              tdest => tdest_v,
-              tuser => tuser_v
-            );
-            if (j = 0) and (last='0') then
-              error("Something went wrong. Last misaligned!");
-            end if;
-            check_equal(prbs.get_data(tdata_v'length),tdata_v,result("Checking data error") );
-            check_equal(to_integer(tdest_v),slave_index,result("Checking counter value, error at " & to_string(j) ) );
-            check_equal(to_integer(tuser_v),i,result("Checking counter value, error at " & to_string(j) ) );
+        for j in minimum(controllers_num,peripherals_num)-1 downto 0 loop
+          master_index := j;
+          slave_index  := j;
+          while s_tvalid_i(j) = '1' loop
+            get_axis_packet(packet_number_c,packet_size_c, true);
+          end loop;
+        end loop;
+        info("VCI: Readout Complete!");
+
+      elsif run("Swaped Master-Slave") then
+        info("VCI: Writing data.");
+        for j in minimum(controllers_num,peripherals_num)-1 downto 0 loop
+          master_index := j;
+          slave_index  := j;
+          send_axis_packet(packet_number_c,packet_size_c);
+        end loop;
+        info("VCI: Saving data.");
+        for j in minimum(controllers_num,peripherals_num)-1 downto 0 loop
+          master_index := j;
+          slave_index  := minimum(controllers_num,peripherals_num)-j;
+          while s_tvalid_i(j) = '1' loop
+            get_axis_packet(packet_number_c,packet_size_c, true);
           end loop;
         end loop;
         info("VCI: Readout Complete!");
 
       elsif run("Each Master to All slaves") then
+        info("VCI: Writing data.");
+        for j in controllers_num-1 downto 0 loop          
+          for k in peripherals_num-1 downto 0 loop
+            master_index := j;
+            slave_index  := k;        
+            send_axis_packet(packet_number_c,packet_size_c);
+          end loop;
+        end loop;
+        info("VCI: Saving data.");
+        for j in controllers_num-1 downto 0 loop          
+          for k in peripherals_num-1 downto 0 loop
+            master_index := j;
+            slave_index  := k;
+            while s_tvalid_i(j) = '1' loop
+              get_axis_packet(packet_number_c,packet_size_c, true);
+              set_timeout(runner, now + 1 us);
+            end loop;            
+          end loop;
+        end loop;
+        info("VCI: Readout Complete!");
 
-      elsif run("All slaves to one Slave") then
+      elsif run("All Masters to one Slave") then
+        info("VCI: Writing data.");
+        for k in peripherals_num-1 downto 0 loop
+          for j in controllers_num-1 downto 0 loop          
+            master_index := j;
+            slave_index  := k;        
+            send_axis_packet(packet_number_c,packet_size_c);
+          end loop;
+          info("VCI: Saving data.");
+          for j in controllers_num-1 downto 0 loop          
+            master_index := j;
+            slave_index  := k;
+            while s_tvalid_i(j) = '1' loop
+              get_axis_packet(packet_number_c,packet_size_c, true);
+              set_timeout(runner, now + 1 us);
+            end loop;            
+          end loop;
+        end loop;
 
       elsif run("1:1 Master Slave with intermitent read") then
+        check_passed(result("TBI."));
 
       end if;
     end loop;

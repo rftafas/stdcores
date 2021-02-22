@@ -122,23 +122,25 @@ architecture behavioral of axis_intercon is
     );
   end component;
 
-  constant n_signals : integer := peripherals_num*controllers_num;
+  --this is a 4 dimension vector. synthesis tools may complaint it is a complex memory but actually is
+  --just a bunch of signals... it should result into no extra hardware.
+  type intercon_vector_matrix is array (natural range <>) of std_logic_array;
 
-  signal demux_tdata_s  : std_logic_array(n_signals-1 downto 0)(8*tdata_byte-1 downto 0);
-  signal demux_tuser_s  : std_logic_array(n_signals-1 downto 0)(tuser_size-1 downto 0);
-  signal demux_tdest_s  : std_logic_array(n_signals-1 downto 0)(tdest_size-1 downto 0);
-  signal demux_tstrb_s  : std_logic_array(n_signals-1 downto 0)(tdata_byte-1 downto 0);
-  signal demux_tvalid_s : std_logic_vector(n_signals-1 downto 0);
-  signal demux_tlast_s  : std_logic_vector(n_signals-1 downto 0);
-  signal demux_tready_s : std_logic_vector(n_signals-1 downto 0);
+  signal demux_tdata_s  : intercon_vector_matrix(controllers_num-1 downto 0)(peripherals_num-1 downto 0)(8*tdata_byte-1 downto 0);
+  signal demux_tuser_s  : intercon_vector_matrix(controllers_num-1 downto 0)(peripherals_num-1 downto 0)(tuser_size-1 downto 0);
+  signal demux_tdest_s  : intercon_vector_matrix(controllers_num-1 downto 0)(peripherals_num-1 downto 0)(tdest_size-1 downto 0);
+  signal demux_tstrb_s  : intercon_vector_matrix(controllers_num-1 downto 0)(peripherals_num-1 downto 0)(tdata_byte-1 downto 0);
+  signal demux_tvalid_s : std_logic_array(controllers_num-1 downto 0)(peripherals_num-1 downto 0);
+  signal demux_tlast_s  : std_logic_array(controllers_num-1 downto 0)(peripherals_num-1 downto 0);
+  signal demux_tready_s : std_logic_array(controllers_num-1 downto 0)(peripherals_num-1 downto 0);
 
-  signal mux_tdata_s    : std_logic_array(n_signals-1 downto 0)(8*tdata_byte-1 downto 0);
-  signal mux_tuser_s    : std_logic_array(n_signals-1 downto 0)(tuser_size-1 downto 0);
-  signal mux_tdest_s    : std_logic_array(n_signals-1 downto 0)(tdest_size-1 downto 0);
-  signal mux_tstrb_s    : std_logic_array(n_signals-1 downto 0)(tdata_byte-1 downto 0);
-  signal mux_tvalid_s   : std_logic_vector(n_signals-1 downto 0);
-  signal mux_tlast_s    : std_logic_vector(n_signals-1 downto 0);
-  signal mux_tready_s   : std_logic_vector(n_signals-1 downto 0);
+  signal mux_tdata_s    : intercon_vector_matrix(peripherals_num-1 downto 0)(controllers_num-1 downto 0)(8*tdata_byte-1 downto 0);
+  signal mux_tuser_s    : intercon_vector_matrix(peripherals_num-1 downto 0)(controllers_num-1 downto 0)(tuser_size-1 downto 0);
+  signal mux_tdest_s    : intercon_vector_matrix(peripherals_num-1 downto 0)(controllers_num-1 downto 0)(tdest_size-1 downto 0);
+  signal mux_tstrb_s    : intercon_vector_matrix(peripherals_num-1 downto 0)(controllers_num-1 downto 0)(tdata_byte-1 downto 0);
+  signal mux_tvalid_s   : std_logic_array(peripherals_num-1 downto 0)(controllers_num-1 downto 0);
+  signal mux_tlast_s    : std_logic_array(peripherals_num-1 downto 0)(controllers_num-1 downto 0);
+  signal mux_tready_s   : std_logic_array(peripherals_num-1 downto 0)(controllers_num-1 downto 0);
 
 begin
 
@@ -146,7 +148,7 @@ begin
 
     intercon_mux_u : axis_mux
       generic map (
-        controllers_num => peripherals_num,
+        controllers_num => controllers_num,
         tdata_byte      => tdata_byte,
         tdest_size      => tdest_size,
         tuser_size      => tuser_size,
@@ -159,13 +161,13 @@ begin
         clk_i      => clk_i,
         rst_i      => rst_i,
         --Slave s0
-        s_tvalid_i => mux_tvalid_s(controllers_num*(j+1)-1 downto peripherals_num*j),
-        s_tlast_i  =>  mux_tlast_s(controllers_num*(j+1)-1 downto controllers_num*j),
-        s_tready_o => mux_tready_s(controllers_num*(j+1)-1 downto controllers_num*j),
-        s_tdata_i  =>  mux_tdata_s(controllers_num*(j+1)-1 downto controllers_num*j),
-        s_tuser_i  =>  mux_tuser_s(controllers_num*(j+1)-1 downto controllers_num*j),
-        s_tdest_i  =>  mux_tdest_s(controllers_num*(j+1)-1 downto controllers_num*j),
-        s_tstrb_i  =>  mux_tstrb_s(controllers_num*(j+1)-1 downto controllers_num*j),
+        s_tvalid_i => mux_tvalid_s(j),
+        s_tlast_i  =>  mux_tlast_s(j),
+        s_tready_o => mux_tready_s(j),
+        s_tdata_i  =>  mux_tdata_s(j),
+        s_tuser_i  =>  mux_tuser_s(j),
+        s_tdest_i  =>  mux_tdest_s(j),
+        s_tstrb_i  =>  mux_tstrb_s(j),
 
         m_tdata_o  => m_tdata_o(j),
         m_tuser_o  => m_tuser_o(j),
@@ -182,7 +184,7 @@ begin
 
     intercon_demux_u : axis_demux
       generic map (
-        peripherals_num => controllers_num,
+        peripherals_num => peripherals_num,
         tdata_byte      => tdata_byte,
         tdest_size      => tdest_size,
         tuser_size      => tuser_size,
@@ -194,13 +196,13 @@ begin
         clk_i      => clk_i,
         rst_i      => rst_i,
         --master
-        m_tvalid_o => demux_tvalid_s(peripherals_num*(j+1)-1 downto peripherals_num*j),
-        m_tlast_o  =>  demux_tlast_s(peripherals_num*(j+1)-1 downto peripherals_num*j),
-        m_tready_i => demux_tready_s(peripherals_num*(j+1)-1 downto peripherals_num*j),
-        m_tdata_o  =>  demux_tdata_s(peripherals_num*(j+1)-1 downto peripherals_num*j),
-        m_tuser_o  =>  demux_tuser_s(peripherals_num*(j+1)-1 downto peripherals_num*j),
-        m_tdest_o  =>  demux_tdest_s(peripherals_num*(j+1)-1 downto peripherals_num*j),
-        m_tstrb_o  =>  demux_tstrb_s(peripherals_num*(j+1)-1 downto peripherals_num*j),
+        m_tvalid_o => demux_tvalid_s(j),
+        m_tlast_o  =>  demux_tlast_s(j),
+        m_tready_i => demux_tready_s(j),
+        m_tdata_o  =>  demux_tdata_s(j),
+        m_tuser_o  =>  demux_tuser_s(j),
+        m_tdest_o  =>  demux_tdest_s(j),
+        m_tstrb_o  =>  demux_tstrb_s(j),
         --slave
         s_tdata_i  => s_tdata_i(j),
         s_tuser_i  => s_tuser_i(j),
@@ -213,16 +215,16 @@ begin
 
     end generate;
 
-    controller_gen : for j in 0 to controllers_num-1 generate
-      periph_gen : for k in 0 to peripherals_num-1 generate
+    controller_gen : for j in 0 to peripherals_num-1 generate
+      periph_gen : for k in 0 to controllers_num-1 generate
 
-        mux_tvalid_s(k*controllers_num + j) <= demux_tvalid_s(j*peripherals_num + k);
-        mux_tlast_s(k*controllers_num + j)  <= demux_tlast_s(j*peripherals_num + k);
-        mux_tdata_s(k*controllers_num + j)  <= demux_tdata_s(j*peripherals_num + k);
-        mux_tdest_s(k*controllers_num + j)  <= demux_tdest_s(j*peripherals_num + k);
-        mux_tstrb_s(k*controllers_num + j)  <= demux_tstrb_s(j*peripherals_num + k);
-        mux_tuser_s(k*controllers_num + j)  <= demux_tuser_s(j*peripherals_num + k);
-        demux_tready_s(j*peripherals_num + k) <= mux_tready_s(k*controllers_num + j);
+        mux_tvalid_s(j)(k)   <= demux_tvalid_s(k)(j);
+        mux_tlast_s(j)(k)    <= demux_tlast_s(k)(j);
+        mux_tdata_s(j)(k)    <= demux_tdata_s(k)(j);
+        mux_tdest_s(j)(k)    <= demux_tdest_s(k)(j);
+        mux_tstrb_s(j)(k)    <= demux_tstrb_s(k)(j);
+        mux_tuser_s(j)(k)    <= demux_tuser_s(k)(j);
+        demux_tready_s(k)(j) <= mux_tready_s(j)(k);
 
       end generate;
     end generate;

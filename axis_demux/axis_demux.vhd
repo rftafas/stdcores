@@ -56,11 +56,11 @@ begin
 
   --Master Connections
   out_gen : for j in peripherals_num-1 downto 0 generate
-    m_tdata_o(j)  <= s_tdata_i;
-    m_tuser_o(j)  <= s_tuser_i;
-    m_tdest_o(j)  <= s_tdest_i;
-    m_tstrb_o(j) <= s_tstrb_i;
-    m_tlast_o(j)  <= s_tlast_i;
+    m_tdata_o(j)  <= s_tdata_i  when to_integer(s_tdest_i) = j else (others=>'0');
+    m_tuser_o(j)  <= s_tuser_i  when to_integer(s_tdest_i) = j else (others=>'0');
+    m_tdest_o(j)  <= s_tdest_i  when to_integer(s_tdest_i) = j else (others=>'0');
+    m_tstrb_o(j)  <= s_tstrb_i  when to_integer(s_tdest_i) = j else (others=>'0');
+    m_tlast_o(j)  <= s_tlast_i  when to_integer(s_tdest_i) = j else '0';
     m_tvalid_o(j) <= s_tvalid_i when to_integer(s_tdest_i) = j else '0';
   end generate;
 
