@@ -8,6 +8,7 @@ except:
     print("Also, make sure to have either GHDL or Modelsim installed.")
     exit()
 
+
 root = dirname(__file__)
 
 vu = VUnit.from_argv()
@@ -21,10 +22,11 @@ stdblocks.add_source_files(join(root, "../../stdblocks/sync_lib/*.vhd"))
 stdblocks.add_source_files(join(root, "../../stdblocks/ram_lib/*.vhd"))
 stdblocks.add_source_files(join(root, "../../stdblocks/fifo_lib/*.vhd"))
 stdblocks.add_source_files(join(root, "../../stdblocks/prbs_lib/*.vhd"))
+stdblocks.add_source_files(join(root, "../../stdblocks/scheduler_lib/*.vhd"))
 
 stdcores = vu.add_library("stdcores")
 stdcores.add_source_files(join(root, "./*.vhd"))
-test_tb = stdcores.entity("axis_fifo_tb")
-test_tb.scan_tests_from_file(join(root, "axis_fifo_tb.vhd"))
+test_tb = stdcores.entity("axis_mux_tb")
+test_tb.scan_tests_from_file(join(root, "axis_mux_tb.vhd"))
 
 vu.main()
