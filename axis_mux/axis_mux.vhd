@@ -22,7 +22,7 @@ library stdblocks;
 
 entity axis_mux is
     generic (
-      controllers_num : positive := 2;
+      peripherals_num : positive := 2;
       tdata_byte      : positive := 1;
       tdest_size      : positive := 8;
       tuser_size      : positive := 8;
@@ -37,13 +37,13 @@ entity axis_mux is
       clk_i      : in  std_logic;
       rst_i      : in  std_logic;
       --AXIS Slave Port
-      s_tdata_i  : in  std_logic_array(controllers_num-1 downto 0)(8*tdata_byte-1 downto 0);
-      s_tuser_i  : in  std_logic_array(controllers_num-1 downto 0)(tuser_size-1 downto 0);
-      s_tdest_i  : in  std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0);
-      s_tstrb_i  : in  std_logic_array(controllers_num-1 downto 0)(tdata_byte-1 downto 0);
-      s_tready_o : out std_logic_vector(controllers_num-1 downto 0);
-      s_tvalid_i : in  std_logic_vector(controllers_num-1 downto 0);
-      s_tlast_i  : in  std_logic_vector(controllers_num-1 downto 0);
+      s_tdata_i  : in  std_logic_array(peripherals_num-1 downto 0)(8*tdata_byte-1 downto 0);
+      s_tuser_i  : in  std_logic_array(peripherals_num-1 downto 0)(tuser_size-1 downto 0);
+      s_tdest_i  : in  std_logic_array(peripherals_num-1 downto 0)(tdest_size-1 downto 0);
+      s_tstrb_i  : in  std_logic_array(peripherals_num-1 downto 0)(tdata_byte-1 downto 0);
+      s_tready_o : out std_logic_vector(peripherals_num-1 downto 0);
+      s_tvalid_i : in  std_logic_vector(peripherals_num-1 downto 0);
+      s_tlast_i  : in  std_logic_vector(peripherals_num-1 downto 0);
       --AXIS Master port
       m_tdata_o  : out std_logic_vector(8*tdata_byte-1 downto 0);
       m_tuser_o  : out std_logic_vector(tuser_size-1 downto 0);
@@ -58,18 +58,18 @@ end axis_mux;
 architecture behavioral of axis_mux is
 
   signal tx_count_s : integer;
-  signal index_s    : natural range 0 to controllers_num-1;
-  signal ack_s      : std_logic_vector(controllers_num-1 downto 0);
+  signal index_s    : natural range 0 to peripherals_num-1;
+  signal ack_s      : std_logic_vector(peripherals_num-1 downto 0);
 
-  signal axi_tdata_s : std_logic_array(controllers_num-1 downto 0)(8*tdata_byte-1 downto 0);
-  signal axi_tuser_s : std_logic_array(controllers_num-1 downto 0)(tuser_size-1 downto 0);
-  signal axi_tdest_s : std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0);
-  signal axi_tstrb_s : std_logic_array(controllers_num-1 downto 0)(tdata_byte-1 downto 0);
-  signal s_tvalid_s  : std_logic_vector(controllers_num-1 downto 0);
+  signal axi_tdata_s : std_logic_array(peripherals_num-1 downto 0)(8*tdata_byte-1 downto 0);
+  signal axi_tuser_s : std_logic_array(peripherals_num-1 downto 0)(tuser_size-1 downto 0);
+  signal axi_tdest_s : std_logic_array(peripherals_num-1 downto 0)(tdest_size-1 downto 0);
+  signal axi_tstrb_s : std_logic_array(peripherals_num-1 downto 0)(tdata_byte-1 downto 0);
+  signal s_tvalid_s  : std_logic_vector(peripherals_num-1 downto 0);
 
-  signal en_i_s       : std_logic_vector(controllers_num-1 downto 0);
-  signal en_o_s       : std_logic_vector(controllers_num-1 downto 0);
-  signal last_data_en : std_logic_vector(controllers_num-1 downto 0);
+  signal en_i_s       : std_logic_vector(peripherals_num-1 downto 0);
+  signal en_o_s       : std_logic_vector(peripherals_num-1 downto 0);
+  signal last_data_en : std_logic_vector(peripherals_num-1 downto 0);
   signal timeout_s    : std_logic_vector(15 downto 0) := (others=>'0');
 
 begin
@@ -95,14 +95,14 @@ begin
     end if;
   end process;
 
-  ready_gen : for j in 0 to controllers_num-1 generate
+  ready_gen : for j in 0 to peripherals_num-1 generate
     s_tready_o(j) <= m_tready_i when en_o_s(j) = '1' else '0';
     en_i_s(j)     <= s_tvalid_i(j);
   end generate;
 
   schedulling_engine_u : queueing
     generic map (
-      n_elements => controllers_num
+      n_elements => peripherals_num
     )
     port map (
       clk_i     => clk_i,
@@ -113,7 +113,7 @@ begin
       index_o   => index_s
     );
 
-    ack_gen : for j in controllers_num-1 downto 0 generate
+    ack_gen : for j in peripherals_num-1 downto 0 generate
       last_data_en(j) <= m_tready_i and s_tready_o(j) and s_tlast_i(j);
       ack_s(j) <= last_data_en(j) when switch_tlast               else
                   '1'             when timeout_s(15) = '1'        else
