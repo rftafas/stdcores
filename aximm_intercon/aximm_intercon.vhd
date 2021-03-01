@@ -134,14 +134,12 @@ architecture behavioral of aximm_intercon is
 
   signal bresp_tdest_i_s  : std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0) := (others=>(others=>'0'));
 
-  signal araddr_tdest_o_s : std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0) := (others=>(others=>'0'));
   signal araddr_tuser_o_s : std_logic_array(controllers_num-1 downto 0)(tuser_size-1 downto 0) := (others=>(others=>'0'));
   signal araddr_tdest_i_s : std_logic_array(peripherals_num-1 downto 0)(tdest_size-1 downto 0) := (others=>(others=>'0'));
   signal araddr_tuser_i_s : std_logic_array(peripherals_num-1 downto 0)(tuser_size-1 downto 0) := (others=>(others=>'0'));
 
   signal rdata_tdest_i_s  : std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0) := (others=>(others=>'0'));
   signal rdata_tuser_i_s  : std_logic_array(controllers_num-1 downto 0)(tuser_size-1 downto 0) := (others=>(others=>'0'));
-  --signal rdata_tdest_o_s  : std_logic_array(peripherals_num-1 downto 0)(tdest_size-1 downto 0) := (others=>(others=>'0'));
   signal rdata_tuser_o_s  : std_logic_array(peripherals_num-1 downto 0)(tuser_size-1 downto 0) := (others=>(others=>'0'));
 
   type intercon_vector_matrix is array (natural range <>) of std_logic_array;
@@ -175,7 +173,11 @@ architecture behavioral of aximm_intercon is
   signal S_AXI_WLAST_s   : std_logic_vector(peripherals_num-1 downto 0);
 
   signal S_AXI_BRESP_s   : std_logic_array (peripherals_num-1 downto 0)(7 downto 0);
+
   signal S_AXI_ARADDR_s  : std_logic_array (peripherals_num-1 downto 0)(8*tdata_size-1 downto 0);
+  signal S_AXI_ARVALID_s : std_logic_vector(peripherals_num-1 downto 0);
+  signal S_AXI_ARREADY_s : std_logic_vector(peripherals_num-1 downto 0);
+
 
   signal M_AXI_BRESP_s   : std_logic_array (controllers_num-1 downto 0)(7 downto 0);
   signal M_AXI_AWADDR_s  : std_logic_array (controllers_num-1 downto 0)(8*tdata_size-1 downto 0);
@@ -193,21 +195,22 @@ begin
   slave_gen : for j in peripherals_num-1 downto 0 generate
     --write address channel from master to be aligned
     s_tdata_align_s(j)(0)(S_AXI_AWADDR(j)'range) <= S_AXI_AWADDR(j);
-    s_tvalid_align_s(j)(0) <= S_AXI_AWVALID(j);
+    s_tvalid_align_s(j)(0) <= S_AXI_AWVALID(j) when address_valid(S_AXI_AWADDR(j),addr_map_i) else '0';
     s_tstrb_align_s(j)(0)  <= (others=>'1');
+    s_tdest_align_s(j)(0)  <= to_std_logic_vector(address_decode(S_AXI_AWADDR(j),addr_map_i),tdest_size);
     s_tlast_align_s(j)(0)  <= '1';
     s_tuser_align_s(j)(0)(        id_r.high downto         id_r.low) <= S_AXI_AWID(j);
     s_tuser_align_s(j)(0)(      prot_r.high downto      prot_r.low ) <= S_AXI_AWPROT(j);
     s_tuser_align_s(j)(0)( master_no_r.high downto master_no_r.low ) <= to_std_logic_vector(j,tdest_size);
-    S_AXI_AWREADY(j) <= s_tready_align_s(j)(0);
+    S_AXI_AWREADY(j) <= s_tready_align_s(j)(0) when address_valid(S_AXI_AWADDR(j),addr_map_i) else '0';
 
     --write data channel from master to be aligned
     s_tdata_align_s(j)(1)(S_AXI_WDATA(j)'range) <= S_AXI_WDATA(j);
-    s_tvalid_align_s(j)(1) <= S_AXI_WVALID(j);
+    s_tvalid_align_s(j)(1) <= S_AXI_WVALID(j) when address_valid(S_AXI_AWADDR(j),addr_map_i) else '0';
     s_tstrb_align_s(j)(1)  <= S_AXI_WSTRB(j);
     s_tdest_align_s(j)(1)  <= to_std_logic_vector(address_decode(S_AXI_AWADDR(j),addr_map_i),tdest_size);
     s_tlast_align_s(j)(1)  <= S_AXI_WLAST(j);
-    S_AXI_WREADY(j) <= s_tready_align_s(j)(1);
+    S_AXI_WREADY(j) <= s_tready_align_s(j)(1) when address_valid(S_AXI_AWADDR(j),addr_map_i) else '0';
 
     align_u : axis_aligner
       generic map(
@@ -223,7 +226,7 @@ begin
         --AXIS Slave Port
         s_tdata_i  => s_tdata_align_s(j),
         s_tuser_i  => s_tuser_align_s(j),
-        s_tdest_i  => (others=>(others=>'0')),
+        s_tdest_i  => s_tdest_align_s(j),
         s_tstrb_i  => s_tstrb_align_s(j),
         s_tready_o => s_tready_align_s(j),
         s_tvalid_i => s_tvalid_align_s(j),
@@ -231,24 +234,30 @@ begin
         --AXIS Master Port
         m_tdata_o  => m_tdata_align_s(j),
         m_tuser_o  => m_tuser_align_s(j),
-        m_tdest_o  => open,
+        m_tdest_o  => m_tdest_align_s(j),
         m_tstrb_o  => m_tstrb_align_s(j),
         m_tready_i => m_tready_align_s(j),
         m_tvalid_o => m_tvalid_align_s(j),
         m_tlast_o  => m_tlast_align_s(j)
       );
 
-    S_AXI_AWID_s(j)    <= m_tuser_align_s(j)(0)(  id_r.high downto   id_r.low);
-    S_AXI_AWPROT_s(j)  <= m_tuser_align_s(j)(0)(prot_r.high downto prot_r.low);
-    S_AXI_AWVALID_s(j) <= m_tvalid_align_s(j)(0);
+    
+
+    --S_AXI_AWID_s(j)     <= m_tuser_align_s(j)(0)(  id_r.high downto   id_r.low);
+    --S_AXI_AWPROT_s(j)   <= m_tuser_align_s(j)(0)(prot_r.high downto prot_r.low);
+    S_AXI_AWVALID_s(j)  <= m_tvalid_align_s(j)(0);
     m_tready_align_s(j)(0) <= S_AXI_AWREADY_s(j);
-    S_AXI_AWADDR_s(j)  <= m_tdata_align_s(j)(0);
-  
+    S_AXI_AWADDR_s(j)   <= m_tdata_align_s(j)(0);
+    awaddr_tdest_i_s(j) <= m_tdest_align_s(j)(0);
+    awaddr_tuser_i_s(j) <= m_tuser_align_s(j)(0);
+
     S_AXI_WVALID_s(j) <= m_tvalid_align_s(j)(1);
     m_tready_align_s(j)(1) <= S_AXI_WREADY_s(j);
-    S_AXI_WDATA_s(j)  <= m_tdata_align_s(j)(1);
-    S_AXI_WSTRB_s(j)  <= m_tstrb_align_s(j)(1);
-    S_AXI_WLAST_s(j)  <= m_tlast_align_s(j)(1);
+    S_AXI_WDATA_s(j)   <= m_tdata_align_s(j)(1);
+    S_AXI_WSTRB_s(j)   <= m_tstrb_align_s(j)(1);
+    S_AXI_WLAST_s(j)   <= m_tlast_align_s(j)(1);
+    wdata_tdest_i_s(j) <= m_tdest_align_s(j)(1);
+    wdata_tuser_i_s(j) <= m_tuser_align_s(j)(1);
 
     --read address from master to slave
     araddr_tdest_i_s(j) <= to_std_logic_vector(address_decode(S_AXI_ARADDR(j),addr_map_i),tdest_size);
@@ -258,6 +267,9 @@ begin
       
     --read data channel from slave to master
     S_AXI_ARADDR_s(j)(S_AXI_ARADDR(j)'range) <= S_AXI_ARADDR(j);
+    S_AXI_ARVALID_s(j) <= S_AXI_ARVALID(j)   when address_valid(S_AXI_AWADDR(j),addr_map_i) else '0';
+    S_AXI_ARREADY(j)   <= S_AXI_ARREADY_s(j) when address_valid(S_AXI_AWADDR(j),addr_map_i) else '0';
+
     S_AXI_RRESP(j) <= rdata_tuser_o_s(j)(rresp_r.high downto rresp_r.low);
     S_AXI_RID(j)   <= rdata_tuser_o_s(j)(id_r.high downto id_r.low);
     S_AXI_BRESP(j)(1 downto 0) <= S_AXI_BRESP_s(j)(1 downto 0);
@@ -273,7 +285,7 @@ begin
 
     bresp_u : srfifo1ck
       generic map(
-        fifo_size => 16,
+        fifo_size => 4,
         port_size => tdest_size
       )
       port map(
@@ -294,14 +306,14 @@ begin
 
     rdata_u : srfifo1ck
       generic map(
-        fifo_size => 16,
+        fifo_size => 4,
         port_size => tdest_size
       )
       port map(
         --general
         clk_i         => clk_i,
         rst_i         => rst_i,
-        dataa_i       => (others=>'0'),--araddr_tuser_o_s(j)(master_no_r.high downto master_no_r.low),
+        dataa_i       => araddr_tuser_o_s(j)(master_no_r.high downto master_no_r.low),
         ena_i         => M_AXI_ARREADY(j) and M_AXI_ARVALID(j),
         datab_o       => rdata_tdest_i_s(j),
         enb_i         => M_AXI_RREADY(j)  and M_AXI_RVALID(j) and M_AXI_RLAST(j),
@@ -354,7 +366,7 @@ begin
       s_tready_o => S_AXI_AWREADY_s,
       s_tvalid_i => S_AXI_AWVALID_s,
       s_tlast_i  => (others=>'1')
-    );
+    );  
 
   wdata_intercon_u : axis_intercon
     generic map (
@@ -382,7 +394,7 @@ begin
       s_tdata_i  => S_AXI_WDATA_s,
       s_tstrb_i  => S_AXI_WSTRB_s,
       s_tuser_i  => wdata_tuser_i_s,
-      s_tdest_i  => (others=>(others=>'0')),
+      s_tdest_i  => wdata_tdest_i_s,
       s_tready_o => S_AXI_WREADY_s,
       s_tvalid_i => S_AXI_WVALID_s,
       s_tlast_i  => S_AXI_WLAST_s
@@ -438,7 +450,7 @@ begin
       m_tdata_o  => M_AXI_ARADDR_s,
       m_tstrb_o  => open,
       m_tuser_o  => araddr_tuser_o_s,
-      m_tdest_o  => araddr_tdest_o_s,
+      m_tdest_o  => open,
       m_tready_i => M_AXI_ARREADY,
       m_tvalid_o => M_AXI_ARVALID,
       m_tlast_o  => open,
@@ -447,8 +459,8 @@ begin
       s_tstrb_i  => (others=>(others=>'1')),
       s_tuser_i  => araddr_tuser_i_s,
       s_tdest_i  => araddr_tdest_i_s,
-      s_tready_o => S_AXI_ARREADY,
-      s_tvalid_i => S_AXI_ARVALID,
+      s_tready_o => S_AXI_ARREADY_s,
+      s_tvalid_i => S_AXI_ARVALID_s,
       s_tlast_i  => (others=>'1')
     );
 

@@ -195,7 +195,7 @@ begin
   begin
     set_peripheral_address(7,"0000----",addr_map_v);
     set_peripheral_address(6,"0001----",addr_map_v);
-    set_peripheral_address(5,"0010----",addr_map_v);
+    set_peripheral_address(5,"001-----",addr_map_v);
     set_peripheral_address(4,"01------",addr_map_v);
     set_peripheral_address(3,"100-----",addr_map_v);
     set_peripheral_address(2,"101-----",addr_map_v);
@@ -206,9 +206,9 @@ begin
 
   --The Testbench
   main : process
-    variable rdata_v      : std_logic_vector(8*DATA_BYTE_NUM-1 downto 0) := (others=>'0');
-    variable data_v       : std_logic_vector(8*DATA_BYTE_NUM-1 downto 0) := (others=>'0');
-    variable buffer_v     : buffer_t := null_buffer;
+    variable rdata_v  : std_logic_array(register_num-1 downto 0)(8*DATA_BYTE_NUM-1 downto 0) := (others=>(others=>'0'));
+    variable data_v   : std_logic_vector(8*DATA_BYTE_NUM-1 downto 0) := (others=>'0');
+    variable buffer_v : buffer_t := null_buffer;
   begin
       test_runner_setup(runner, runner_cfg);
       rst_i     <= '1';
@@ -234,7 +234,7 @@ begin
           buffer_v := allocate(memory, 2**ADDR_SIZE, "write buffer", alignment => add_inc);
           --we will do a write to every address.
           --address on AXI are byte based so we have to rebase the address to the word size.
-          for reg_addr in 0 to 2**(ADDR_SIZE-size_of(DATA_BYTE_NUM)+1)-1 loop
+          for reg_addr in 0 to register_num-1 loop
             data_v := prbs.get_data(8*DATA_BYTE_NUM);
             set_expected_byte(memory, base_address(buffer_v)+add_inc*reg_addr, to_integer(data_v) );
             write_bus(net,axi_master_handle(0),add_inc*reg_addr,data_v,strb_c);
@@ -247,18 +247,18 @@ begin
         elsif run("All Masters Write Out") then
           info("Writing to VCI Masters.");
           set_timeout(runner, now + (register_num * 300 ns) );
-          for j in 2 to peripherals_num-1 loop
+          for j in 0 to peripherals_num-1 loop
             info("Master_" & to_string(j) & ": writing.");
             buffer_v := allocate(memory, 2**ADDR_SIZE, "write buffer", alignment => add_inc);
-            for reg_addr in 0 to 2**(ADDR_SIZE-size_of(DATA_BYTE_NUM)+1)-1 loop
-              data_v := prbs.get_data(8*DATA_BYTE_NUM);
+            for reg_addr in 0 to register_num-1 loop
+              data_v      := prbs.get_data(8*DATA_BYTE_NUM);
               set_expected_byte(memory, base_address(buffer_v)+add_inc*reg_addr, to_integer(data_v) );
               write_bus(net,axi_master_handle(j),add_inc*reg_addr,data_v,strb_c);
-              wait_until_idle(net,axi_master_handle(j));
-              --info("Write: " & to_string(data_v) & "| Read: " & to_string(read_word(memory,add_inc*reg_addr,DATA_BYTE_NUM)));
+              wait_until_idle( net, axi_master_handle(j) );
             end loop;
             set_timeout(runner, now + (register_num * 300 ns) );
-            wait for register_num*250 ns;  
+            wait for register_num*250 ns;
+            clear(memory);
             info("Master_" & to_string(j) & ": done.");
           end loop;
           set_timeout(runner, now + (register_num * 250 ns) );
@@ -266,6 +266,7 @@ begin
           check_passed(result("All Masters Write Out - Pass."));
 
         elsif run("Master 0 Read Out") then
+          info("Reading from VCI Masters.");
           set_timeout(runner, now + (register_num * 250 ns) );
           info("Master_0: reading.");
           buffer_v := allocate(memory, 2**ADDR_SIZE, "read buffer", alignment => add_inc);
@@ -279,22 +280,20 @@ begin
           check_passed(result("Master 0 Read Out - Pass."));
 
         elsif run("All Masters Read Out") then
-          --buffer_v := allocate(memory, 2**ADDR_SIZE, "read buffer", alignment => add_inc);
+          info("Reading from VCI Masters.");
+          set_timeout(runner, now + (register_num * 300 ns) );
           for j in 0 to peripherals_num-1 loop
-            buffer_v := allocate(memory, 2**ADDR_SIZE, "read buffer", alignment => add_inc);
-            set_timeout(runner, now + (2 * register_num * 200 ns) );
             info("Master_" & to_string(j) & ": reading.");
+            buffer_v := allocate(memory, 2**ADDR_SIZE, "read buffer", alignment => add_inc);
             for reg_addr in 0 to register_num-1 loop
               data_v := prbs.get_data(8*DATA_BYTE_NUM);
               write_word(memory,base_address(buffer_v)+add_inc*reg_addr,data_v);
               check_bus(net,axi_master_handle(j),add_inc*reg_addr,data_v,"Read Ok.");  
-              --read_bus(net,axi_master_handle(j),add_inc*reg_addr,data_v);          
-              --check_true(prbs.check_data(data_v),result("Data Error."));
             end loop;
+            set_timeout(runner, now + (2 * register_num * 200 ns) );
             wait for register_num*200 ns;
-            
             info("Master_" & to_string(j) & ": done.");
-            --clear(memory);
+            clear(memory);
           end loop;
           check_passed(result("All Masters Read Out - Pass."));
         end if;
@@ -370,7 +369,7 @@ begin
       S_AXI_RLAST   => S_AXI_RLAST
     );
 
-  master_vci_gen : for j in peripherals_num-1 downto 0 generate
+  master_vci_gen : for j in 0 to peripherals_num-1 generate
     master_vci_u : entity vunit_lib.axi_lite_master
       generic map (
         bus_handle => axi_master_handle(j)
@@ -403,7 +402,7 @@ begin
       S_AXI_WLAST(j) <= '1';
   end generate;
 
-  slave_vci_gen : for j in controllers_num-1 downto 0 generate
+  slave_vci_gen : for j in 0 to controllers_num-1 generate
 
     read_slave_vci_u : entity vunit_lib.axi_read_slave
       generic map (

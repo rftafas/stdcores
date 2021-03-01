@@ -154,6 +154,11 @@ package aximm_intercon_pkg is
            table       : std_logic_array
   ) return natural;
 
+  function address_valid(
+    address     : std_logic_vector;
+    table       : std_logic_array
+) return boolean;
+
 end package;
 
 package body aximm_intercon_pkg is
@@ -201,5 +206,18 @@ package body aximm_intercon_pkg is
     end loop;
     return tmp;
   end address_decode;
+
+  function address_valid (
+           address     : std_logic_vector;
+           table       : std_logic_array
+  ) return boolean is
+    variable tmp : boolean := false;
+  begin
+    for j in table'range loop
+      tmp := std_match( address, table(j) );
+      exit when std_match( address, table(j) );
+    end loop;
+    return tmp;
+  end address_valid;
 
 end package body;
