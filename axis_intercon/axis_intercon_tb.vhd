@@ -60,49 +60,49 @@ architecture behavioral of axis_intercon_tb is
       rst_i       : in  std_logic;
       clk_i       : in  std_logic;
       --AXIS Master Port
-      m_tdata_o  : out std_logic_array(peripherals_num-1 downto 0)(8*tdata_byte-1 downto 0);
-      m_tuser_o  : out std_logic_array(peripherals_num-1 downto 0)(tuser_size-1 downto 0);
-      m_tdest_o  : out std_logic_array(peripherals_num-1 downto 0)(tdest_size-1 downto 0);
-      m_tstrb_o  : out std_logic_array(peripherals_num-1 downto 0)(tdata_byte-1 downto 0);
-      m_tready_i : in  std_logic_vector(peripherals_num-1 downto 0);
-      m_tvalid_o : out std_logic_vector(peripherals_num-1 downto 0);
-      m_tlast_o  : out std_logic_vector(peripherals_num-1 downto 0);
+      m_tdata_o  : out std_logic_array(controllers_num-1 downto 0)(8*tdata_byte-1 downto 0);
+      m_tuser_o  : out std_logic_array(controllers_num-1 downto 0)(tuser_size-1 downto 0);
+      m_tdest_o  : out std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0);
+      m_tstrb_o  : out std_logic_array(controllers_num-1 downto 0)(tdata_byte-1 downto 0);
+      m_tready_i : in  std_logic_vector(controllers_num-1 downto 0);
+      m_tvalid_o : out std_logic_vector(controllers_num-1 downto 0);
+      m_tlast_o  : out std_logic_vector(controllers_num-1 downto 0);
         --AXIS Slave Port
-      s_tdata_i  : in  std_logic_array(controllers_num-1 downto 0)(8*tdata_byte-1 downto 0);
-      s_tuser_i  : in  std_logic_array(controllers_num-1 downto 0)(tuser_size-1 downto 0);
-      s_tdest_i  : in  std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0);
-      s_tstrb_i  : in  std_logic_array(controllers_num-1 downto 0)(tdata_byte-1 downto 0);
-      s_tready_o : out std_logic_vector(controllers_num-1 downto 0);
-      s_tvalid_i : in  std_logic_vector(controllers_num-1 downto 0);
-      s_tlast_i  : in  std_logic_vector(controllers_num-1 downto 0)
+      s_tdata_i  : in  std_logic_array(peripherals_num-1 downto 0)(8*tdata_byte-1 downto 0);
+      s_tuser_i  : in  std_logic_array(peripherals_num-1 downto 0)(tuser_size-1 downto 0);
+      s_tdest_i  : in  std_logic_array(peripherals_num-1 downto 0)(tdest_size-1 downto 0);
+      s_tstrb_i  : in  std_logic_array(peripherals_num-1 downto 0)(tdata_byte-1 downto 0);
+      s_tready_o : out std_logic_vector(peripherals_num-1 downto 0);
+      s_tvalid_i : in  std_logic_vector(peripherals_num-1 downto 0);
+      s_tlast_i  : in  std_logic_vector(peripherals_num-1 downto 0)
     );
   end component axis_intercon;
 
   signal   rst_i       : std_logic;
   signal   clk_i       : std_logic := '0';
 
-  signal s_tdata_i  : std_logic_array(controllers_num-1 downto 0)(8*tdata_byte-1 downto 0);
-  signal s_tuser_i  : std_logic_array(controllers_num-1 downto 0)(tuser_size-1 downto 0);
-  signal s_tdest_i  : std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0);
-  signal s_tstrb_i  : std_logic_array(controllers_num-1 downto 0)(tdata_byte-1 downto 0) := (others=>(others=>'1'));
-  signal s_tready_o : std_logic_vector(controllers_num-1 downto 0);
-  signal s_tvalid_i : std_logic_vector(controllers_num-1 downto 0);
-  signal s_tlast_i  : std_logic_vector(controllers_num-1 downto 0) := (others=>'0');
+  signal s_tdata_i  : std_logic_array(peripherals_num-1 downto 0)(8*tdata_byte-1 downto 0);
+  signal s_tuser_i  : std_logic_array(peripherals_num-1 downto 0)(tuser_size-1 downto 0);
+  signal s_tdest_i  : std_logic_array(peripherals_num-1 downto 0)(tdest_size-1 downto 0);
+  signal s_tstrb_i  : std_logic_array(peripherals_num-1 downto 0)(tdata_byte-1 downto 0) := (others=>(others=>'1'));
+  signal s_tready_o : std_logic_vector(peripherals_num-1 downto 0);
+  signal s_tvalid_i : std_logic_vector(peripherals_num-1 downto 0);
+  signal s_tlast_i  : std_logic_vector(peripherals_num-1 downto 0) := (others=>'0');
 
-  signal m_tdata_o  : std_logic_array(peripherals_num-1 downto 0)(8*tdata_byte-1 downto 0);
-  signal m_tuser_o  : std_logic_array(peripherals_num-1 downto 0)(tuser_size-1 downto 0);
-  signal m_tdest_o  : std_logic_array(peripherals_num-1 downto 0)(tdest_size-1 downto 0);
-  signal m_tstrb_o  : std_logic_array(peripherals_num-1 downto 0)(tdata_byte-1 downto 0);
-  signal m_tready_i : std_logic_vector(peripherals_num-1 downto 0);
-  signal m_tvalid_o : std_logic_vector(peripherals_num-1 downto 0);
-  signal m_tlast_o  : std_logic_vector(peripherals_num-1 downto 0);
+  signal m_tdata_o  : std_logic_array(controllers_num-1 downto 0)(8*tdata_byte-1 downto 0);
+  signal m_tuser_o  : std_logic_array(controllers_num-1 downto 0)(tuser_size-1 downto 0);
+  signal m_tdest_o  : std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0);
+  signal m_tstrb_o  : std_logic_array(controllers_num-1 downto 0)(tdata_byte-1 downto 0);
+  signal m_tready_i : std_logic_vector(controllers_num-1 downto 0);
+  signal m_tvalid_o : std_logic_vector(controllers_num-1 downto 0);
+  signal m_tlast_o  : std_logic_vector(controllers_num-1 downto 0);
 
-  type axi_slave_array_t is array (peripherals_num-1 downto 0) of axi_stream_slave_t;
+  type axi_slave_array_t is array (controllers_num-1 downto 0) of axi_stream_slave_t;
 
   impure function new_slave_array return axi_slave_array_t is
     variable tmp : axi_slave_array_t;
   begin
-    for j in peripherals_num-1 downto 0 loop
+    for j in controllers_num-1 downto 0 loop
       tmp(j) := new_axi_stream_slave(
         data_length  => 8*tdata_byte,
         dest_length  => tdest_size,
@@ -116,12 +116,12 @@ architecture behavioral of axis_intercon_tb is
 
   constant slave_axi_stream  : axi_slave_array_t := new_slave_array;
 
-  type axi_master_array_t is array (controllers_num-1 downto 0) of axi_stream_master_t;
+  type axi_master_array_t is array (peripherals_num-1 downto 0) of axi_stream_master_t;
 
   impure function new_master_array return axi_master_array_t is
     variable tmp : axi_master_array_t;
   begin
-    for j in controllers_num-1 downto 0 loop
+    for j in peripherals_num-1 downto 0 loop
       tmp(j) := new_axi_stream_master(
         data_length  => 8*tdata_byte,
         dest_length  => tdest_size,
@@ -248,16 +248,17 @@ begin
 
       elsif run("Each Master to All slaves") then
         info("VCI: Writing data.");
-        for j in controllers_num-1 downto 0 loop          
-          for k in peripherals_num-1 downto 0 loop
+        for j in peripherals_num-1 downto 0 loop          
+          for k in controllers_num-1 downto 0 loop
             master_index := j;
             slave_index  := k;        
             send_axis_packet(packet_number_c,packet_size_c);
+            set_timeout(runner, now + 1 us);
           end loop;
         end loop;
         info("VCI: Saving data.");
-        for j in controllers_num-1 downto 0 loop          
-          for k in peripherals_num-1 downto 0 loop
+        for j in peripherals_num-1 downto 0 loop          
+          for k in controllers_num-1 downto 0 loop
             master_index := j;
             slave_index  := k;
             while s_tvalid_i(j) = '1' loop
@@ -270,14 +271,14 @@ begin
 
       elsif run("All Masters to one Slave") then
         info("VCI: Writing data.");
-        for k in peripherals_num-1 downto 0 loop
-          for j in controllers_num-1 downto 0 loop          
+        for k in controllers_num-1 downto 0 loop
+          for j in peripherals_num-1 downto 0 loop          
             master_index := j;
             slave_index  := k;        
             send_axis_packet(packet_number_c,packet_size_c);
           end loop;
           info("VCI: Saving data.");
-          for j in controllers_num-1 downto 0 loop          
+          for j in peripherals_num-1 downto 0 loop          
             master_index := j;
             slave_index  := k;
             while s_tvalid_i(j) = '1' loop
@@ -296,7 +297,7 @@ begin
     test_runner_cleanup(runner); -- Simulation ends here
   end process;
 
-  stream_slave_gen : for k in 0 to peripherals_num-1 generate
+  stream_slave_gen : for k in 0 to controllers_num-1 generate
 
     vunit_axiss: entity vunit_lib.axi_stream_slave
       generic map (
@@ -315,7 +316,7 @@ begin
 
   end generate;
 
-  stream_master_gen : for k in 0 to controllers_num-1 generate
+  stream_master_gen : for k in 0 to peripherals_num-1 generate
 
     vunit_axism: entity vunit_lib.axi_stream_master
       generic map (

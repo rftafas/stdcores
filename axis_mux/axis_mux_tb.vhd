@@ -45,7 +45,7 @@ architecture behavioral of axis_mux_tb is
 
   component axis_mux is
     generic (
-      controllers_num : positive := 2;
+      peripherals_num : positive := 2;
       tdata_byte      : positive := 8;
       tdest_size      : positive := 8;
       tuser_size      : positive := 8;
@@ -60,13 +60,13 @@ architecture behavioral of axis_mux_tb is
       clk_i      : in  std_logic;
       rst_i      : in  std_logic;
       --AXIS Slave Port
-      s_tdata_i  : in  std_logic_array(controllers_num-1 downto 0)(8*tdata_byte-1 downto 0);
-      s_tuser_i  : in  std_logic_array(controllers_num-1 downto 0)(tuser_size-1 downto 0);
-      s_tdest_i  : in  std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0);
-      s_tstrb_i  : in  std_logic_array(controllers_num-1 downto 0)(tdata_byte-1 downto 0);
-      s_tready_o : out std_logic_vector(controllers_num-1 downto 0);
-      s_tvalid_i : in  std_logic_vector(controllers_num-1 downto 0);
-      s_tlast_i  : in  std_logic_vector(controllers_num-1 downto 0);
+      s_tdata_i  : in  std_logic_array(peripherals_num-1 downto 0)(8*tdata_byte-1 downto 0);
+      s_tuser_i  : in  std_logic_array(peripherals_num-1 downto 0)(tuser_size-1 downto 0);
+      s_tdest_i  : in  std_logic_array(peripherals_num-1 downto 0)(tdest_size-1 downto 0);
+      s_tstrb_i  : in  std_logic_array(peripherals_num-1 downto 0)(tdata_byte-1 downto 0);
+      s_tready_o : out std_logic_vector(peripherals_num-1 downto 0);
+      s_tvalid_i : in  std_logic_vector(peripherals_num-1 downto 0);
+      s_tlast_i  : in  std_logic_vector(peripherals_num-1 downto 0);
       --AXIS Master port
       m_tdata_o  : out std_logic_vector(8*tdata_byte-1 downto 0);
       m_tuser_o  : out std_logic_vector(tuser_size-1 downto 0);
@@ -284,7 +284,7 @@ begin
 
   dut : axis_mux
   generic map (
-    controllers_num => peripherals_num,
+    peripherals_num => peripherals_num,
     tdata_byte      => tdata_byte,
     tdest_size      => tdest_size,
     tuser_size      => tuser_size,

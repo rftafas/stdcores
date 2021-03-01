@@ -34,13 +34,13 @@ end axis_demux_tb;
 
 architecture behavioral of axis_demux_tb is
 
-  constant peripherals_num : positive := 2;
+  constant controllers_num : positive := 2;
   constant packet_size_c   : integer := 8;
   constant packet_number_c : integer := 8;
 
   component axis_demux is
     generic (
-      peripherals_num : integer  := 2;
+      controllers_num : integer  := 2;
       tdata_byte      : positive := 8;
       tdest_size      : integer  := 8;
       tuser_size      : integer  := 8;
@@ -52,13 +52,13 @@ architecture behavioral of axis_demux_tb is
       clk_i       : in  std_logic;
       rst_i       : in  std_logic;
       --AXIS Master Port
-      m_tdata_o  : out std_logic_array(peripherals_num-1 downto 0)(8*tdata_byte-1 downto 0);
-      m_tuser_o  : out std_logic_array(peripherals_num-1 downto 0)(tuser_size-1 downto 0);
-      m_tdest_o  : out std_logic_array(peripherals_num-1 downto 0)(tdest_size-1 downto 0);
-      m_tstrb_o  : out std_logic_array(peripherals_num-1 downto 0)(tdata_byte-1 downto 0);
-      m_tready_i : in  std_logic_vector(peripherals_num-1 downto 0);
-      m_tvalid_o : out std_logic_vector(peripherals_num-1 downto 0);
-      m_tlast_o  : out std_logic_vector(peripherals_num-1 downto 0);
+      m_tdata_o  : out std_logic_array(controllers_num-1 downto 0)(8*tdata_byte-1 downto 0);
+      m_tuser_o  : out std_logic_array(controllers_num-1 downto 0)(tuser_size-1 downto 0);
+      m_tdest_o  : out std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0);
+      m_tstrb_o  : out std_logic_array(controllers_num-1 downto 0)(tdata_byte-1 downto 0);
+      m_tready_i : in  std_logic_vector(controllers_num-1 downto 0);
+      m_tvalid_o : out std_logic_vector(controllers_num-1 downto 0);
+      m_tlast_o  : out std_logic_vector(controllers_num-1 downto 0);
       --AXIS Slave Port
       s_tdata_i  : in  std_logic_vector(8*tdata_byte-1 downto 0);
       s_tuser_i  : in  std_logic_vector(tuser_size-1 downto 0);
@@ -86,13 +86,13 @@ architecture behavioral of axis_demux_tb is
   signal s_tvalid_i : std_logic;
   signal s_tlast_i  : std_logic := '0';
 
-  signal m_tdata_o  : std_logic_array(peripherals_num-1 downto 0)(8*tdata_byte-1 downto 0);
-  signal m_tuser_o  : std_logic_array(peripherals_num-1 downto 0)(tuser_size-1 downto 0);
-  signal m_tdest_o  : std_logic_array(peripherals_num-1 downto 0)(tdest_size-1 downto 0);
-  signal m_tstrb_o  : std_logic_array(peripherals_num-1 downto 0)(tdata_byte-1 downto 0);
-  signal m_tready_i : std_logic_vector(peripherals_num-1 downto 0);
-  signal m_tvalid_o : std_logic_vector(peripherals_num-1 downto 0);
-  signal m_tlast_o  : std_logic_vector(peripherals_num-1 downto 0);
+  signal m_tdata_o  : std_logic_array(controllers_num-1 downto 0)(8*tdata_byte-1 downto 0);
+  signal m_tuser_o  : std_logic_array(controllers_num-1 downto 0)(tuser_size-1 downto 0);
+  signal m_tdest_o  : std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0);
+  signal m_tstrb_o  : std_logic_array(controllers_num-1 downto 0)(tdata_byte-1 downto 0);
+  signal m_tready_i : std_logic_vector(controllers_num-1 downto 0);
+  signal m_tvalid_o : std_logic_vector(controllers_num-1 downto 0);
+  signal m_tlast_o  : std_logic_vector(controllers_num-1 downto 0);
 
   signal start : boolean := false;
   signal done  : boolean := false;
@@ -105,12 +105,12 @@ architecture behavioral of axis_demux_tb is
     stall_config => new_stall_config(0.00, 1, 10)
   );
 
-  type axi_stream_slave_array_t is array (peripherals_num-1 downto 0) of axi_stream_slave_t;
+  type axi_stream_slave_array_t is array (controllers_num-1 downto 0) of axi_stream_slave_t;
 
   impure function new_slave_array return axi_stream_slave_array_t is
     variable tmp : axi_stream_slave_array_t;
   begin
-    for j in peripherals_num-1 downto 0 loop
+    for j in controllers_num-1 downto 0 loop
       tmp(j) := new_axi_stream_slave(
         data_length  => 8*tdata_byte,
         dest_length  => tdest_size,
@@ -172,8 +172,8 @@ begin
 
     info("VCI: Writing data.");
 
-    for dest in 0 to (packet_number_c*peripherals_num-1) loop
-      slave_index := dest mod peripherals_num;
+    for dest in 0 to (packet_number_c*controllers_num-1) loop
+      slave_index := dest mod controllers_num;
       
       for j in packet_size_c-1 downto 0 loop
         wait until rising_edge(clk_i);
@@ -217,8 +217,8 @@ begin
 
       info("Reading data from VCI.");
 
-      for dest in 0 to (packet_number_c*peripherals_num-1) loop
-        slave_index := dest mod peripherals_num;
+      for dest in 0 to (packet_number_c*controllers_num-1) loop
+        slave_index := dest mod controllers_num;
         for j in packet_size_c-1 downto 0 loop
           pop_axi_stream(net, slave_axi_stream(slave_index),
             tdata => tdata_v,
@@ -245,7 +245,7 @@ begin
       saved <= true;
     end process;
 
-  stream_chec_gen : for k in 0 to peripherals_num-1 generate
+  stream_chec_gen : for k in 0 to controllers_num-1 generate
 
     vunit_axiss: entity vunit_lib.axi_stream_slave
       generic map (
@@ -281,7 +281,7 @@ begin
 
   dut : axis_demux
   generic map (
-    peripherals_num => peripherals_num,
+    controllers_num => controllers_num,
     tdata_byte      => tdata_byte,
     tdest_size      => tdest_size,
     tuser_size      => tuser_size,

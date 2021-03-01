@@ -20,7 +20,7 @@ library expert;
 
 entity axis_demux is
     generic (
-      peripherals_num : integer  := 2;
+      controllers_num : integer  := 2;
       tdata_byte      : positive := 8;
       tdest_size      : integer  := 8;
       tuser_size      : integer  := 8;
@@ -32,13 +32,13 @@ entity axis_demux is
       clk_i       : in  std_logic;
       rst_i       : in  std_logic;
       --AXIS Master Port
-      m_tdata_o  : out std_logic_array(peripherals_num-1 downto 0)(8*tdata_byte-1 downto 0);
-      m_tuser_o  : out std_logic_array(peripherals_num-1 downto 0)(tuser_size-1 downto 0);
-      m_tdest_o  : out std_logic_array(peripherals_num-1 downto 0)(tdest_size-1 downto 0);
-      m_tstrb_o  : out std_logic_array(peripherals_num-1 downto 0)(tdata_byte-1 downto 0);
-      m_tready_i : in  std_logic_vector(peripherals_num-1 downto 0);
-      m_tvalid_o : out std_logic_vector(peripherals_num-1 downto 0);
-      m_tlast_o  : out std_logic_vector(peripherals_num-1 downto 0);
+      m_tdata_o  : out std_logic_array(controllers_num-1 downto 0)(8*tdata_byte-1 downto 0);
+      m_tuser_o  : out std_logic_array(controllers_num-1 downto 0)(tuser_size-1 downto 0);
+      m_tdest_o  : out std_logic_array(controllers_num-1 downto 0)(tdest_size-1 downto 0);
+      m_tstrb_o  : out std_logic_array(controllers_num-1 downto 0)(tdata_byte-1 downto 0);
+      m_tready_i : in  std_logic_vector(controllers_num-1 downto 0);
+      m_tvalid_o : out std_logic_vector(controllers_num-1 downto 0);
+      m_tlast_o  : out std_logic_vector(controllers_num-1 downto 0);
       --AXIS Slave Port
       s_tdata_i  : in  std_logic_vector(8*tdata_byte-1 downto 0);
       s_tuser_i  : in  std_logic_vector(tuser_size-1 downto 0);
@@ -52,16 +52,20 @@ end axis_demux;
 
 architecture behavioral of axis_demux is
 
+  signal s_tdest_s : std_logic_vector(tdest_size-1 downto 0);
+
 begin
 
+  s_tdest_s <= to_x01(s_tdest_i);
+
   --Master Connections
-  out_gen : for j in peripherals_num-1 downto 0 generate
-    m_tdata_o(j)  <= s_tdata_i  when to_integer(s_tdest_i) = j else (others=>'0');
-    m_tuser_o(j)  <= s_tuser_i  when to_integer(s_tdest_i) = j else (others=>'0');
-    m_tdest_o(j)  <= s_tdest_i  when to_integer(s_tdest_i) = j else (others=>'0');
-    m_tstrb_o(j)  <= s_tstrb_i  when to_integer(s_tdest_i) = j else (others=>'0');
-    m_tlast_o(j)  <= s_tlast_i  when to_integer(s_tdest_i) = j else '0';
-    m_tvalid_o(j) <= s_tvalid_i when to_integer(s_tdest_i) = j else '0';
+  out_gen : for j in controllers_num-1 downto 0 generate
+    m_tdata_o(j)  <= s_tdata_i  when to_integer(s_tdest_s) = j else (others=>'0');
+    m_tuser_o(j)  <= s_tuser_i  when to_integer(s_tdest_s) = j else (others=>'0');
+    m_tdest_o(j)  <= s_tdest_i  when to_integer(s_tdest_s) = j else (others=>'0');
+    m_tstrb_o(j)  <= s_tstrb_i  when to_integer(s_tdest_s) = j else (others=>'0');
+    m_tlast_o(j)  <= s_tlast_i  when to_integer(s_tdest_s) = j else '0';
+    m_tvalid_o(j) <= s_tvalid_i when to_integer(s_tdest_s) = j else '0';
   end generate;
 
   s_tready_o <= m_tready_i(to_integer(s_tdest_i));

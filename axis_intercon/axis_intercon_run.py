@@ -28,8 +28,6 @@ for vhd_file in stdblocks_filelist:
     if "_tb" not in vhd_file:
         stdblocks.add_source_files(vhd_file)
 
-
-
 stdcores = vu.add_library("stdcores")
 stdcores_filelist = glob.glob("../axis_mux/*.vhd")
 stdcores_filelist = stdcores_filelist + glob.glob("../axis_demux/*.vhd")
