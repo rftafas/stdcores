@@ -18,14 +18,14 @@ use ieee.numeric_std.all;
 
 entity can_tx is
     port (
-        rst_i        : in  std_logic;              
-        mclk_i       : in  std_logic;            
-        tx_en_i      : in  std_logic;            
-        fb_en_i      : in  std_logic;            
+        rst_i        : in  std_logic;
+        mclk_i       : in  std_logic;
+        tx_en_i      : in  std_logic;
+        fb_en_i      : in  std_logic;
         --can signals can be bundled in TUSER
-        usr_eff_i    : in  std_logic;                     -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags 
-        usr_id_i     : in  std_logic_vector(29 downto 0); -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags 
-        usr_rtr_i    : in  std_logic;                     -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags 
+        usr_eff_i    : in  std_logic;                     -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
+        usr_id_i     : in  std_logic_vector(29 downto 0); -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
+        usr_rtr_i    : in  std_logic;                     -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
         usr_dlc_i    : in  std_logic_vector(3 downto 0);
         usr_rsvd_i   : in  std_logic_vector(1 downto 0);
         data_i       : in  std_logic_vector(63 downto 0);
@@ -58,7 +58,7 @@ architecture rtl of can_tx is
         ack_slot_st,
         eof_st,
         clear_fifo_st,
-        limbo_st
+        abort_st
     );
 
     signal can_mq : can_t := idle_st;
@@ -71,7 +71,7 @@ architecture rtl of can_tx is
     signal tx_clken_s       : std_logic;
 
 begin
-    
+
     control_p: process(mclk_i)
         variable retry_cnt : integer := 0;
         variable frame_cnt : integer := 0;
@@ -88,63 +88,63 @@ begin
                         if data_valid = '1' then
                             can_mq <= load_header_st;
                         end if;
-        
+
                     when load_header_st =>
                         if channel_ready_i = '1' then
                             frame_cnt := 0;
                             can_mq <= arbitration_st;
                         end if;
-        
+
                     when arbitration_st =>
                         if collision = '1' then
                             frame_cnt := 0;
-                            can_mq <= limbo_st;
+                            can_mq <= abort_st;
                         else
                             frame_cnt := frame_cnt + 1;
                             if usr_eff = '1' and frame_cnt = 19 then
-                                if usr_dlc = "0000" then 
+                                if usr_dlc = "0000" then
                                     can_mq <= load_crc_st;
                                 else
                                     can_mq <= load_data_st;
                                 end if;
                             elsif usr_eff = '0' and frame_cnt = 38 then
-                                if usr_dlc = "0000" then 
+                                if usr_dlc = "0000" then
                                     can_mq <= load_crc_st;
                                 else
                                     can_mq <= load_data_st;
                                 end if;
                             end if;
                         end if;
-        
-        
+
+
                     when load_data_st =>
                         frame_cnt := 0;
                         can_mq <= data_st;
-    
+
                     when data_st =>
                         frame_cnt := frame_cnt + 1;
                         if frame_cnt = usr_dlc*8 then
                             can_mq <= load_crc_st;
                         end if;
-                    
+
                     when load_crc_st =>
                         frame_cnt := 0;
                         can_mq <= crc_st;
-    
+
                     when crc_st =>
                         frame_cnt := frame_cnt + 1;
                         if frame_cnt = 16 then
                             can_mq <= ack_slot_st;
                         end if;
-    
+
                     when crc_delimiter_st =>
                         frame_cnt := 0;
                         can_mq <= ack_slot_st;
-    
+
                     when ack_slot_st =>
                         frame_cnt := 0;
                         can_mq <= eof_st;
-        
+
                     when eof_st =>
                         --this states covers: ACK delimiter (1b), EOF (7b) and IFS (3b)
                         frame_cnt := frame_cnt + 1;
@@ -158,26 +158,26 @@ begin
                                 retry_cnt_v <= retry_cnt_v + 1;
                             end if;
                         end if;
-    
+
                     when clear_fifo_st =>
                         retry_cnt_v := 0;
                         frame_cnt   := 0;
                         can_mq      <= idle_st;
-    
-                    when limbo_st =>
-                        frame_cnt := 0;
+
+                    when abort =>
+                        frame_cnt   := 0;
+                        retry_cnt_v := retry_cnt_v + 1;
                         if retry_cnt_v = 7 then
                             can_mq <= clear_fifo_st;
-                        elsif channel_ready_i = '1' then
-                            retry_cnt_v <= retry_cnt_v + 1;
-                            can_mq <= idle_st;
+                        else
+                            can_mq <= load_header_st;
                         end if;
-    
+
                     when others =>
                         can_mq <= idle_st;
-    
+
                 end case;
-        
+
             end if;
         end if;
     end process frame_p;
@@ -187,12 +187,16 @@ begin
                         '1' when can_mq = ack_slot_st      else
                         '1' when can_mq = eof_st           else
                         '0';
-    
-    txen_o <=   '0' when can_mq = idle_st           else
+
+    txen_o  <=  '0' when can_mq = idle_st           else
                 '0' when can_mq = clear_fifo_st     else
-                '0' when can_mq = limbo_st          else
+                '0' when can_mq = abort_st          else
                 '0' when can_mq = load_header_st    else
                 '1';
+
+    busy_o  <=  '0' when can_mq = idle_st           else
+                '1';
+
 
     --if we detect a colision during the ACK, it means that someone has
     --acknoledged our frame. We won't retransmitt it.
@@ -240,8 +244,8 @@ begin
                             frame_sr(14)       <= '0';                                 --IDE
                             frame_sr(15)       <= reserved_i(0);                       --R0
                             frame_sr(16 to 19) <= usr_dlc_i;                           --DLC
-                        end if;               
-                    
+                        end if;
+
                     when load_data_st =>
                         frame_sr                     <= (others=>'1');
                         frame_sr(0 to 8*usr_dlc_i-1) <= data_i(8*usr_dlc_i-1 downto 0);
@@ -270,7 +274,7 @@ begin
                         crc_s <= (others=>'0');
                     when load_header_st =>
                         crc_s <= (others=>'0');
-                    when limbo_st =>
+                    when abort_st =>
                         crc_s <= (others=>'0');
                     when clear_fifo_st =>
                         crc_s <= (others=>'0');

@@ -23,22 +23,22 @@ entity can_clk is
     port ( mclk_i      : in  std_logic;
            rst_i       : in  std_logic;
            baud_rate_i : in  std_logic_vector(11 downto 0); -- baudrate in N x kbps, n = 0...2**12
-           clk_sync_i  : in  std_logic;                     
-           txen_o      : out std_logic;                    
-           rxen_o      : out std_logic;                    
-           fben_o      : out std_logic                     
-    ); 
+           clk_sync_i  : in  std_logic;
+           txen_o      : out std_logic;
+           rxen_o      : out std_logic;
+           fben_o      : out std_logic
+    );
 end can_clk;
 
 architecture behavioral of can_clk is
-    
+
     signal   quanta_cnt      : unsigned(3 downto 0) := (others=>'0');
     constant quanta_num      : integer              := 2**quanta_cnt'length;
     constant base_freq       : real                 := to_real(quanta_num*1000);
 
     constant NCO_size_c      : integer := 22; --ceil ( log2(1000) + 12 bits )
     constant Resolution_hz_c : real    := system_freq/(2**NCO_size_c);
-    constant baud_calc_c     : integer := increment_value_calc(system_freq,base_freq,NCO_size_c);   
+    constant baud_calc_c     : integer := increment_value_calc(system_freq,base_freq,NCO_size_c);
 
 begin
 
@@ -65,7 +65,7 @@ begin
         );
     end nco;
 
-    --generate the timebase for 
+    --generate the timebase for
     s_value_s <= baud_rate_i * baud_calc_c;
 
     quanta_clk_u : det_down

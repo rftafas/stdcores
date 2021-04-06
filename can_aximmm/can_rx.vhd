@@ -18,25 +18,28 @@ use ieee.numeric_std.all;
 
 entity can_rx is
     port (
-        rst_i        : in  std_logic;              
-        mclk_i       : in  std_logic;            
-        rx_clken_i   : in  std_logic;            
-        fb_clken_i   : in  std_logic;            
+        rst_i          : in  std_logic;
+        mclk_i         : in  std_logic;
+        rx_clken_i     : in  std_logic;
+        fb_clken_i     : in  std_logic;
         --can signals can be bundled in TUSER
-        usr_eff_o    : out std_logic;                     -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags 
-        usr_id_o     : out std_logic_vector(29 downto 0); -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags 
-        usr_rtr_o    : out std_logic;                     -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags 
-        usr_dlc_o    : out std_logic_vector(3 downto 0);
-        usr_rsvd_o   : out std_logic_vector(1 downto 0);
-        data_o       : out std_logic_vector(63 downto 0);
-        data_ready_i : in  std_logic;
-        data_valid_o : out std_logic;
-        data_last_o  : out std_logic;
+        usr_eff_o      : out std_logic;                     -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
+        usr_id_o       : out std_logic_vector(29 downto 0); -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
+        usr_rtr_o      : out std_logic;                     -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
+        usr_dlc_o      : out std_logic_vector(3 downto 0);
+        usr_rsvd_o     : out std_logic_vector(1 downto 0);
+        data_o         : out std_logic_vector(63 downto 0);
+        data_ready_i   : in  std_logic;
+        data_valid_o   : out std_logic;
+        data_last_o    : out std_logic;
         --status
-        busy_o       : out std_logic;
+        reg_id_i       : in  std_logic_vector(29 downto 0);
+        reg_id_mask_i  : in  std_logic_vector(29 downto 0);
+        busy_o         : out std_logic;
+        rx_crc_error_o : out std_logic;
         --Signals to PHY
-        col_i        : in  std_logic;
-        rxdata_i     : out std_logic;
+        collision_i    : in  std_logic;
+        rxdata_i       : out std_logic;
     );
 end can_rx;
 

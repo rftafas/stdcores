@@ -55,7 +55,7 @@ architecture rtl of can_phy is
 
     signal rx_int_s : std_logic; --create rx_out as buffer
     signal rx_int_s : std_logic; --create rx_out as buffer
-    
+
 begin
 
     --error injection. we have to guarantee that the command from registerbank is captured by the phy.
@@ -78,11 +78,11 @@ begin
             if tx_clken_i = '1' then
                 tx_en_s <= tx_en_i;
                 if lock_dominant_i = '1' then
-                    tx_s <= '0'; 
+                    tx_s <= '0';
                 elsif send_ack_i = '1' then
-                    tx_s <= '0'; 
+                    tx_s <= '0';
                 elsif force_error_s = '1' then
-                    tx_s <= not tx_i;                   
+                    tx_s <= not tx_i;
                 else
                     tx_s <= tx_i;
                 end if;
@@ -98,7 +98,7 @@ begin
     --internal phy:
     can_l <= '0' when (tx_en_s and not tx_s) = '1' else 'Z';
     can_h <= '0' when (tx_en_s and     tx_s) = '1' else 'Z';
-    
+
     --internal PHY: ex from RXI, external PHY: RX from CANH/L
     rx_s <= rxi when not internal_phy           else
             '1' when can_h = '1' and can_l ='0' else
@@ -112,8 +112,8 @@ begin
           din    => rx_s,
           dout   => rx_int_s
         );
-    
-        --detect the edge to sync the internal clock
+
+    --detect the edge to sync the internal clock
     rx_det_u : det_down
         port map (
           rst_i  => '0',
@@ -121,10 +121,10 @@ begin
           din    => rx_int_s,
           dout   => rx_sync_o
         );
-    
+
     --send the data.
     rx_o <= rx_int_s;
-    
+
     --we can only detect when we send a 1 but the bus remains low.
     col_det_p : process(clk, rst)
     begin
@@ -135,7 +135,7 @@ begin
                 collision_o <= (not rx_int_s) and tx_s and tx_en_s;
             elsif tx_clken_i = '1' then
                 collision_o <= '0';
-            end if;            
+            end if;
         end if;
     end process;
 
@@ -172,5 +172,5 @@ begin
         end if;
     end process;
 
-    
+
 end rtl;
