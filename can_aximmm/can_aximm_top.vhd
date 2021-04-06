@@ -1,0 +1,252 @@
+----------------------------------------------------------------------------------
+--Copyright 2021 Ricardo F Tafas Jr
+
+--Licensed under the Apache License, Version 2.0 (the "License"); you may not
+--use this file except in compliance with the License. You may obtain a copy of
+--the License at
+
+--   http://www.apache.org/licenses/LICENSE-2.0
+
+--Unless required by applicable law or agreed to in writing, software distributed
+--under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES
+--OR CONDITIONS OF ANY KIND, either express or implied. See the License for
+--the specific language governing permissions and limitations under the License.
+----------------------------------------------------------------------------------
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity can_aximm_top is
+  generic (
+    internal_phy : boolean := false
+  )  
+  port (
+    mclk_i        : in  std_logic;
+    rst_i         : in  std_logic;
+    S_AXI_AWADDR  : in  std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
+    S_AXI_AWPROT  : in  std_logic_vector(2 downto 0);
+    S_AXI_AWVALID : in  std_logic;
+    S_AXI_AWREADY : out std_logic;
+    S_AXI_WDATA   : in  std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+    S_AXI_WSTRB   : in  std_logic_vector((C_S_AXI_DATA_WIDTH/8)-1 downto 0);
+    S_AXI_WVALID  : in  std_logic;
+    S_AXI_WREADY  : out std_logic;
+    S_AXI_BRESP   : out std_logic_vector(1 downto 0);
+    S_AXI_BVALID  : out std_logic;
+    S_AXI_BREADY  : in  std_logic;
+    S_AXI_ARADDR  : in  std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
+    S_AXI_ARPROT  : in  std_logic_vector(2 downto 0);
+    S_AXI_ARVALID : in  std_logic;
+    S_AXI_ARREADY : out std_logic;
+    S_AXI_RDATA   : out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+    S_AXI_RRESP   : out std_logic_vector(1 downto 0);
+    S_AXI_RVALID  : out std_logic;
+    S_AXI_RREADY  : in  std_logic;
+    --Simple IRQs
+    --external PHY signals
+    txo_o : out   std_logic;
+    txo_t : out   std_logic;
+    rxi   : in    std_logic;
+    --internal phy
+    can_l : inout std_logic;
+    can_h : inout std_logic
+  );
+end can_aximm_top;
+
+architecture behavior of can_aximm_top is
+
+  --clock control
+  signal baud_rate_s       : std_logic_vector(11 downto 0);
+  signal rx_clken_s        : std_logic;
+  signal fb_clken_s        : std_logic;
+  signal tx_clken_s        : std_logic;
+
+  -- CAN TX
+  signal tx_eff_s          : std_logic;
+  signal tx_id_s           : std_logic_vector(29 downto 0);
+  signal tx_rtr_s          : std_logic;
+  signal tx_dlc_s          : std_logic_vector( 3 downto 0);
+  signal tx_rsvd_s         : std_logic_vector( 1 downto 0);
+  signal tx_data_s         : std_logic_vector(63 downto 0);
+  signal tx_send_s         : std_logic;
+  signal ack_error_s       : std_logic;
+  signal arb_lost_s        : std_logic;
+  signal tx_busy_s         : std_logic;
+  signal tx_serial_data_s  : std_logic;
+  signal tx_serial_data_en : std_logic;
+
+  --CAN RX
+  signal rx_eff_s          : std_logic;        
+  signal rx_id_s           : std_logic_vector(29 downto 0);       
+  signal rx_rtr_s          : std_logic;        
+  signal rx_dlc_s          : std_logic_vector( 3 downto 0);        
+  signal rx_rsvd_s         : std_logic_vector( 1 downto 0);         
+  signal rx_data_valid_s   : std_logic;               
+  signal rx_data_s         : std_logic_vector(63 downto 0);         
+  signal rx_busy_s         : std_logic;         
+  signal rx_serial_data_s  : std_logic;                
+
+  --PHY
+  signal collision_s       : std_logic;            
+  signal rx_sync_s         : std_logic;          
+  signal insert_error_s    : std_logic;               
+  signal lock_dominant_s   : std_logic;                
+  signal loopback_s        : std_logic;           
+  signal stuff_violation_s : std_logic;                  
+
+
+
+begin
+
+  can_reg_u : can_aximm
+    generic map(
+      C_S_AXI_ADDR_WIDTH => C_S_AXI_ADDR_WIDTH,
+      C_S_AXI_DATA_WIDTH => C_S_AXI_DATA_WIDTH
+    )
+    port map(
+      S_AXI_ACLK        => S_AXI_ACLK,
+      S_AXI_ARESETN     => S_AXI_ARESETN,
+      S_AXI_AWADDR      => S_AXI_AWADDR,
+      S_AXI_AWPROT      => S_AXI_AWPROT,
+      S_AXI_AWVALID     => S_AXI_AWVALID,
+      S_AXI_AWREADY     => S_AXI_AWREADY,
+      S_AXI_WDATA       => S_AXI_WDATA,
+      S_AXI_WSTRB       => S_AXI_WSTRB,
+      S_AXI_WVALID      => S_AXI_WVALID,
+      S_AXI_WREADY      => S_AXI_WREADY,
+      S_AXI_BRESP       => S_AXI_BRESP,
+      S_AXI_BVALID      => S_AXI_BVALID,
+      S_AXI_BREADY      => S_AXI_BREADY,
+      S_AXI_ARADDR      => S_AXI_ARADDR,
+      S_AXI_ARPROT      => S_AXI_ARPROT,
+      S_AXI_ARVALID     => S_AXI_ARVALID,
+      S_AXI_ARREADY     => S_AXI_ARREADY,
+      S_AXI_RDATA       => S_AXI_RDATA,
+      S_AXI_RRESP       => S_AXI_RRESP,
+      S_AXI_RVALID      => S_AXI_RVALID,
+      S_AXI_RREADY      => S_AXI_RREADY,
+      ---
+      g1_i              => x"A1A2A3A4",
+      iso_mode_o        => open,
+      fd_enable_o       => open,
+      sample_rate_o     => baud_rate_s,
+      rx_irq_i          => ,
+      rx_irq_mask_o     => ,
+      tx_irq_i          => ,
+      loop_enable_o     => internal_loop_s,
+      insert_errors_o   => insert_error_s,
+      pop_error_o       => pop_error_s,
+      auto_error_rate_o => ,
+      rx_data_valid_i   => rx_data_valid_s,
+      rx_read_done_o    => ,
+      rx_busy_i         => rx_busy_s,
+      rx_crc_error_i    => ,
+      rx_rtr_i          => rx_rtr_s,
+      rx_ide_i          => rx_eff_s,
+      rx_r0_i           => rx_rsvd_s(0),
+      rx_r1_i           => rx_rsvd_s(1),
+      id1_o             => ,
+      id1_mask_o        => ,
+      rx_size_i         => rx_dlc_s,
+      rx_id_i           => rx_id_s,
+      rx_data0_i        => rx_data_s(31 downto  0),
+      rx_data1_i        => rx_data_s(63 downto 32),
+      tx_ready_i        => ,
+      tx_send_o         => tx_send_s,
+      tx_busy_i         => tx_busy_s,
+      tx_arb_lost_i     => arb_lost_s,
+      tx_rtr_o          => tx_rtr_s,
+      tx_eff_o          => tx_eff_s,
+      tx_r0_o           => tx_rsvd_s(0),
+      tx_r1_o           => tx_rsvd_s(1),
+      tx_dlc_o          => tx_dlc_s,
+      tx_id_o           => tx_id_s,
+      tx_data0_o        => tx_data_s(31 downto  0),
+      tx_data1_o        => tx_data_s(63 downto 32)
+    );
+
+
+  -- can clock generation 
+  can_clk : entity work.can_clk
+    port map(
+      mclk_i      => mclk_i,
+      rst_i       => rst_i,
+      baud_rate_i => baud_rate_s,
+      clk_sync_i  => rx_sync_s,
+      rxen_o      => rx_clken_s,
+      fben_o      => fb_clken_s,
+      txen_o      => tx_clken_s
+    );
+
+  -- can sending of messages
+  can_tx_u : can_tx
+    port map(
+      rst_i        => rst_i,
+      mclk_i       => mclk_i,
+      tx_en_i      => tx_clken_s,
+      fb_en_i      => fb_clken_s,
+      usr_eff_i    => tx_eff_s, 
+      usr_id_i     => tx_id_s, 
+      usr_rtr_i    => tx_rtr_s, 
+      usr_dlc_i    => tx_dlc_s,
+      usr_rsvd_i   => tx_rsvd_s,
+      data_i       => tx_data_s,
+      data_ready_o => open,
+      data_valid_i => tx_send_s,
+      data_last_i  => '0',
+      ack_error_o  => ack_error_s,
+      arb_lost_o   => arb_lost_s,
+      busy_o       => tx_busy_s,
+      collision_i  => collision_s,
+      txdata_o     => tx_serial_data_s,
+      txen_o       => tx_serial_data_en,
+    );
+
+  can_rx_u : can_rx 
+    port map (
+      rst_i        => rst_i,
+      mclk_i       => mclk_i,
+      rx_clken_i   => rx_clken_s,
+      fb_clken_i   => fb_clken_s,
+      usr_eff_o    => rx_eff_s,
+      usr_id_o     => rx_id_s,
+      usr_rtr_o    => rx_rtr_s,
+      usr_dlc_o    => rx_dlc_s,
+      usr_rsvd_o   => rx_rsvd_s,
+      data_ready_i => '1',
+      data_valid_o => rx_data_valid_s,
+      data_o       => rx_data_s,
+      data_last_o  => open,
+      busy_o       => rx_busy_s,
+      collision_i  => collision_s,
+      rxdata_i     => rx_serial_data_s
+    );
+
+    can_phy_u : can_phy
+      generic map(
+        internal_phy : boolean := false
+      )
+      port map(
+        rst_i             => rst_i,
+        mclk_i            => mclk_i,
+        tx_clken_i        => tx_clken_s,
+        rx_clken_i        => rx_clken_s,
+        fb_clken_i        => fb_clken_s,
+        force_error_i     => insert_error_s,
+        lock_dominant_i   => lock_dominant_s,
+        loopback_i        => loopback_s,
+        stuff_violation_o => stuff_violation_s,
+        collision_o       => collision_s,
+        channel_ready_o   => channel_ready_s,
+        tx_i              => tx_serial_data_s,
+        tx_en_i           => tx_serial_data_en,
+        rx_o              => rx_serial_data_s,
+        rx_sync_o         => rx_sync_s,
+        txo_o             => txo_o,
+        txo_t             => txo_t,
+        rxi               => rxi,
+        can_l             => can_l,
+        can_h             => can_h
+      );
+
+end behavior;
