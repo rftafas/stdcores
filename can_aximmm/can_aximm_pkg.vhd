@@ -34,11 +34,49 @@ package can_aximm_pkg is
   --generic  (
     --Package Generics go here.
   --);
-
   constant golden_c          : std_logic_vector(31 downto 0) := x"A1A2A3A4";
-
   constant C_S_AXI_ADDR_WIDTH : integer := 5;
   constant C_S_AXI_DATA_WIDTH : integer := 32;
+
+  component can_aximm_top is
+    generic (
+      system_freq  : real    := 96.0000e+6;
+      internal_phy : boolean := false
+    );
+    port (
+      mclk_i        : in  std_logic;
+      rst_i         : in  std_logic;
+      S_AXI_AWADDR  : in  std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
+      S_AXI_AWPROT  : in  std_logic_vector(2 downto 0);
+      S_AXI_AWVALID : in  std_logic;
+      S_AXI_AWREADY : out std_logic;
+      S_AXI_WDATA   : in  std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+      S_AXI_WSTRB   : in  std_logic_vector((C_S_AXI_DATA_WIDTH/8)-1 downto 0);
+      S_AXI_WVALID  : in  std_logic;
+      S_AXI_WREADY  : out std_logic;
+      S_AXI_BRESP   : out std_logic_vector(1 downto 0);
+      S_AXI_BVALID  : out std_logic;
+      S_AXI_BREADY  : in  std_logic;
+      S_AXI_ARADDR  : in  std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
+      S_AXI_ARPROT  : in  std_logic_vector(2 downto 0);
+      S_AXI_ARVALID : in  std_logic;
+      S_AXI_ARREADY : out std_logic;
+      S_AXI_RDATA   : out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+      S_AXI_RRESP   : out std_logic_vector(1 downto 0);
+      S_AXI_RVALID  : out std_logic;
+      S_AXI_RREADY  : in  std_logic;
+      --Simple IRQs
+      tx_irq_o      : out std_logic;
+      rx_irq_o      : out std_logic;
+      --external PHY signals
+      txo_o         : out std_logic;
+      txo_t         : out std_logic;
+      rxi           : in  std_logic;
+      --internal phy
+      can_l         : inout std_logic;
+      can_h         : inout std_logic
+    );
+  end component;
 
   component can_clk is
     generic (
