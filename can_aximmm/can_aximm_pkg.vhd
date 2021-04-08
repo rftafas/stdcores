@@ -35,8 +35,10 @@ package can_aximm_pkg is
     --Package Generics go here.
   --);
 
-  constant golden_c          : std_logic_vector(31 downto 0) := "A1A2A3A4";
-  constant package_version_c : String                        := "20210406_1804";
+  constant golden_c          : std_logic_vector(31 downto 0) := x"A1A2A3A4";
+
+  constant C_S_AXI_ADDR_WIDTH : integer := 5;
+  constant C_S_AXI_DATA_WIDTH : integer := 32;
 
   component can_clk is
     generic (
@@ -52,6 +54,98 @@ package can_aximm_pkg is
     );
   end component;
 
+  component can_rx is
+    port (
+        rst_i          : in  std_logic;
+        mclk_i         : in  std_logic;
+        rx_clken_i     : in  std_logic;
+        fb_clken_i     : in  std_logic;
+        --can signals can be bundled in TUSER
+        usr_eff_o      : out std_logic;                     -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
+        usr_id_o       : out std_logic_vector(28 downto 0); -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
+        usr_rtr_o      : out std_logic;                     -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
+        usr_dlc_o      : out std_logic_vector(3 downto 0);
+        usr_rsvd_o     : out std_logic_vector(1 downto 0);
+        data_o         : out std_logic_vector(63 downto 0);
+        data_ready_i   : in  std_logic;
+        data_valid_o   : out std_logic;
+        data_last_o    : out std_logic;
+        --status
+        reg_id_i       : in  std_logic_vector(28 downto 0);
+        reg_id_mask_i  : in  std_logic_vector(28 downto 0);
+        busy_o         : out std_logic;
+        rx_crc_error_o : out std_logic;
+        --Signals to PHY
+        collision_i    : in  std_logic;
+        rxdata_i       : out std_logic
+    );
+  end component;
+
+  component can_tx is
+    port (
+        rst_i        : in  std_logic;
+        mclk_i       : in  std_logic;
+        tx_clken_i   : in  std_logic;
+        fb_clken_i   : in  std_logic;
+        --can signals can be bundled in TUSER
+        usr_eff_i    : in  std_logic;                     -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
+        usr_id_i     : in  std_logic_vector(28 downto 0); -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
+        usr_rtr_i    : in  std_logic;                     -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
+        usr_dlc_i    : in  std_logic_vector(3 downto 0);
+        usr_rsvd_i   : in  std_logic_vector(1 downto 0);
+        data_i       : in  std_logic_vector(63 downto 0);
+        data_ready_o : out std_logic;
+        data_valid_i : in  std_logic;
+        data_last_i  : in  std_logic;
+        --status
+        rtry_error_o : out std_logic;
+        ack_error_o  : out std_logic;
+        arb_lost_o   : out std_logic;
+        busy_o       : out std_logic;
+        --Signals to PHY
+        ch_ready_i   : in  std_logic;
+        collision_i  : in  std_logic;
+        txdata_o     : out std_logic;
+        txen_o       : out std_logic
+    );
+  end component;
+
+  component can_phy is
+    generic (
+        internal_phy      : boolean := false
+    );
+    port (
+        rst_i             : in  std_logic;
+        mclk_i            : in  std_logic;
+        --configs
+        force_error_i     : in  std_logic;
+        lock_dominant_i   : in  std_logic;
+        loopback_i        : in  std_logic;
+        --stats
+        stuff_violation_o : out std_logic;
+        collision_o       : out std_logic;
+        channel_ready_o   : out std_logic;
+        --commands
+        send_ack_i        : in  std_logic;
+        -- data channel;
+        tx_clken_i        : in  std_logic;
+        rx_clken_i        : in  std_logic;
+        fb_clken_i        : in  std_logic;
+        tx_i              : in  std_logic;
+        tx_en_i           : in  std_logic;
+        rx_o              : out std_logic;
+        rx_sync_o         : out std_logic;
+        --external PHY
+        txo_o : out   std_logic;
+        txo_t : out   std_logic;
+        rxi   : in    std_logic;
+        --internal phy
+        can_l : inout std_logic;
+        can_h : inout std_logic
+    );
+  end component;
+
+  constant package_version_c : String := "20210408_1704";
   component can_aximm is
     generic (
       C_S_AXI_ADDR_WIDTH : integer := 5;
@@ -107,12 +201,12 @@ package can_aximm_pkg is
       rx_data0_i : in std_logic_vector(31 downto 0);
       rx_data1_i : in std_logic_vector(31 downto 0);
       tx_ready_i : in std_logic;
-      tx_send_o : out std_logic;
+      tx_valid_o : out std_logic;
       tx_busy_i : in std_logic;
       tx_arb_lost_i : in std_logic;
       tx_retry_error_i : in std_logic;
       tx_rtr_o : out std_logic;
-      tx_ide_o : out std_logic;
+      tx_eff_o : out std_logic;
       tx_reserved_o : out std_logic_vector(1 downto 0);
       tx_dlc_o : out std_logic_vector(3 downto 0);
       tx_id_o : out std_logic_vector(28 downto 0);
@@ -133,7 +227,7 @@ package body can_aximm_pkg is
       --input and shift
       crc_v(15 downto 1) := vector;
       --xor
-      crc_v(0) := crc_v(15) xor crc_v(14) xor crc_v(10) xor crc_v(8) xor crc_v(7) xor crc_v(4) xor crc_v(3) xor din;
+      crc_v(0) := crc_v(15) xor crc_v(14) xor crc_v(10) xor crc_v(8) xor crc_v(7) xor crc_v(4) xor crc_v(3) xor input;
       --output
       vector   <= crc_v(14 downto 0);
   end procedure;

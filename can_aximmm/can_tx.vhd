@@ -20,18 +20,20 @@ library expert;
 library stdblocks;
     use stdblocks.sync_lib.all;
 
+    use work.can_aximm_pkg.all;
+
 entity can_tx is
     port (
         rst_i        : in  std_logic;
         mclk_i       : in  std_logic;
-        tx_en_i      : in  std_logic;
-        fb_en_i      : in  std_logic;
+        tx_clken_i   : in  std_logic;
+        fb_clken_i   : in  std_logic;
         --can signals can be bundled in TUSER
-        usr_eff_i    : in  std_logic;                     -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
-        usr_id_i     : in  std_logic_vector(29 downto 0); -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
-        usr_rtr_i    : in  std_logic;                     -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
-        usr_dlc_i    : in  std_logic_vector(3 downto 0);
-        usr_rsvd_i   : in  std_logic_vector(1 downto 0);
+        usr_eff_i    : in  std_logic;
+        usr_id_i     : in  std_logic_vector(28 downto 0);
+        usr_rtr_i    : in  std_logic;
+        usr_dlc_i    : in  std_logic_vector( 3 downto 0);
+        usr_rsvd_i   : in  std_logic_vector( 1 downto 0);
         data_i       : in  std_logic_vector(63 downto 0);
         data_ready_o : out std_logic;
         data_valid_i : in  std_logic;
@@ -42,6 +44,7 @@ entity can_tx is
         arb_lost_o   : out std_logic;
         busy_o       : out std_logic;
         --Signals to PHY
+        ch_ready_i   : in  std_logic;
         collision_i  : in  std_logic;
         txdata_o     : out std_logic;
         txen_o       : out std_logic
@@ -67,7 +70,7 @@ architecture rtl of can_tx is
 
     signal can_mq : can_t := idle_st;
 
-    signal frame_sr         : std_logic_vector(63 downto 0);
+    signal frame_sr         : std_logic_vector(0 to 63);
     signal crc_s            : std_logic_vector(14 downto 0);
     signal ack_s            : std_logic;
     signal stuff_disable_s  : std_logic;
@@ -89,13 +92,13 @@ begin
                 case can_mq is
                     when idle_st =>
                         frame_cnt := 0;
-                        if data_valid = '1' then
+                        if data_valid_i = '1' then
                             can_mq <= load_header_st;
                         end if;
 
                     when load_header_st =>
-                        if channel_ready_i = '1' then
-                            frame_cnt := 0;
+                        frame_cnt := 0;
+                        if ch_ready_i = '1' then
                             can_mq <= arbitration_st;
                         end if;
 
@@ -105,13 +108,13 @@ begin
                             can_mq <= abort_st;
                         else
                             frame_cnt := frame_cnt + 1;
-                            if usr_eff = '1' and frame_cnt = 19 then
+                            if usr_eff_i = '1' and frame_cnt = 19 then
                                 if usr_dlc_i = "0000" then
                                     can_mq <= load_crc_st;
                                 else
                                     can_mq <= load_data_st;
                                 end if;
-                            elsif usr_eff = '0' and frame_cnt = 38 then
+                            elsif usr_eff_i = '0' and frame_cnt = 38 then
                                 if usr_dlc_i = "0000" then
                                     can_mq <= load_crc_st;
                                 else
@@ -119,7 +122,6 @@ begin
                                 end if;
                             end if;
                         end if;
-
 
                     when load_data_st =>
                         frame_cnt := 0;
@@ -155,23 +157,23 @@ begin
                         if frame_cnt = 11 then
                             if ack = '1' then
                                 can_mq <= clear_fifo_st;
-                            elsif retry_cnt_v = 7 then
+                            elsif retry_cnt = 7 then
                                 can_mq <= clear_fifo_st;
                             else
                                 can_mq <= idle_st;
-                                retry_cnt_v <= retry_cnt_v + 1;
+                                retry_cnt := retry_cnt + 1;
                             end if;
                         end if;
 
                     when clear_fifo_st =>
-                        retry_cnt_v := 0;
-                        frame_cnt   := 0;
-                        can_mq      <= idle_st;
+                        retry_cnt := 0;
+                        frame_cnt := 0;
+                        can_mq    <= idle_st;
 
-                    when abort =>
-                        frame_cnt   := 0;
-                        retry_cnt_v := retry_cnt_v + 1;
-                        if retry_cnt_v = 7 then
+                    when abort_st =>
+                        frame_cnt := 0;
+                        retry_cnt := retry_cnt + 1;
+                        if retry_cnt = 7 then
                             can_mq <= clear_fifo_st;
                         else
                             can_mq <= load_header_st;
@@ -184,7 +186,7 @@ begin
 
             end if;
         end if;
-    end process frame_p;
+    end process;
 
     --we disable the stuffing after the CRC (delimiter is not stuffed)
     stuff_disable_s <=  '1' when can_mq = crc_delimiter_st else
@@ -206,7 +208,7 @@ begin
     --acknoledged our frame. We won't retransmitt it.
     ack_p : process(all)
     begin
-        if rst = '1' then
+        if rst_i = '1' then
             ack_s       <= '0';
             ack_error_o <= '0';
         elsif rising_edge(mclk_i) then
@@ -230,29 +232,29 @@ begin
     begin
         if rst_i = '1' then
         elsif rising_edge(mclk_i) then
-            if tx_en_s = '1' then
+            if tx_clken_s = '1' then
                 case can_mq is
                     when load_header_st =>
                         frame_sr    <= (others=>'1');
-                        frame_sr(0) <= '0';                                            --SOF
-                        if usr_eff_i = '1' then                                        --29 bit ID
-                            frame_sr(1 to 12)  <= usr_id_i(28 downto 18);              --ID_A
-                            frame_sr(13)       <= '0';                                 --SRR
-                            frame_sr(14)       <= '1';                                 --IDE
-                            frame_sr(15 to 32) <= usr_id_i(17 downto 0);               --ID_B
-                            frame_sr(33 to 34) <= reserved_i;                          --R1 & R0
-                            frame_sr(35 to 38) <= usr_dlc_i_i;                         --DLC
-                        else                                                           --11 bit ID
-                            frame_sr(1 to 12)  <= usr_id_i(11 downto 0);               --ID_A
-                            frame_sr(13)       <= usr_rtr_i;                           --RTR
-                            frame_sr(14)       <= '0';                                 --IDE
-                            frame_sr(15)       <= reserved_i(0);                       --R0
-                            frame_sr(16 to 19) <= usr_dlc_i_i;                         --DLC
+                        frame_sr(0) <= '0';                                 --SOF
+                        if usr_eff_i = '1' then                             --29 bit ID
+                            frame_sr(1 to 12)  <= usr_id_i(28 downto 18);   --ID_A
+                            frame_sr(13)       <= '0';                      --SRR
+                            frame_sr(14)       <= '1';                      --IDE
+                            frame_sr(15 to 32) <= usr_id_i(17 downto 0);    --ID_B
+                            frame_sr(33 to 34) <= usr_rsvd_i;               --R1 & R0
+                            frame_sr(35 to 38) <= usr_dlc_i;                --DLC
+                        else                                                --11 bit ID
+                            frame_sr(1 to 12)  <= usr_id_i(11 downto 0);    --ID_A
+                            frame_sr(13)       <= usr_rtr_i;                --RTR
+                            frame_sr(14)       <= '0';                      --IDE
+                            frame_sr(15)       <= usr_rsvd_i(0);            --R0
+                            frame_sr(16 to 19) <= usr_dlc_i;                --DLC
                         end if;
 
                     when load_data_st =>
                         frame_sr                     <= (others=>'1');
-                        frame_sr(0 to 8*usr_dlc_i_i-1) <= data_i(8*usr_dlc_i_i-1 downto 0);
+                        frame_sr(0 to 8*usr_dlc_i-1) <= data_i(8*usr_dlc_i-1 downto 0);
 
                     when load_crc_st =>
                         frame_sr          <= (others=>'1');
@@ -272,7 +274,7 @@ begin
         if rst_i = '1' then
             crc_s <= (others=>'0');
         elsif rising_edge(mclk_i) then
-            if tx_en_s = '1' then
+            if tx_clken_s = '1' then
                 case can_mq is
                     when idle_st =>
                         crc_s <= (others=>'0');
@@ -290,12 +292,14 @@ begin
     end process;
 
     stuffing_p: process(mclk_i, rst_i)
-        variable stuff_sr : std_logic_vector(4 downto 0)
+        variable stuff_sr  : std_logic_vector(4 downto 0);
+        variable stuff_bit : std_logic;
     begin
         if rst_i = '1' then
-            txdata_o <= '0';
-            stuff_en <= '0';
-            stuff_sr <= "11111"
+            txdata_o  <= '0';
+            stuff_en  <= '0';
+            stuff_bit := '0';
+            stuff_sr  := "11111";
         elsif rising_edge(mclk_i) then
             if tx_clken_i = '1' then
                 stuff_sr    := stuff_sr sll 1;
@@ -309,10 +313,10 @@ begin
                 else
                     txdata_o      <= frame_sr(63);
                     if stuff_sr = "00000" then
-                        stuff_en  <= '1'
+                        stuff_en  <= '1';
                         stuff_bit := '1';
                     elsif stuff_sr = "11111" then
-                        stuff_en  <= '1'
+                        stuff_en  <= '1';
                         stuff_bit := '0';
                     end if;
                 end if;

@@ -15,10 +15,12 @@
 library ieee;
   use ieee.std_logic_1164.all;
   use ieee.numeric_std.all;
+  use ieee.math_real.all;
 library expert;
   use expert.std_logic_expert.all;
 library stdblocks;
     use stdblocks.sync_lib.all;
+    use stdblocks.timer_lib.all;
 
 entity can_clk is
     generic (
@@ -38,46 +40,49 @@ architecture behavioral of can_clk is
 
     signal   quanta_cnt      : unsigned(3 downto 0) := (others=>'0');
     constant quanta_num      : integer              := 2**quanta_cnt'length;
-    constant base_freq       : real                 := to_real(quanta_num*1000);
+    constant base_freq       : real                 := real(quanta_num*1000);
 
     constant NCO_size_c      : integer := 22; --ceil ( log2(1000) + 12 bits )
-    constant Resolution_hz_c : real    := system_freq/(2**NCO_size_c);
+    constant Resolution_hz_c : real    := system_freq/real(2**NCO_size_c);
     constant baud_calc_c     : integer := increment_value_calc(system_freq,base_freq,NCO_size_c);
+
+    signal   quanta_clk_s    : std_logic;
+    signal   quanta_clk_en   : std_logic;
+    signal   s_value_s       : std_logic_vector(NCO_size_c-1 downto 0);
 
 begin
 
-    assert NCO_size_c > internal_clock_freq
-        report "Minimum Frequency is " & to_string(internal_clock_freq) & " Hz."
+    assert system_freq > base_freq
+        report "Minimum Frequency is " & to_string(base_freq) & " Hz."
         severity failure;
 
     nco_u : nco
         generic map (
-          Fref_hz         => system_freq,
-          Fout_hz         => max_baud_rate,
-          Resolution_hz   => Resolution_hz_c,
-          use_scaler      => false,
-          adjustable_freq => true,
-          NCO_size_c      => NCO_size_c
+            Fref_hz         => system_freq,
+            Fout_hz         => base_freq,
+            Resolution_hz   => Resolution_hz_c,
+            use_scaler      => false,
+            adjustable_freq => true,
+            NCO_size_c      => NCO_size_c
         )
         port map (
-          rst_i     => rst,
-          mclk_i    => clk,
-          scaler_i  => '1',
-          sync_i    => can_rx_clk_sync,
-          n_value_i => s_value_s,
-          clkout_o  => quanta_clk_s,
+            rst_i     => rst_i,
+            mclk_i    => mclk_i,
+            scaler_i  => '1',
+            sync_i    => clk_sync_i,
+            n_value_i => s_value_s,
+            clkout_o  => quanta_clk_s
         );
-    end nco;
 
     --generate the timebase for
     s_value_s <= baud_rate_i * baud_calc_c;
 
     quanta_clk_u : det_down
         port map (
-            rst_i   => rst,
-            mclk_i  => clk,
+            rst_i   => rst_i,
+            mclk_i  => mclk_i,
             din     => quanta_clk_s,
-            dout    => quanta_clk_en,
+            dout    => quanta_clk_en
         );
 
     quanta_p : process(all)
@@ -85,17 +90,17 @@ begin
         if rst_i = '1' then
             quanta_cnt <= (others=>'0');
         elsif rising_edge(mclk_i) then
-            if can_rx_clk_sync = '1' then
-                quanta_counter <= (others=>'0');
+            if clk_sync_i = '1' then
+                quanta_cnt <= (others=>'0');
             elsif quanta_clk_en = '1' then
-                quanta_counter <= quanta_counter + 1;
+                quanta_cnt <= quanta_cnt + 1;
             end if;
         end if;
     end process;
 
-    fb_clken_o <= quanta_clk_en when quanta_counter =  5 else '0';
-    rx_clken_o <= quanta_clk_en when quanta_counter = 10 else '0';
-    tx_clken_o <= quanta_clk_en when quanta_counter = 15 else '0';
+    fb_clken_o <= quanta_clk_en when quanta_cnt =  5 else '0';
+    rx_clken_o <= quanta_clk_en when quanta_cnt = 10 else '0';
+    tx_clken_o <= quanta_clk_en when quanta_cnt = 15 else '0';
 
 
-end rtl;
+end behavioral;

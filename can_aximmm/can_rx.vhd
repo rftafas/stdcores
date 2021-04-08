@@ -43,7 +43,7 @@ entity can_rx is
         rx_crc_error_o : out std_logic;
         --Signals to PHY
         collision_i    : in  std_logic;
-        rxdata_i       : out std_logic;
+        rxdata_i       : out std_logic
     );
 end can_rx;
 

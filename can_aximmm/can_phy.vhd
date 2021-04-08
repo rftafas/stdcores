@@ -15,6 +15,7 @@
 library ieee;
   use ieee.std_logic_1164.all;
   use ieee.numeric_std.all;
+  use ieee.math_real.all;
 library expert;
   use expert.std_logic_expert.all;
 library stdblocks;
@@ -22,13 +23,13 @@ library stdblocks;
 
 entity can_phy is
     generic (
-        internal_phy : boolean := false
-    )
+        internal_phy      : boolean := false
+    );
     port (
+        rst_i             : in  std_logic;
         mclk_i            : in  std_logic;
         --configs
         force_error_i     : in  std_logic;
-        internal_loop_i   : in  std_logic;
         lock_dominant_i   : in  std_logic;
         loopback_i        : in  std_logic;
         --stats
@@ -38,7 +39,6 @@ entity can_phy is
         --commands
         send_ack_i        : in  std_logic;
         -- data channel;
-        tx_clken_i        : in  std_logic;
         tx_clken_i        : in  std_logic;
         rx_clken_i        : in  std_logic;
         fb_clken_i        : in  std_logic;
@@ -78,12 +78,12 @@ begin
         );
 
     --we sample TX_I so it should place an FFD the closest to the IO.
-    tx_p: process(clk, rst)
+    tx_p: process(mclk_i, rst_i)
     begin
-        if rst = rst_val then
+        if rst_i = '1' then
             tx_s    <= '1';
             tx_en_s <= '0';
-        elsif rising_edge(clk) then
+        elsif rising_edge(mclk_i) then
             if tx_clken_i = '1' then
                 tx_en_s <= tx_en_i;
                 if lock_dominant_i = '1' then
@@ -135,11 +135,11 @@ begin
     rx_o <= rx_int_s;
 
     --we can only detect when we send a 1 but the bus remains low.
-    col_det_p : process(clk, rst)
+    col_det_p : process(mclk_i, rst_i)
     begin
-        if rst = rst_val then
+        if rst_i = '1' then
             collision_o <= '0';
-        elsif rising_edge(clk) then
+        elsif rising_edge(mclk_i) then
             if fb_clken_i = '1' then
                 collision_o <= (not rx_int_s) and tx_s and tx_en_s;
             elsif tx_clken_i = '1' then
@@ -148,14 +148,14 @@ begin
         end if;
     end process;
 
-    line_status_p : process(clk, rst)
+    line_status_p : process(mclk_i, rst_i)
         variable stuff_sr : std_logic_vector(7 downto 0) := (others => '0');
     begin
-        if rst = rst_val then
+        if rst_i = '1' then
             channel_ready_o   <= '0';
             stuff_violation_o <= '0';
             stuff_sr          := (others => '0');
-        elsif rising_edge(clk) then
+        elsif rising_edge(mclk_i) then
             if rx_clken_i = '1' then
                 stuff_sr    := stuff_sr sll 1;
                 stuff_sr(0) := rx_int_s;

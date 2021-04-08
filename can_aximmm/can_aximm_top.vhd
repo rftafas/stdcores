@@ -20,11 +20,13 @@ library expert;
 library stdblocks;
     use stdblocks.sync_lib.all;
 
+    use work.can_aximm_pkg.all;
+
 entity can_aximm_top is
   generic (
     system_freq  : real    := 96.0000e+6;
     internal_phy : boolean := false
-  )
+  );
   port (
     mclk_i        : in  std_logic;
     rst_i         : in  std_logic;
@@ -63,14 +65,14 @@ end can_aximm_top;
 architecture behavior of can_aximm_top is
 
   --clock control
-  signal baud_rate_s       : std_logic_vector(11 downto 0);
+  signal baud_rate_s       : std_logic_vector(15 downto 0);
   signal rx_clken_s        : std_logic;
   signal fb_clken_s        : std_logic;
   signal tx_clken_s        : std_logic;
 
   -- CAN TX
   signal tx_eff_s          : std_logic;
-  signal tx_id_s           : std_logic_vector(29 downto 0);
+  signal tx_id_s           : std_logic_vector(28 downto 0);
   signal tx_rtr_s          : std_logic;
   signal tx_dlc_s          : std_logic_vector( 3 downto 0);
   signal tx_rsvd_s         : std_logic_vector( 1 downto 0);
@@ -79,6 +81,7 @@ architecture behavior of can_aximm_top is
   signal tx_ready_s        : std_logic;
   signal ack_error_s       : std_logic;
   signal arb_lost_s        : std_logic;
+  signal rtry_error_s      : std_logic;
   signal tx_busy_s         : std_logic;
   signal tx_serial_data_s  : std_logic;
   signal tx_serial_data_en : std_logic;
@@ -88,7 +91,9 @@ architecture behavior of can_aximm_top is
 
   --CAN RX
   signal rx_eff_s          : std_logic;
-  signal rx_id_s           : std_logic_vector(29 downto 0);
+  signal rx_id_s           : std_logic_vector(28 downto 0);
+  signal reg_id_s          : std_logic_vector(28 downto 0);
+  signal reg_id_mask_s     : std_logic_vector(28 downto 0);
   signal rx_rtr_s          : std_logic;
   signal rx_dlc_s          : std_logic_vector( 3 downto 0);
   signal rx_rsvd_s         : std_logic_vector( 1 downto 0);
@@ -99,12 +104,13 @@ architecture behavior of can_aximm_top is
   signal rx_irq_s          : std_logic;
   signal rx_irq_mask_s     : std_logic;
   signal rx_busy_down_s    : std_logic;
+  signal rx_crc_error_s    : std_logic;
 
   --PHY
   signal collision_s       : std_logic;
   signal rx_sync_s         : std_logic;
   signal insert_error_s    : std_logic;
-  signal lock_dominant_s   : std_logic;
+  signal force_dominant_s  : std_logic;
   signal loopback_s        : std_logic;
   signal stuff_violation_s : std_logic;
   signal channel_ready_s   : std_logic;
@@ -120,8 +126,8 @@ begin
       C_S_AXI_DATA_WIDTH => C_S_AXI_DATA_WIDTH
     )
     port map(
-      S_AXI_ACLK        => S_AXI_ACLK,
-      S_AXI_ARESETN     => S_AXI_ARESETN,
+      S_AXI_ACLK        => mclk_i,
+      S_AXI_ARESETN     => rst_i,
       S_AXI_AWADDR      => S_AXI_AWADDR,
       S_AXI_AWPROT      => S_AXI_AWPROT,
       S_AXI_AWVALID     => S_AXI_AWVALID,
@@ -154,7 +160,7 @@ begin
       collision_i       => collision_s,
       channel_ready_i   => channel_ready_s,
       loop_enable_o     => loopback_s,
-      insert_errors_o   => insert_error_s,
+      insert_error_o    => insert_error_s,
       force_dominant_o  => force_dominant_s,
       rx_data_valid_i   => rx_data_valid_s,
       rx_read_done_o    => open,
@@ -162,8 +168,7 @@ begin
       rx_crc_error_i    => rx_crc_error_s,
       rx_rtr_i          => rx_rtr_s,
       rx_ide_i          => rx_eff_s,
-      rx_r0_i           => rx_rsvd_s(0),
-      rx_r1_i           => rx_rsvd_s(1),
+      rx_reserved_i     => rx_rsvd_s,
       id1_o             => reg_id_s,
       id1_mask_o        => reg_id_mask_s,
       rx_size_i         => rx_dlc_s,
@@ -174,10 +179,10 @@ begin
       tx_valid_o        => tx_valid_s,
       tx_busy_i         => tx_busy_s,
       tx_arb_lost_i     => arb_lost_s,
+      tx_retry_error_i  => rtry_error_s,
       tx_rtr_o          => tx_rtr_s,
       tx_eff_o          => tx_eff_s,
-      tx_r0_o           => tx_rsvd_s(0),
-      tx_r1_o           => tx_rsvd_s(1),
+      tx_reserved_o     => tx_rsvd_s,
       tx_dlc_o          => tx_dlc_s,
       tx_id_o           => tx_id_s,
       tx_data0_o        => tx_data_s(31 downto  0),
@@ -222,11 +227,11 @@ begin
     port map(
       mclk_i      => mclk_i,
       rst_i       => rst_i,
-      baud_rate_i => baud_rate_s,
+      baud_rate_i => baud_rate_s(11 downto 0),
       clk_sync_i  => rx_sync_s,
-      rxen_o      => rx_clken_s,
-      fben_o      => fb_clken_s,
-      txen_o      => tx_clken_s
+      rx_clken_o  => rx_clken_s,
+      fb_clken_o  => fb_clken_s,
+      tx_clken_o  => tx_clken_s
     );
 
   ----------------------------------------------------------------------------------
@@ -236,8 +241,8 @@ begin
     port map(
       rst_i        => rst_i,
       mclk_i       => mclk_i,
-      tx_en_i      => tx_clken_s,
-      fb_en_i      => fb_clken_s,
+      tx_clken_i   => tx_clken_s,
+      fb_clken_i   => fb_clken_s,
       usr_eff_i    => tx_eff_s,
       usr_id_i     => tx_id_s,
       usr_rtr_i    => tx_rtr_s,
@@ -247,12 +252,14 @@ begin
       data_ready_o => open,
       data_valid_i => tx_valid_s,
       data_last_i  => '0',
+      rtry_error_o => rtry_error_s,
       ack_error_o  => ack_error_s,
       arb_lost_o   => arb_lost_s,
       busy_o       => tx_busy_s,
+      ch_ready_i   => channel_ready_s,
       collision_i  => collision_s,
       txdata_o     => tx_serial_data_s,
-      txen_o       => tx_serial_data_en,
+      txen_o       => tx_serial_data_en
     );
 
   ----------------------------------------------------------------------------------
@@ -276,7 +283,7 @@ begin
       reg_id_i       => reg_id_s,
       reg_id_mask_i  => reg_id_mask_s,
       busy_o         => rx_busy_s,
-      rx_crc_error_o => rx_crc_error_s
+      rx_crc_error_o => rx_crc_error_s,
       collision_i    => collision_s,
       rxdata_i       => rx_serial_data_s
     );
@@ -295,11 +302,12 @@ begin
       rx_clken_i        => rx_clken_s,
       fb_clken_i        => fb_clken_s,
       force_error_i     => insert_error_s,
-      lock_dominant_i   => lock_dominant_s,
+      lock_dominant_i   => force_dominant_s,
       loopback_i        => loopback_s,
       stuff_violation_o => stuff_violation_s,
       collision_o       => collision_s,
       channel_ready_o   => channel_ready_s,
+      send_ack_i        => '0',
       tx_i              => tx_serial_data_s,
       tx_en_i           => tx_serial_data_en,
       rx_o              => rx_serial_data_s,
