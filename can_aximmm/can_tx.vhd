@@ -13,8 +13,12 @@
 --the specific language governing permissions and limitations under the License.
 ----------------------------------------------------------------------------------
 library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+  use ieee.std_logic_1164.all;
+  use ieee.numeric_std.all;
+library expert;
+  use expert.std_logic_expert.all;
+library stdblocks;
+    use stdblocks.sync_lib.all;
 
 entity can_tx is
     port (
@@ -96,19 +100,19 @@ begin
                         end if;
 
                     when arbitration_st =>
-                        if collision = '1' then
+                        if collision_i = '1' then
                             frame_cnt := 0;
                             can_mq <= abort_st;
                         else
                             frame_cnt := frame_cnt + 1;
                             if usr_eff = '1' and frame_cnt = 19 then
-                                if usr_dlc = "0000" then
+                                if usr_dlc_i = "0000" then
                                     can_mq <= load_crc_st;
                                 else
                                     can_mq <= load_data_st;
                                 end if;
                             elsif usr_eff = '0' and frame_cnt = 38 then
-                                if usr_dlc = "0000" then
+                                if usr_dlc_i = "0000" then
                                     can_mq <= load_crc_st;
                                 else
                                     can_mq <= load_data_st;
@@ -123,7 +127,7 @@ begin
 
                     when data_st =>
                         frame_cnt := frame_cnt + 1;
-                        if frame_cnt = usr_dlc*8 then
+                        if frame_cnt = usr_dlc_i*8 then
                             can_mq <= load_crc_st;
                         end if;
 
@@ -237,18 +241,18 @@ begin
                             frame_sr(14)       <= '1';                                 --IDE
                             frame_sr(15 to 32) <= usr_id_i(17 downto 0);               --ID_B
                             frame_sr(33 to 34) <= reserved_i;                          --R1 & R0
-                            frame_sr(35 to 38) <= usr_dlc_i;                           --DLC
-                        else                                                            --11 bit ID
+                            frame_sr(35 to 38) <= usr_dlc_i_i;                         --DLC
+                        else                                                           --11 bit ID
                             frame_sr(1 to 12)  <= usr_id_i(11 downto 0);               --ID_A
                             frame_sr(13)       <= usr_rtr_i;                           --RTR
                             frame_sr(14)       <= '0';                                 --IDE
                             frame_sr(15)       <= reserved_i(0);                       --R0
-                            frame_sr(16 to 19) <= usr_dlc_i;                           --DLC
+                            frame_sr(16 to 19) <= usr_dlc_i_i;                         --DLC
                         end if;
 
                     when load_data_st =>
                         frame_sr                     <= (others=>'1');
-                        frame_sr(0 to 8*usr_dlc_i-1) <= data_i(8*usr_dlc_i-1 downto 0);
+                        frame_sr(0 to 8*usr_dlc_i_i-1) <= data_i(8*usr_dlc_i_i-1 downto 0);
 
                     when load_crc_st =>
                         frame_sr          <= (others=>'1');

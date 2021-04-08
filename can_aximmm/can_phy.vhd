@@ -13,7 +13,12 @@
 --the specific language governing permissions and limitations under the License.
 ----------------------------------------------------------------------------------
 library ieee;
-use ieee.std_logic_1164.all;
+  use ieee.std_logic_1164.all;
+  use ieee.numeric_std.all;
+library expert;
+  use expert.std_logic_expert.all;
+library stdblocks;
+    use stdblocks.sync_lib.all;
 
 entity can_phy is
     generic (
@@ -53,8 +58,12 @@ end can_phy;
 
 architecture rtl of can_phy is
 
-    signal rx_int_s : std_logic; --create rx_out as buffer
-    signal rx_int_s : std_logic; --create rx_out as buffer
+    signal rx_s          : std_logic;
+    signal rx_int_s      : std_logic;
+    signal tx_s          : std_logic;
+    signal tx_en_s       : std_logic;
+
+    signal force_error_s : std_logic;
 
 begin
 

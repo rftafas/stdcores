@@ -13,11 +13,16 @@
 --the specific language governing permissions and limitations under the License.
 ----------------------------------------------------------------------------------
 library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+  use ieee.std_logic_1164.all;
+  use ieee.numeric_std.all;
+library expert;
+  use expert.std_logic_expert.all;
+library stdblocks;
+    use stdblocks.sync_lib.all;
 
 entity can_aximm_top is
   generic (
+    system_freq  : real    := 96.0000e+6;
     internal_phy : boolean := false
   )
   port (
@@ -46,12 +51,12 @@ entity can_aximm_top is
     tx_irq_o      : out std_logic;
     rx_irq_o      : out std_logic;
     --external PHY signals
-    txo_o : out   std_logic;
-    txo_t : out   std_logic;
-    rxi   : in    std_logic;
+    txo_o         : out std_logic;
+    txo_t         : out std_logic;
+    rxi           : in  std_logic;
     --internal phy
-    can_l : inout std_logic;
-    can_h : inout std_logic
+    can_l         : inout std_logic;
+    can_h         : inout std_logic
   );
 end can_aximm_top;
 
@@ -137,7 +142,7 @@ begin
       S_AXI_RVALID      => S_AXI_RVALID,
       S_AXI_RREADY      => S_AXI_RREADY,
       ---
-      g1_i              => x"A1A2A3A4",
+      g1_i              => golden_c,
       iso_mode_o        => open,
       fd_enable_o       => open,
       sample_rate_o     => baud_rate_s,
@@ -211,6 +216,9 @@ begin
   --CLOCK AND QUANTA
   ----------------------------------------------------------------------------------
   can_clk : entity work.can_clk
+    generic map(
+      system_freq   => system_freq
+    )
     port map(
       mclk_i      => mclk_i,
       rst_i       => rst_i,
@@ -278,7 +286,7 @@ begin
   ----------------------------------------------------------------------------------
   can_phy_u : can_phy
     generic map(
-      internal_phy : boolean := false
+      internal_phy => internal_phy
     )
     port map(
       rst_i             => rst_i,

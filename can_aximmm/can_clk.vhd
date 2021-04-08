@@ -13,8 +13,12 @@
 --the specific language governing permissions and limitations under the License.
 ----------------------------------------------------------------------------------
 library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+  use ieee.std_logic_1164.all;
+  use ieee.numeric_std.all;
+library expert;
+  use expert.std_logic_expert.all;
+library stdblocks;
+    use stdblocks.sync_lib.all;
 
 entity can_clk is
     generic (
@@ -24,9 +28,9 @@ entity can_clk is
            rst_i       : in  std_logic;
            baud_rate_i : in  std_logic_vector(11 downto 0); -- baudrate in N x kbps, n = 0...2**12
            clk_sync_i  : in  std_logic;
-           txen_o      : out std_logic;
-           rxen_o      : out std_logic;
-           fben_o      : out std_logic
+           tx_clken_o  : out std_logic;
+           rx_clken_o  : out std_logic;
+           fb_clken_o  : out std_logic
     );
 end can_clk;
 
@@ -89,9 +93,9 @@ begin
         end if;
     end process;
 
-    txen_o <= quanta_clk_en when quanta_counter =  5 else '0';
-    rxen_o <= quanta_clk_en when quanta_counter = 10 else '0';
-    fben_o <= quanta_clk_en when quanta_counter = 15 else '0';
+    fb_clken_o <= quanta_clk_en when quanta_counter =  5 else '0';
+    rx_clken_o <= quanta_clk_en when quanta_counter = 10 else '0';
+    tx_clken_o <= quanta_clk_en when quanta_counter = 15 else '0';
 
 
 end rtl;
