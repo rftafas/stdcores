@@ -42,7 +42,7 @@ architecture behavioral of can_clk is
     constant quanta_num      : integer              := 2**quanta_cnt'length;
     constant base_freq       : real                 := real(quanta_num*1000);
 
-    constant NCO_size_c      : integer := 22; --ceil ( log2(1000) + 12 bits )
+    constant NCO_size_c      : integer := 24; --ceil ( log2(1000) + 12 bits )
     constant Resolution_hz_c : real    := system_freq/real(2**NCO_size_c);
     constant baud_calc_c     : integer := increment_value_calc(system_freq,base_freq,NCO_size_c);
 
@@ -75,7 +75,7 @@ begin
         );
 
     --generate the timebase for
-    s_value_s <= baud_rate_i * baud_calc_c;
+    s_value_s <= baud_rate_i * to_std_logic_vector(baud_calc_c,12);
 
     quanta_clk_u : det_down
         port map (
