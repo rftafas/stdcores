@@ -64,6 +64,7 @@ architecture rtl of can_phy is
     signal tx_en_s       : std_logic;
 
     signal force_error_s : std_logic;
+    signal lock_end_en   : std_logic;
 
 begin
 
@@ -77,6 +78,14 @@ begin
           dout_o => force_error_s
         );
 
+    lock_end_u : det_down
+        port map (
+            rst_i   => rst_i,
+            mclk_i  => mclk_i,
+            din     => lock_dominant_i,
+            dout    => lock_end_en
+        );
+
     --we sample TX_I so it should place an FFD the closest to the IO.
     tx_p: process(mclk_i, rst_i)
     begin
@@ -84,11 +93,15 @@ begin
             tx_s    <= '1';
             tx_en_s <= '0';
         elsif rising_edge(mclk_i) then
-            if tx_clken_i = '1' then
+            if lock_end_en = '1' then
+                tx_s    <= '1';
+                tx_en_s <= '0';
+            elsif lock_dominant_i = '1' then
+                tx_s    <= '0';
+                tx_en_s <= '1';
+            elsif tx_clken_i = '1' then
                 tx_en_s <= tx_en_i;
-                if lock_dominant_i = '1' then
-                    tx_s <= '0';
-                elsif send_ack_i = '1' then
+                if send_ack_i = '1' then
                     tx_s <= '0';
                 elsif force_error_s = '1' then
                     tx_s <= not tx_i;

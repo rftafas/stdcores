@@ -127,7 +127,7 @@ begin
     )
     port map(
       S_AXI_ACLK        => mclk_i,
-      S_AXI_ARESETN     => rst_i,
+      S_AXI_ARESETN     => not rst_i,
       S_AXI_AWADDR      => S_AXI_AWADDR,
       S_AXI_AWPROT      => S_AXI_AWPROT,
       S_AXI_AWVALID     => S_AXI_AWVALID,

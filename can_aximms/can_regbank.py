@@ -33,7 +33,7 @@ can_aximm.add(4, "Line Status")
 # REG_4 FIELDS
 can_aximm.reg[4].add("stuff_violation", "Write2Clear", 0, 1)
 can_aximm.reg[4].add("collision", "Write2Clear", 1, 1)
-can_aximm.reg[4].add("channel_ready", "Write2Clear", 8, 1)
+can_aximm.reg[4].add("channel_ready", "ReadOnly", 8, 1)
 
 # REG_7
 can_aximm.add(7, "TEST Control 1")

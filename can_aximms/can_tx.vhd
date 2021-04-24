@@ -65,6 +65,7 @@ architecture rtl of can_tx is
         ack_slot_st,
         eof_st,
         clear_fifo_st,
+        retry_error_st,
         abort_st
     );
 
@@ -76,8 +77,18 @@ architecture rtl of can_tx is
     signal stuff_disable_s  : std_logic;
     signal stuff_en         : std_logic;
     signal tx_clken_s       : std_logic;
+    signal start_s          : std_logic;
 
 begin
+
+    pulse_error_u : stretch_sync
+        port map (
+          rst_i  => rst_i,
+          mclk_i => mclk_i,
+          da_i   => tx_clken_s,
+          db_i   => data_valid_i,
+          dout_o => start_s
+        );
 
     control_p: process(mclk_i)
         variable retry_cnt : integer := 0;
@@ -92,7 +103,7 @@ begin
                 case can_mq is
                     when idle_st =>
                         frame_cnt := 0;
-                        if data_valid_i = '1' then
+                        if start_s = '1' then
                             can_mq <= load_header_st;
                         end if;
 
@@ -158,12 +169,17 @@ begin
                             if ack = '1' then
                                 can_mq <= clear_fifo_st;
                             elsif retry_cnt = 7 then
-                                can_mq <= clear_fifo_st;
+                                can_mq <= retry_error_st;
                             else
                                 can_mq <= idle_st;
                                 retry_cnt := retry_cnt + 1;
                             end if;
                         end if;
+
+                    when retry_error_st =>
+                        retry_cnt := 0;
+                        frame_cnt := 0;
+                        can_mq    <= idle_st;
 
                     when clear_fifo_st =>
                         retry_cnt := 0;
@@ -202,6 +218,13 @@ begin
 
     busy_o  <=  '0' when can_mq = idle_st           else
                 '1';
+
+    rtry_error_o  <=  '1' when can_mq = retry_error_st else
+                      '0';
+
+    arb_lost_o  <=  '1' when can_mq = abort_st else
+                    '0';
+
 
 
     --if we detect a colision during the ACK, it means that someone has

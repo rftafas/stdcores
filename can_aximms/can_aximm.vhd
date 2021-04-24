@@ -107,7 +107,7 @@ architecture rtl of can_aximm is
   --architecture_declaration_tag
 
 
-  constant register_bank_version_c : String := "20210409_1004";
+  constant register_bank_version_c : String := "20210423_1504";
   constant C_S_AXI_ADDR_LSB : integer := 2;
   constant REG_NUM : integer := 2**(C_S_AXI_ADDR_WIDTH-C_S_AXI_ADDR_LSB);
 
@@ -386,6 +386,7 @@ begin
     regread_s(3)(1) <= regwrite_s(3)(1);
     tx_irq_mask_o <= regwrite_s(3)(9);
     regread_s(3)(9) <= regwrite_s(3)(9);
+    regread_s(4)(8) <= channel_ready_i;
     loop_enable_o <= regwrite_s(7)(0);
     regread_s(7)(0) <= regwrite_s(7)(0);
     insert_error_o <= regwrite_s(7)(8);
@@ -429,7 +430,6 @@ begin
     regset_s(3)(8) <= tx_irq_i;
     regset_s(4)(0) <= stuff_violation_i;
     regset_s(4)(1) <= collision_i;
-    regset_s(4)(8) <= channel_ready_i;
     regset_s(8)(0) <= rx_data_valid_i;
     regset_s(16)(9) <= tx_arb_lost_i;
     regset_s(16)(10) <= tx_retry_error_i;
@@ -439,7 +439,6 @@ begin
     regclear_s(3)(8) <= regwrite_s(3)(8);
     regclear_s(4)(0) <= regwrite_s(4)(0);
     regclear_s(4)(1) <= regwrite_s(4)(1);
-    regclear_s(4)(8) <= regwrite_s(4)(8);
     regclear_s(7)(8) <= regwrite_s(7)(8);
     regclear_s(8)(0) <= regwrite_s(8)(0);
     regclear_s(8)(1) <= regwrite_s(8)(1);

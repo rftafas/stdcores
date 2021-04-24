@@ -48,7 +48,9 @@ architecture behavioral of can_clk is
 
     signal   quanta_clk_s    : std_logic;
     signal   quanta_clk_en   : std_logic;
-    signal   s_value_s       : std_logic_vector(NCO_size_c-1 downto 0);
+    signal   s_value_s       : std_logic_vector(NCO_size_c+baud_rate_i'length-1 downto 0);
+    --alias    s_value_a       : std_logic_vector(NCO_size_c-1 downto 0) is s_value_s(NCO_size_c+baud_rate_i'length-1 downto baud_rate_i'length);
+    alias    s_value_a       : std_logic_vector(NCO_size_c-1 downto 0) is s_value_s(NCO_size_c-1 downto 0);
 
 begin
 
@@ -70,12 +72,12 @@ begin
             mclk_i    => mclk_i,
             scaler_i  => '1',
             sync_i    => clk_sync_i,
-            n_value_i => s_value_s,
+            n_value_i => s_value_a,
             clkout_o  => quanta_clk_s
         );
 
     --generate the timebase for
-    s_value_s <= baud_rate_i * to_std_logic_vector(baud_calc_c,12);
+    s_value_s <= baud_rate_i * to_std_logic_vector(baud_calc_c,NCO_size_c);
 
     quanta_clk_u : det_down
         port map (
@@ -98,9 +100,9 @@ begin
         end if;
     end process;
 
-    fb_clken_o <= quanta_clk_en when quanta_cnt =  5 else '0';
-    rx_clken_o <= quanta_clk_en when quanta_cnt = 10 else '0';
-    tx_clken_o <= quanta_clk_en when quanta_cnt = 15 else '0';
+    fb_clken_o <= quanta_clk_en when quanta_cnt = quanta_num/3   else '0';
+    rx_clken_o <= quanta_clk_en when quanta_cnt = 2*quanta_num/3 else '0';
+    tx_clken_o <= quanta_clk_en when quanta_cnt = quanta_num-1   else '0';
 
 
 end behavioral;
