@@ -1,0 +1,10 @@
+# End time: 15:11:34 on Apr 23,2021, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 2
+# vsim -modelsimini /home/rftafas/Projects/stdcores/can_aximms/output/vunit_out/modelsim/modelsim.ini -wlf /home/rftafas/Projects/stdcores/can_aximms/output/vunit_out/test_output/can_aximm.can_aximm_tb.run_time.Simple_Run_Test_468516291b10ea145d2ad1c0ae189e553c42902e/modelsim/vsim.wlf -quiet -t ps -onfinish stop can_aximm.can_aximm_tb(simulation) -L vunit_lib -L osvvm -L expert -L can_aximm -g/can_aximm_tb/runner_cfg="active python runner : true,enabled_test_cases : Simple Run Test,output path : /home/rftafas/Projects/stdcores/can_aximms/output/vunit_out/test_output/can_aximm.can_aximm_tb.run_time.Simple_Run_Test_468516291b10ea145d2ad1c0ae189e553c42902e/,tb path : /home/rftafas/Projects/stdcores/can_aximms/output/,use_color : true" -g/can_aximm_tb/run_time=100 
+# Start time: 15:11:34 on Apr 23,2021
+# ** Warning: (vsim-3473) Component instance "dut_u : can_aximm" is not bound.
+#    Time: 0 ps  Iteration: 0  Instance: /can_aximm_tb File: /home/rftafas/Projects/stdcores/can_aximms/output/can_aximm_tb.vhd
+# ** Warning: Design size of 46067 statements exceeds ModelSim-Intel FPGA Starter Edition recommended capacity.
+# Expect performance to be adversely affected.
+# Break in Subprogram stop at /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/stop_body_2008p.vhd line 13
+# Stopped at /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/stop_body_2008p.vhd line 13
