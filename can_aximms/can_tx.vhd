@@ -72,7 +72,7 @@ architecture rtl of can_tx is
     signal can_mq : can_t := idle_st;
 
     signal frame_sr         : std_logic_vector(0 to 63);
-    signal crc_s            : std_logic_vector(14 downto 0);
+    signal crc_sr           : std_logic_vector(14 downto 0);
     signal ack_s            : std_logic;
     signal stuff_disable_s  : std_logic;
     signal stuff_en         : std_logic;
@@ -205,9 +205,11 @@ begin
     end process;
 
     --we disable the stuffing after the CRC (delimiter is not stuffed)
-    stuff_disable_s <=  '1' when can_mq = crc_delimiter_st else
+    stuff_disable_s <=  '1' when can_mq = idle_st          else
+                        '1' when can_mq = crc_delimiter_st else
                         '1' when can_mq = ack_slot_st      else
                         '1' when can_mq = eof_st           else
+                        '1' when can_mq = load_header_st   else
                         '0';
 
     txen_o  <=  '0' when can_mq = idle_st           else
@@ -254,6 +256,7 @@ begin
     frame_shift_p: process(mclk_i, rst_i)
     begin
         if rst_i = '1' then
+            frame_sr    <= (others=>'1');
         elsif rising_edge(mclk_i) then
             if tx_clken_s = '1' then
                 case can_mq is
@@ -281,7 +284,7 @@ begin
 
                     when load_crc_st =>
                         frame_sr          <= (others=>'1');
-                        frame_sr(0 to 14) <= crc_s;
+                        frame_sr(0 to 14) <= crc_sr;
 
                     when others =>
                         frame_sr     <= frame_sr sll 1;
@@ -295,20 +298,20 @@ begin
     crc_p: process(mclk_i, rst_i)
     begin
         if rst_i = '1' then
-            crc_s <= (others=>'0');
+            crc_sr <= (others=>'0');
         elsif rising_edge(mclk_i) then
             if tx_clken_s = '1' then
                 case can_mq is
                     when idle_st =>
-                        crc_s <= (others=>'0');
+                        crc_sr <= (others=>'0');
                     when load_header_st =>
-                        crc_s <= (others=>'0');
+                        crc_sr <= (others=>'0');
                     when abort_st =>
-                        crc_s <= (others=>'0');
+                        crc_sr <= (others=>'0');
                     when clear_fifo_st =>
-                        crc_s <= (others=>'0');
+                        crc_sr <= (others=>'0');
                     when others =>
-                        crc15(crc_s,frame_sr(63));
+                        crc15(crc_sr,frame_sr(63));
                 end case;
             end if;
         end if;
@@ -325,16 +328,19 @@ begin
             stuff_sr  := "11111";
         elsif rising_edge(mclk_i) then
             if tx_clken_i = '1' then
-                stuff_sr    := stuff_sr sll 1;
-                stuff_sr(0) := txdata_o;
                 if stuff_disable_s = '1' then
-                    txdata_o <= frame_sr(63);
-                    stuff_en <= '0';
+                    txdata_o    <= frame_sr(0);
+                    stuff_sr    := (others => not txdata_o);
+                    stuff_sr(0) := txdata_o;
+                    stuff_en    <= '0';
                 elsif stuff_en = '1' then
-                    txdata_o <= stuff_bit;
-                    stuff_en <= '0';
+                    txdata_o    <= stuff_bit;
+                    stuff_sr    := "01010";
+                    stuff_en    <= '0';
                 else
-                    txdata_o      <= frame_sr(63);
+                    txdata_o    <= frame_sr(0);
+                    stuff_sr    := stuff_sr sll 1;
+                    stuff_sr(0) := txdata_o;
                     if stuff_sr = "00000" then
                         stuff_en  <= '1';
                         stuff_bit := '1';

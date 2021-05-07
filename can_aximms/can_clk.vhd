@@ -38,19 +38,22 @@ end can_clk;
 
 architecture behavioral of can_clk is
 
-    signal   quanta_cnt      : unsigned(3 downto 0) := (others=>'0');
-    constant quanta_num      : integer              := 2**quanta_cnt'length;
-    constant base_freq       : real                 := real(quanta_num*1000);
+    constant quanta_cnt_size_c : integer := 3;
+    constant quanta_num        : integer := 2**quanta_cnt_size_c;
+    constant base_freq         : real    := real(quanta_num*1000);
 
-    constant NCO_size_c      : integer := 24; --ceil ( log2(1000) + 12 bits )
-    constant Resolution_hz_c : real    := system_freq/real(2**NCO_size_c);
-    constant baud_calc_c     : integer := increment_value_calc(system_freq,base_freq,NCO_size_c);
+    --constant NCO_size_c        : integer := 24; --ceil ( log2(1000) + 12 bits )
+    --constant Resolution_hz_c   : real    := system_freq/real(2**NCO_size_c);
 
-    signal   quanta_clk_s    : std_logic;
-    signal   quanta_clk_en   : std_logic;
-    signal   s_value_s       : std_logic_vector(NCO_size_c+baud_rate_i'length-1 downto 0);
-    --alias    s_value_a       : std_logic_vector(NCO_size_c-1 downto 0) is s_value_s(NCO_size_c+baud_rate_i'length-1 downto baud_rate_i'length);
-    alias    s_value_a       : std_logic_vector(NCO_size_c-1 downto 0) is s_value_s(NCO_size_c-1 downto 0);
+    constant Resolution_hz_c   : real    := 10.0000;
+    constant NCO_size_c        : integer := integer ( ceil ( log2(system_freq) - log2(Resolution_hz_c) ) );
+    constant baud_calc_c       : integer := increment_value_calc(system_freq,base_freq,NCO_size_c);
+
+    signal   quanta_clk_s      : std_logic;
+    signal   quanta_clk_en     : std_logic;
+    signal   quanta_cnt        : unsigned(quanta_cnt_size_c-1 downto 0) := (others=>'0');
+    signal   s_value_s         : std_logic_vector(NCO_size_c+baud_rate_i'length-1 downto 0);
+    alias    s_value_a         : std_logic_vector(NCO_size_c-1 downto 0) is s_value_s(NCO_size_c-1 downto 0);
 
 begin
 
@@ -100,9 +103,17 @@ begin
         end if;
     end process;
 
-    fb_clken_o <= quanta_clk_en when quanta_cnt = quanta_num/3   else '0';
-    rx_clken_o <= quanta_clk_en when quanta_cnt = 2*quanta_num/3 else '0';
-    tx_clken_o <= quanta_clk_en when quanta_cnt = quanta_num-1   else '0';
 
-
+    output_p : process(all)
+    begin
+        if rst_i = '1' then
+            fb_clken_o <= '0';
+            rx_clken_o <= '0';
+            tx_clken_o <= '0';
+        elsif rising_edge(mclk_i) then
+            fb_clken_o <= quanta_clk_en ?= '1' and quanta_cnt ?= quanta_num/3;
+            rx_clken_o <= quanta_clk_en ?= '1' and quanta_cnt ?= 2*quanta_num/3;
+            tx_clken_o <= quanta_clk_en ?= '1' and quanta_cnt ?= quanta_num-1;
+        end if;
+    end process;
 end behavioral;

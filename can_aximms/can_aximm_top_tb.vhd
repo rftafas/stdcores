@@ -86,7 +86,7 @@ architecture simulation of can_aximm_top_tb is
 begin
 
   --architecture_body_tag.
-  mclk_i <= not mclk_i after 10 ns;
+  mclk_i <= not mclk_i after 5 ns;
 
   main : process
     variable wdata_v : std_logic_vector(C_S_AXI_DATA_WIDTH - 1 downto 0) := (others => '0');
@@ -277,33 +277,33 @@ begin
         wdata_v := to_std_logic_vector(200,32);
         write_bus(net,axi_handle,8,wdata_v,"0011");
 
-        -- --Setting tx_id_o
-        -- wdata_v := x"1A2B3C4D";
-        -- write_bus(net,axi_handle,72,wdata_v,"1111");
+        --Setting tx_id_o
+        wdata_v := x"1A2B3C4D";
+        write_bus(net,axi_handle,72,wdata_v,"1111");
 
-        -- --Setting tx_data
-        -- wdata_v := x"76543210";
-        -- write_bus(net,axi_handle,76,wdata_v,"1111");
-        -- wdata_v := x"76543210";
-        -- write_bus(net,axi_handle,80,wdata_v,"1111");
+        --data length
+        wdata_v := to_std_logic_vector(8,32);
+        write_bus(net,axi_handle,68,wdata_v,"0001");
 
-        -- --data length
-        -- wdata_v := to_std_logic_vector(8,32);
-        -- write_bus(net,axi_handle,68,wdata_v,"0001");
+        --Setting tx_data
+        wdata_v := x"76543210";
+        write_bus(net,axi_handle,76,wdata_v,"1111");
+        wdata_v := x"76543210";
+        write_bus(net,axi_handle,80,wdata_v,"1111");
 
-        -- --Command to send
-        -- wdata_v(1) := '1';
-        -- write_bus(net,axi_handle,64,wdata_v,"0001");
+        --Command to send
+        wdata_v(1) := '1';
+        write_bus(net,axi_handle,64,wdata_v,"0001");
 
-        -- --Testing tx_busy_i
-        -- set_timeout(runner, now + 100 us);
-        -- wait for 50 us;
+        --Testing tx_busy_i
+        set_timeout(runner, now + 110 us);
+        wait for 100 us;
 
-        -- read_bus(net,axi_handle,64,rdata_v);
-        -- check_equal(rdata_v(8),'1',result("Test Read: tx_busy_i."));
+        read_bus(net,axi_handle,64,rdata_v);
+        check_equal(rdata_v(8),'1',result("Test Read: tx_busy_i."));
 
-        set_timeout(runner, now + 200 us);
-        wait for 500 us;
+        set_timeout(runner, now + 1001 us);
+        wait for 1000 us;
 
         -- --Testing tx_busy_i
         -- read_bus(net,axi_handle,64,rdata_v);
