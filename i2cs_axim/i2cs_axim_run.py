@@ -16,13 +16,13 @@ vu.add_verification_components()
 vu.add_com()
 
 expert = vu.add_library("expert")
-expert.add_source_files(join(root, "../../stdexpert/src/*.vhd"))
+expert.add_source_files(join(root, "../dependencies/stdblocks/libraries/stdexpert/src/*.vhd"))
 
 stdblocks = vu.add_library("stdblocks")
-stdblocks.add_source_files(join(root, "../../stdblocks/sync_lib/*.vhd"))
-stdblocks.add_source_files(join(root, "../../stdblocks/ram_lib/*.vhd"))
-stdblocks.add_source_files(join(root, "../../stdblocks/fifo_lib/*.vhd"))
-stdblocks.add_source_files(join(root, "../../stdblocks/prbs_lib/*.vhd"))
+stdblocks.add_source_files(join(root, "../dependencies/stdblocks/sync_lib/*.vhd"))
+stdblocks.add_source_files(join(root, "../dependencies/stdblocks/ram_lib/*.vhd"))
+stdblocks.add_source_files(join(root, "../dependencies/stdblocks/fifo_lib/*.vhd"))
+stdblocks.add_source_files(join(root, "../dependencies/stdblocks/prbs_lib/*.vhd"))
 
 stdcores = vu.add_library("stdcores")
 stdcores.add_source_files(join(root, "./*.vhd"))

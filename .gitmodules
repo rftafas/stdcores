@@ -1,0 +1,3 @@
+[submodule "dependencies/stdblocks"]
+	path = dependencies/stdblocks
+	url = git@github.com:rftafas/stdblocks.git

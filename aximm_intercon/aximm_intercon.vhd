@@ -163,7 +163,7 @@ architecture behavioral of aximm_intercon is
   signal S_AXI_AWID_s    : std_logic_array (peripherals_num-1 downto 0)(ID_WIDTH-1 downto 0);
   signal S_AXI_AWVALID_s : std_logic_vector(peripherals_num-1 downto 0);
   signal S_AXI_AWREADY_s : std_logic_vector(peripherals_num-1 downto 0);
-  signal S_AXI_AWADDR_s  : std_logic_array (peripherals_num-1 downto 0)(8*tdata_size-1 downto 0);
+  signal S_AXI_AWADDR_s  : std_logic_array (peripherals_num-1 downto 0)(8*ceil_8(ADDR_SIZE)-1 downto 0);
   signal S_AXI_AWPROT_s  : std_logic_array (peripherals_num-1 downto 0)(2 downto 0);
 
   signal S_AXI_WVALID_s  : std_logic_vector(peripherals_num-1 downto 0);
@@ -174,14 +174,14 @@ architecture behavioral of aximm_intercon is
 
   signal S_AXI_BRESP_s   : std_logic_array (peripherals_num-1 downto 0)(7 downto 0);
 
-  signal S_AXI_ARADDR_s  : std_logic_array (peripherals_num-1 downto 0)(8*tdata_size-1 downto 0);
+  signal S_AXI_ARADDR_s  : std_logic_array (peripherals_num-1 downto 0)(8*ceil_8(ADDR_SIZE)-1 downto 0);
   signal S_AXI_ARVALID_s : std_logic_vector(peripherals_num-1 downto 0);
   signal S_AXI_ARREADY_s : std_logic_vector(peripherals_num-1 downto 0);
 
 
   signal M_AXI_BRESP_s   : std_logic_array (controllers_num-1 downto 0)(7 downto 0);
-  signal M_AXI_AWADDR_s  : std_logic_array (controllers_num-1 downto 0)(8*tdata_size-1 downto 0);
-  signal M_AXI_ARADDR_s  : std_logic_array (controllers_num-1 downto 0)(8*tdata_size-1 downto 0);
+  signal M_AXI_AWADDR_s  : std_logic_array (controllers_num-1 downto 0)(8*ceil_8(ADDR_SIZE)-1 downto 0);
+  signal M_AXI_ARADDR_s  : std_logic_array (controllers_num-1 downto 0)(8*ceil_8(ADDR_SIZE)-1 downto 0);
 
 begin
 
@@ -247,13 +247,13 @@ begin
     --S_AXI_AWPROT_s(j)   <= m_tuser_align_s(j)(0)(prot_r.high downto prot_r.low);
     S_AXI_AWVALID_s(j)  <= m_tvalid_align_s(j)(0);
     m_tready_align_s(j)(0) <= S_AXI_AWREADY_s(j);
-    S_AXI_AWADDR_s(j)   <= m_tdata_align_s(j)(0);
+    S_AXI_AWADDR_s(j)   <= m_tdata_align_s(j)(0)(S_AXI_AWADDR_s(j)'range);
     awaddr_tdest_i_s(j) <= m_tdest_align_s(j)(0);
     awaddr_tuser_i_s(j) <= m_tuser_align_s(j)(0);
 
     S_AXI_WVALID_s(j) <= m_tvalid_align_s(j)(1);
     m_tready_align_s(j)(1) <= S_AXI_WREADY_s(j);
-    S_AXI_WDATA_s(j)   <= m_tdata_align_s(j)(1);
+    S_AXI_WDATA_s(j)   <= m_tdata_align_s(j)(1)(S_AXI_WDATA_s(j)'range);
     S_AXI_WSTRB_s(j)   <= m_tstrb_align_s(j)(1);
     S_AXI_WLAST_s(j)   <= m_tlast_align_s(j)(1);
     wdata_tdest_i_s(j) <= m_tdest_align_s(j)(1);
@@ -327,7 +327,7 @@ begin
     --READ ADDRESS MMASTER TO SLAVE
     M_AXI_ARID(j)    <= araddr_tuser_o_s(j)(id_r.high downto id_r.low);
     M_AXI_ARPROT(j)  <= araddr_tuser_o_s(j)(prot_r.high downto prot_r.low);
-    M_AXI_ARADDR(j)  <= M_AXI_ARADDR_s(j)(M_AXI_ARADDR(j)'range);
+    M_AXI_ARADDR(j)  <= M_AXI_ARADDR_s(j)(ADDR_SIZE-1 downto 0);--(M_AXI_ARADDR(j)'range);
 
 
   end generate;
