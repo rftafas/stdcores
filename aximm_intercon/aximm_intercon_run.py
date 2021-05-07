@@ -15,15 +15,15 @@ vu = VUnit.from_argv()
 vu.add_verification_components()
 
 expert = vu.add_library("expert")
-expert.add_source_files(join(root, "../dependencies/stdblocks/libraries/stdexpert/src/*.vhd"))
+expert.add_source_files(join(root, "../../stdexpert/src/*.vhd"))
 
 stdblocks = vu.add_library("stdblocks")
 
-stdblocks_filelist = glob.glob("../dependencies/stdblocks/sync_lib/*.vhd")
-stdblocks_filelist = stdblocks_filelist + glob.glob("../dependencies/stdblocks/ram_lib/*.vhd")
-stdblocks_filelist = stdblocks_filelist + glob.glob("../dependencies/stdblocks/fifo_lib/*.vhd")
-stdblocks_filelist = stdblocks_filelist + glob.glob("../dependencies/stdblocks/prbs_lib/*.vhd")
-stdblocks_filelist = stdblocks_filelist + glob.glob("../dependencies/stdblocks/scheduler_lib/*.vhd")
+stdblocks_filelist = glob.glob("../../stdblocks/sync_lib/*.vhd")
+stdblocks_filelist = stdblocks_filelist + glob.glob("../../stdblocks/ram_lib/*.vhd")
+stdblocks_filelist = stdblocks_filelist + glob.glob("../../stdblocks/fifo_lib/*.vhd")
+stdblocks_filelist = stdblocks_filelist + glob.glob("../../stdblocks/prbs_lib/*.vhd")
+stdblocks_filelist = stdblocks_filelist + glob.glob("../../stdblocks/scheduler_lib/*.vhd")
 for vhd_file in stdblocks_filelist:
     if "_tb" not in vhd_file:
         stdblocks.add_source_files(vhd_file)
