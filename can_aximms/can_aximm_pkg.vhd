@@ -114,9 +114,10 @@ package can_aximm_pkg is
         reg_id_mask_i  : in  std_logic_vector(28 downto 0);
         busy_o         : out std_logic;
         rx_crc_error_o : out std_logic;
+        send_ack_o     : out std_logic;
         --Signals to PHY
         collision_i    : in  std_logic;
-        rxdata_i       : out std_logic
+        rxdata_i       : in  std_logic
     );
   end component;
 
@@ -253,13 +254,14 @@ package can_aximm_pkg is
     );
   end component;
 
-  procedure crc15( signal vector : inout std_logic_vector(14 downto 0); input : in  std_logic);
+  procedure crc15(        vector : inout std_logic_vector(14 downto 0); input : in  std_logic);
+  --procedure crc15( signal vector : inout std_logic_vector(14 downto 0); input : in  std_logic);
 
 end can_aximm_pkg;
 
 package body can_aximm_pkg is
 
-  procedure crc15( signal vector : inout std_logic_vector(14 downto 0); input : in  std_logic) is
+  procedure crc15( vector : inout std_logic_vector(14 downto 0); input : in  std_logic) is
     variable crc_v : std_logic_vector(15 downto 0);
   begin
       --input and shift
@@ -267,8 +269,16 @@ package body can_aximm_pkg is
       --xor
       crc_v(0) := crc_v(15) xor crc_v(14) xor crc_v(10) xor crc_v(8) xor crc_v(7) xor crc_v(4) xor crc_v(3) xor input;
       --output
-      vector   <= crc_v(14 downto 0);
+      vector   := crc_v(14 downto 0);
   end procedure;
+
+  -- procedure crc15( signal vector : inout std_logic_vector(14 downto 0); input : in  std_logic) is
+  --   variable crc_v : std_logic_vector(14 downto 0);
+  -- begin
+  --   crc_v := vector;
+  --   crc15(crc_v,input);
+  --   vector <= crc_v;
+  -- end procedure;
 
 end package body;
 

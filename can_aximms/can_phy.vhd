@@ -13,43 +13,43 @@
 --the specific language governing permissions and limitations under the License.
 ----------------------------------------------------------------------------------
 library ieee;
-  use ieee.std_logic_1164.all;
-  use ieee.numeric_std.all;
-  use ieee.math_real.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.math_real.all;
 library expert;
-  use expert.std_logic_expert.all;
+use expert.std_logic_expert.all;
 library stdblocks;
-    use stdblocks.sync_lib.all;
+use stdblocks.sync_lib.all;
 
 entity can_phy is
     generic (
-        internal_phy      : boolean := false
+        internal_phy : boolean := false
     );
     port (
-        rst_i             : in  std_logic;
-        mclk_i            : in  std_logic;
+        rst_i  : in std_logic;
+        mclk_i : in std_logic;
         --configs
-        force_error_i     : in  std_logic;
-        lock_dominant_i   : in  std_logic;
-        loopback_i        : in  std_logic;
+        force_error_i   : in std_logic;
+        lock_dominant_i : in std_logic;
+        loopback_i      : in std_logic;
         --stats
         stuff_violation_o : out std_logic;
         collision_o       : out std_logic;
         channel_ready_o   : out std_logic;
         --commands
-        send_ack_i        : in  std_logic;
+        send_ack_i : in std_logic;
         -- data channel;
-        tx_clken_i        : in  std_logic;
-        rx_clken_i        : in  std_logic;
-        fb_clken_i        : in  std_logic;
-        tx_i              : in  std_logic;
-        tx_en_i           : in  std_logic;
-        rx_o              : out std_logic;
-        rx_sync_o         : out std_logic;
+        tx_clken_i : in  std_logic;
+        rx_clken_i : in  std_logic;
+        fb_clken_i : in  std_logic;
+        tx_i       : in  std_logic;
+        tx_en_i    : in  std_logic;
+        rx_o       : out std_logic;
+        rx_sync_o  : out std_logic;
         --external PHY
-        txo_o : out   std_logic;
-        txo_t : out   std_logic;
-        rxi   : in    std_logic;
+        txo_o : out std_logic;
+        txo_t : out std_logic;
+        rxi   : in  std_logic;
         --internal phy
         can_l : inout std_logic;
         can_h : inout std_logic
@@ -58,10 +58,10 @@ end can_phy;
 
 architecture rtl of can_phy is
 
-    signal rx_s          : std_logic;
-    signal rx_int_s      : std_logic;
-    signal tx_s          : std_logic;
-    signal tx_en_s       : std_logic;
+    signal rx_s     : std_logic;
+    signal rx_int_s : std_logic;
+    signal tx_s     : std_logic;
+    signal tx_en_s  : std_logic;
 
     signal force_error_s : std_logic;
     signal lock_end_en   : std_logic;
@@ -70,24 +70,24 @@ begin
 
     --error injection. we have to guarantee that the command from registerbank is captured by the phy.
     pulse_error_u : stretch_sync
-        port map (
-          rst_i  => '0',
-          mclk_i => mclk_i,
-          da_i   => tx_clken_i,
-          db_i   => force_error_i,
-          dout_o => force_error_s
-        );
+    port map(
+        rst_i  => '0',
+        mclk_i => mclk_i,
+        da_i   => tx_clken_i,
+        db_i   => force_error_i,
+        dout_o => force_error_s
+    );
 
     lock_end_u : det_down
-        port map (
-            rst_i   => rst_i,
-            mclk_i  => mclk_i,
-            din     => lock_dominant_i,
-            dout    => lock_end_en
-        );
+    port map(
+        rst_i  => rst_i,
+        mclk_i => mclk_i,
+        din    => lock_dominant_i,
+        dout   => lock_end_en
+    );
 
     --we sample TX_I so it should place an FFD the closest to the IO.
-    tx_p: process(mclk_i, rst_i)
+    tx_p : process (mclk_i, rst_i)
     begin
         if rst_i = '1' then
             tx_s    <= '1';
@@ -118,37 +118,39 @@ begin
     txo_t <= tx_en_s;
 
     --internal phy:
-    can_l <= '0' when (tx_en_s and not tx_s) = '1' else 'Z';
-    can_h <= '0' when (tx_en_s and     tx_s) = '1' else 'Z';
+    can_l <= '0' when (tx_en_s and not tx_s) = '1' else
+        'Z';
+    can_h <= '0' when (tx_en_s and tx_s) = '1' else
+        'Z';
 
     --internal PHY: ex from RXI, external PHY: RX from CANH/L
-    rx_s <= rxi when not internal_phy           else
-            '1' when can_h = '1' and can_l ='0' else
+    rx_s <= rxi when not internal_phy else
+            '1' when can_h = '1' and can_l = '0' else
             '0';
 
     --we always sync it.
     rx_sync_u : sync_r
-        port map (
-          rst_i  => '0',
-          mclk_i => mclk_i,
-          din    => rx_s,
-          dout   => rx_int_s
-        );
+    port map(
+        rst_i  => '0',
+        mclk_i => mclk_i,
+        din    => rx_s,
+        dout   => rx_int_s
+    );
 
     --detect the edge to sync the internal clock
     rx_det_u : det_down
-        port map (
-          rst_i  => '0',
-          mclk_i => mclk_i,
-          din    => rx_int_s,
-          dout   => rx_sync_o
-        );
+    port map(
+        rst_i  => '0',
+        mclk_i => mclk_i,
+        din    => rx_int_s,
+        dout   => rx_sync_o
+    );
 
     --send the data.
     rx_o <= rx_int_s;
 
     --we can only detect when we send a 1 but the bus remains low.
-    col_det_p : process(mclk_i, rst_i)
+    col_det_p : process (mclk_i, rst_i)
     begin
         if rst_i = '1' then
             collision_o <= '0';
@@ -161,13 +163,13 @@ begin
         end if;
     end process;
 
-    line_status_p : process(mclk_i, rst_i)
+    line_status_p : process (mclk_i, rst_i)
         variable stuff_sr : std_logic_vector(7 downto 0) := (others => '0');
     begin
         if rst_i = '1' then
             channel_ready_o   <= '0';
             stuff_violation_o <= '0';
-            stuff_sr          := (others => '0');
+            stuff_sr := (others => '0');
         elsif rising_edge(mclk_i) then
             if rx_clken_i = '1' then
                 stuff_sr    := stuff_sr sll 1;
@@ -193,6 +195,4 @@ begin
             end if;
         end if;
     end process;
-
-
 end rtl;

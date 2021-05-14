@@ -55,6 +55,7 @@ architecture rtl of can_tx is
 
     type can_t is (
         idle_st,
+        wait_ready_st,
         load_header_st,
         arbitration_st,
         load_data_st,
@@ -72,12 +73,15 @@ architecture rtl of can_tx is
     signal can_mq : can_t := idle_st;
 
     signal frame_sr         : std_logic_vector(0 to 63);
-    signal crc_sr           : std_logic_vector(14 downto 0);
+    --signal crc_sr           : std_logic_vector(14 downto 0);
     signal ack_s            : std_logic;
     signal stuff_disable_s  : std_logic;
     signal stuff_en         : std_logic;
     signal tx_clken_s       : std_logic;
     signal start_s          : std_logic;
+    signal stuff_bit_s      : std_logic;
+
+
 
 begin
 
@@ -104,14 +108,18 @@ begin
                     when idle_st =>
                         frame_cnt := 0;
                         if start_s = '1' then
+                            can_mq <= wait_ready_st;
+                        end if;
+
+                    when wait_ready_st =>
+                        frame_cnt := 0;
+                        if ch_ready_i = '1' then
                             can_mq <= load_header_st;
                         end if;
 
                     when load_header_st =>
                         frame_cnt := 0;
-                        if ch_ready_i = '1' then
-                            can_mq <= arbitration_st;
-                        end if;
+                        can_mq <= arbitration_st;
 
                     when arbitration_st =>
                         if collision_i = '1' then
@@ -119,13 +127,13 @@ begin
                             can_mq <= abort_st;
                         else
                             frame_cnt := frame_cnt + 1;
-                            if usr_eff_i = '1' and frame_cnt = 19 then
+                            if usr_eff_i = '0' and frame_cnt = 19 then
                                 if usr_dlc_i = "0000" then
                                     can_mq <= load_crc_st;
                                 else
                                     can_mq <= load_data_st;
                                 end if;
-                            elsif usr_eff_i = '0' and frame_cnt = 38 then
+                            elsif usr_eff_i = '1' and frame_cnt = 39 then
                                 if usr_dlc_i = "0000" then
                                     can_mq <= load_crc_st;
                                 else
@@ -140,7 +148,9 @@ begin
 
                     when data_st =>
                         frame_cnt := frame_cnt + 1;
-                        if frame_cnt = usr_dlc_i*8 then
+                        if frame_cnt = 63 then
+                            can_mq <= load_crc_st;
+                        elsif frame_cnt = usr_dlc_i*8-1 then
                             can_mq <= load_crc_st;
                         end if;
 
@@ -150,8 +160,8 @@ begin
 
                     when crc_st =>
                         frame_cnt := frame_cnt + 1;
-                        if frame_cnt = 16 then
-                            can_mq <= ack_slot_st;
+                        if frame_cnt = 15 then
+                            can_mq <= crc_delimiter_st;
                         end if;
 
                     when crc_delimiter_st =>
@@ -192,7 +202,7 @@ begin
                         if retry_cnt = 7 then
                             can_mq <= clear_fifo_st;
                         else
-                            can_mq <= load_header_st;
+                            can_mq <= wait_ready_st;
                         end if;
 
                     when others =>
@@ -203,31 +213,6 @@ begin
             end if;
         end if;
     end process;
-
-    --we disable the stuffing after the CRC (delimiter is not stuffed)
-    stuff_disable_s <=  '1' when can_mq = idle_st          else
-                        '1' when can_mq = crc_delimiter_st else
-                        '1' when can_mq = ack_slot_st      else
-                        '1' when can_mq = eof_st           else
-                        '1' when can_mq = load_header_st   else
-                        '0';
-
-    txen_o  <=  '0' when can_mq = idle_st           else
-                '0' when can_mq = clear_fifo_st     else
-                '0' when can_mq = abort_st          else
-                '0' when can_mq = load_header_st    else
-                '1';
-
-    busy_o  <=  '0' when can_mq = idle_st           else
-                '1';
-
-    rtry_error_o  <=  '1' when can_mq = retry_error_st else
-                      '0';
-
-    arb_lost_o  <=  '1' when can_mq = abort_st else
-                    '0';
-
-
 
     --if we detect a colision during the ACK, it means that someone has
     --acknoledged our frame. We won't retransmitt it.
@@ -254,15 +239,46 @@ begin
 
 
     frame_shift_p: process(mclk_i, rst_i)
+        variable crc_sr : std_logic_vector(14 downto 0);
     begin
         if rst_i = '1' then
-            frame_sr    <= (others=>'1');
+            stuff_disable_s <= '1';
+            arb_lost_o      <= '0';
+            txen_o          <= '0';
+            busy_o          <= '0';
+            rtry_error_o    <= '0';
+            crc_sr          := (others=>'0');
+            frame_sr        <= (others=>'1');
         elsif rising_edge(mclk_i) then
             if tx_clken_s = '1' then
                 case can_mq is
+                    when idle_st =>
+                        stuff_disable_s <= '1';
+                        arb_lost_o      <= '0';
+                        txen_o          <= '0';
+                        busy_o          <= '0';
+                        rtry_error_o    <= '0';
+                        crc_sr          := (others=>'0');
+                        frame_sr        <= (others=>'1');
+
+                    when wait_ready_st =>
+                        stuff_disable_s <= '1';
+                        arb_lost_o      <= '0';
+                        txen_o          <= '0';
+                        busy_o          <= '1';
+                        rtry_error_o    <= '0';
+                        crc_sr          := (others=>'0');
+                        frame_sr        <= (others=>'1');
+
                     when load_header_st =>
-                        frame_sr    <= (others=>'1');
-                        frame_sr(0) <= '0';                                 --SOF
+                        stuff_disable_s <= '0';
+                        arb_lost_o      <= '0';
+                        txen_o          <= '1';
+                        busy_o          <= '1';
+                        rtry_error_o    <= '0';
+                        crc_sr          := (others=>'0');
+                        frame_sr        <= (others=>'1');
+                        frame_sr(0)     <= '0';                             --SOF
                         if usr_eff_i = '1' then                             --29 bit ID
                             frame_sr(1 to 12)  <= usr_id_i(28 downto 18);   --ID_A
                             frame_sr(13)       <= '0';                      --SRR
@@ -278,80 +294,184 @@ begin
                             frame_sr(16 to 19) <= usr_dlc_i;                --DLC
                         end if;
 
+                    when arbitration_st =>
+                        stuff_disable_s <= '0';
+                        arb_lost_o      <= '0';
+                        txen_o          <= '1';
+                        busy_o          <= '1';
+                        rtry_error_o    <= '0';
+                        crc15(crc_sr,frame_sr(0));
+                        frame_sr        <= frame_sr sll 1;
+                        frame_sr(63)    <= '1';
+
                     when load_data_st =>
-                        frame_sr                     <= (others=>'1');
+                        stuff_disable_s <= '0';
+                        arb_lost_o      <= '0';
+                        txen_o          <= '1';
+                        busy_o          <= '1';
+                        rtry_error_o    <= '0';
+                        crc15(crc_sr,frame_sr(0));
+                        frame_sr        <= (others=>'1');
                         frame_sr(0 to 8*usr_dlc_i-1) <= data_i(8*usr_dlc_i-1 downto 0);
 
+                    when data_st =>
+                        stuff_disable_s <= '0';
+                        arb_lost_o      <= '0';
+                        txen_o          <= '1';
+                        busy_o          <= '1';
+                        rtry_error_o    <= '0';
+                        crc15(crc_sr,frame_sr(0));
+                        frame_sr        <= frame_sr sll 1;
+                        frame_sr(63)    <= '1';
+
+
                     when load_crc_st =>
+                        stuff_disable_s   <= '0';
+                        arb_lost_o        <= '0';
+                        txen_o            <= '1';
+                        busy_o            <= '1';
+                        rtry_error_o      <= '0';
+                        crc15(crc_sr,frame_sr(0));
                         frame_sr          <= (others=>'1');
                         frame_sr(0 to 14) <= crc_sr;
 
+                    when eof_st =>
+                        stuff_disable_s <= '1';
+                        arb_lost_o      <= '0';
+                        txen_o          <= '1';
+                        busy_o          <= '1';
+                        rtry_error_o    <= '0';
+                        crc_sr          := (others=>'0');
+                        frame_sr        <= (others=>'1');
+
+                    when retry_error_st =>
+                        stuff_disable_s <= '0';
+                        arb_lost_o      <= '0';
+                        txen_o          <= '0';
+                        busy_o          <= '0';
+                        rtry_error_o    <= '1';
+                        crc_sr          := (others=>'0');
+                        frame_sr        <= (others=>'1');
+
+                    when clear_fifo_st =>
+                        stuff_disable_s <= '0';
+                        arb_lost_o      <= '0';
+                        txen_o          <= '0';
+                        busy_o          <= '0';
+                        rtry_error_o    <= '0';
+                        crc_sr          := (others=>'0');
+                        frame_sr        <= (others=>'1');
+
+                    when abort_st =>
+                        stuff_disable_s <= '0';
+                        arb_lost_o      <= '1';
+                        txen_o          <= '0';
+                        busy_o          <= '0';
+                        rtry_error_o    <= '0';
+                        crc_sr          := (others=>'0');
+                        frame_sr        <= (others=>'1');
+
+                    when crc_delimiter_st =>
+                        stuff_disable_s <= '1';
+                        arb_lost_o      <= '0';
+                        txen_o          <= '1';
+                        busy_o          <= '1';
+                        rtry_error_o    <= '0';
+                        crc_sr          := (others=>'0');
+                        frame_sr        <= frame_sr sll 1;
+                        frame_sr(63)    <= '1';
+
+                    when ack_slot_st =>
+                        stuff_disable_s <= '1';
+                        arb_lost_o      <= '0';
+                        txen_o          <= '1';
+                        busy_o          <= '1';
+                        rtry_error_o    <= '0';
+                        crc_sr          := (others=>'0');
+                        frame_sr        <= frame_sr sll 1;
+                        frame_sr(63)    <= '1';
+
+
+                    when crc_st =>
+                        stuff_disable_s <= '0';
+                        arb_lost_o      <= '0';
+                        txen_o          <= '1';
+                        busy_o          <= '1';
+                        rtry_error_o    <= '0';
+                        crc_sr          := crc_sr;
+                        frame_sr        <= frame_sr sll 1;
+                        frame_sr(63)    <= '1';
+
                     when others =>
-                        frame_sr     <= frame_sr sll 1;
-                        frame_sr(63) <= '1';
+                        stuff_disable_s <= '0';
+                        arb_lost_o      <= '0';
+                        txen_o          <= '1';
+                        busy_o          <= '1';
+                        rtry_error_o    <= '0';
+                        crc_sr          := (others=>'0');
+                        frame_sr        <= (others=>'1');
 
                 end case;
             end if;
         end if;
     end process frame_shift_p;
 
-    crc_p: process(mclk_i, rst_i)
-    begin
-        if rst_i = '1' then
-            crc_sr <= (others=>'0');
-        elsif rising_edge(mclk_i) then
-            if tx_clken_s = '1' then
-                case can_mq is
-                    when idle_st =>
-                        crc_sr <= (others=>'0');
-                    when load_header_st =>
-                        crc_sr <= (others=>'0');
-                    when abort_st =>
-                        crc_sr <= (others=>'0');
-                    when clear_fifo_st =>
-                        crc_sr <= (others=>'0');
-                    when others =>
-                        crc15(crc_sr,frame_sr(63));
-                end case;
-            end if;
-        end if;
-    end process;
+    -- crc_p: process(mclk_i, rst_i)
+    -- begin
+    --     if rst_i = '1' then
+    --         crc_sr <= (others=>'0');
+    --     elsif rising_edge(mclk_i) then
+    --         if tx_clken_s = '1' then
+    --             case can_mq is
+    --                 when arbitration_st =>
+    --                     crc15(crc_sr,frame_sr(63));
+    --                 when load_data_st =>
+    --                     crc15(crc_sr,frame_sr(63));
+    --                 when data_st =>
+    --                     crc15(crc_sr,frame_sr(63));
+    --                 when load_crc_st =>
+    --                     crc15(crc_sr,frame_sr(63));
+    --                 when crc_st =>
+    --                     null;
+    --                 when others =>
+    --                     crc_sr <= (others=>'0');
+    --             end case;
+    --         end if;
+    --     end if;
+    -- end process;
 
     stuffing_p: process(mclk_i, rst_i)
         variable stuff_sr  : std_logic_vector(4 downto 0);
-        variable stuff_bit : std_logic;
     begin
         if rst_i = '1' then
-            txdata_o  <= '0';
-            stuff_en  <= '0';
-            stuff_bit := '0';
-            stuff_sr  := "11111";
+            stuff_en    <= '0';
+            stuff_bit_s <= '0';
+            stuff_sr  := "00001";
         elsif rising_edge(mclk_i) then
             if tx_clken_i = '1' then
                 if stuff_disable_s = '1' then
-                    txdata_o    <= frame_sr(0);
-                    stuff_sr    := (others => not txdata_o);
-                    stuff_sr(0) := txdata_o;
+                    stuff_sr    := (others => '0');
+                    stuff_sr(0) := '1';
                     stuff_en    <= '0';
                 elsif stuff_en = '1' then
-                    txdata_o    <= stuff_bit;
-                    stuff_sr    := "01010";
+                    stuff_sr(0) := stuff_bit_s;
                     stuff_en    <= '0';
                 else
-                    txdata_o    <= frame_sr(0);
                     stuff_sr    := stuff_sr sll 1;
                     stuff_sr(0) := txdata_o;
                     if stuff_sr = "00000" then
                         stuff_en  <= '1';
-                        stuff_bit := '1';
+                        stuff_bit_s <= '1';
                     elsif stuff_sr = "11111" then
                         stuff_en  <= '1';
-                        stuff_bit := '0';
+                        stuff_bit_s <= '0';
                     end if;
                 end if;
             end if;
         end if;
     end process stuffing_p;
+
+    txdata_o <= stuff_bit_s when stuff_en = '1' else frame_sr(0);
 
     --the machine stops during stuffing.
     tx_clken_s <=  tx_clken_i when stuff_disable_s = '1'  else

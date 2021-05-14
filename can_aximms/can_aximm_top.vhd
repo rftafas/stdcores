@@ -114,6 +114,7 @@ architecture behavior of can_aximm_top is
   signal loopback_s        : std_logic;
   signal stuff_violation_s : std_logic;
   signal channel_ready_s   : std_logic;
+  signal send_ack_s        : std_logic;
 
 begin
 
@@ -284,6 +285,7 @@ begin
       reg_id_mask_i  => reg_id_mask_s,
       busy_o         => rx_busy_s,
       rx_crc_error_o => rx_crc_error_s,
+      send_ack_o     => send_ack_s,
       collision_i    => collision_s,
       rxdata_i       => rx_serial_data_s
     );
@@ -307,7 +309,7 @@ begin
       stuff_violation_o => stuff_violation_s,
       collision_o       => collision_s,
       channel_ready_o   => channel_ready_s,
-      send_ack_i        => '0',
+      send_ack_i        => send_ack_s,
       tx_i              => tx_serial_data_s,
       tx_en_i           => tx_serial_data_en,
       rx_o              => rx_serial_data_s,

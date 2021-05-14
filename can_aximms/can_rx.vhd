@@ -43,9 +43,10 @@ entity can_rx is
         reg_id_mask_i  : in std_logic_vector(28 downto 0);
         busy_o         : out std_logic;
         rx_crc_error_o : out std_logic;
+        send_ack_o     : out std_logic;
         --Signals to PHY
         collision_i : in std_logic;
-        rxdata_i    : out std_logic
+        rxdata_i    : in std_logic
     );
 end can_rx;
 
@@ -53,9 +54,10 @@ architecture rtl of can_rx is
 
     type can_t is (
         idle_st,
-        arbitration_st,
-        save_short_header_st,
-        save_long_header_st,
+        header_st,
+        save_header_st,
+        extended_header_st,
+        save_extended_header_st,
         get_data_st,
         save_data_st,
         get_crc_st,
@@ -70,10 +72,9 @@ architecture rtl of can_rx is
 
     signal can_mq : can_t := idle_st;
 
-    signal frame_sr        : std_logic_vector(0 to 63);
+    signal frame_sr        : std_logic_vector(63 downto 0);
     signal crc_s           : std_logic_vector(14 downto 0);
     signal crc_sr          : std_logic_vector(14 downto 0);
-    signal ack_s           : std_logic;
     signal stuff_disable_s : std_logic;
     signal stuff_en        : std_logic;
     signal rx_clken_s      : std_logic;
@@ -83,14 +84,12 @@ architecture rtl of can_rx is
 begin
 
     control_p : process (mclk_i)
-        variable retry_cnt : integer   := 0;
         variable frame_cnt : integer   := 0;
         variable ide_v     : std_logic := '0';
     begin
         if rst_i = '1' then
             can_mq <= idle_st;
             ide_v     := '0';
-            retry_cnt := 0;
             frame_cnt := 0;
         elsif rising_edge(mclk_i) then
             if rx_clken_s = '1' then
@@ -99,30 +98,46 @@ begin
                         if rxdata_i = '0' then
                             frame_cnt := 0;
                             ide_v     := '0';
-                            can_mq <= arbitration_st;
+                            can_mq <= header_st;
                         end if;
 
-                    when arbitration_st =>
+                    when header_st =>
                         frame_cnt := frame_cnt + 1;
-                        if frame_cnt = 14 then
-                            ide_v := rxdata_i;
-                        elsif ide_v = '0' and frame_cnt = 19 then
-                            can_mq <= save_short_header_st;
-                        elsif frame_cnt = 32 then
-                            can_mq <= save_long_header_st;
+                        if frame_cnt = 19 then
+                            if frame_sr(5) = '0' then
+                                can_mq <= save_header_st;
+                            else
+                                can_mq <= extended_header_st;
+                            end if;
                         end if;
 
-                    when save_short_header_st =>
+                    when save_header_st =>
                         frame_cnt := 0;
-                        can_mq <= get_data_st;
+                        if frame_sr(3 downto 0) = "0000" then
+                            can_mq <= get_crc_st;
+                        else
+                            can_mq <= get_data_st;
+                        end if;
 
-                    when save_long_header_st =>
+                    when extended_header_st =>
+                        frame_cnt := frame_cnt + 1;
+                        if frame_cnt = 25 then
+                            can_mq <= save_extended_header_st;
+                        end if;
+
+                    when save_extended_header_st =>
                         frame_cnt := 0;
-                        can_mq <= get_data_st;
+                        if frame_sr(3 downto 0) = "0000" then
+                            can_mq <= get_crc_st;
+                        else
+                            can_mq <= get_data_st;
+                        end if;
 
                     when get_data_st =>
                         frame_cnt := frame_cnt + 1;
                         if frame_cnt = 64 then
+                            can_mq <= save_data_st;
+                        elsif frame_cnt = (usr_dlc_o * 8) then
                             can_mq <= save_data_st;
                         end if;
 
@@ -132,7 +147,7 @@ begin
 
                     when get_crc_st =>
                         frame_cnt := frame_cnt + 1;
-                        if frame_cnt = 64 then
+                        if frame_cnt = 15 then
                             can_mq <= save_crc_st;
                         end if;
 
@@ -169,11 +184,13 @@ begin
     data_valid_o <= '1' when can_mq = save_st else '0';
 
     --we disable the stuffing after the CRC (delimiter is not stuffed)
-    stuff_disable_s <=  '1' when can_mq = idle_st else
-                        '1' when can_mq = crc_delimiter_st else
-                        '1' when can_mq = eof_st else
-                        '1' when can_mq = ack_slot_st else
+    stuff_disable_s <=  '1' when can_mq = crc_delimiter_st  else
+                        '1' when can_mq = eof_st            else
+                        '1' when can_mq = ack_slot_st       else
+                        '1' when can_mq = idle_st           else
                         '0';
+
+    send_ack_o <= '1' when can_mq = ack_slot_st else '0';
 
     busy_o  <=  '0' when can_mq = idle_st else
                 '1';
@@ -182,30 +199,56 @@ begin
         variable rx_id_v : std_logic_vector(28 downto 0);
     begin
         if rst_i = '1' then
-            frame_sr <= (others => '1');
+            frame_sr     <= (others => '1');
+            usr_eff_o    <= '0';
+            usr_rtr_o    <= '0';
+            rx_id_v      := (others => '0');
+            usr_rsvd_o   <= (others => '0');
+            usr_dlc_o    <= (others => '0');
+            usr_id_o     <= (others => '0');
+            crc_s        <= (others => '0');
+            address_ok_s <= '0';
+            data_o       <= (others => '0');
+
         elsif rising_edge(mclk_i) then
             if rx_clken_s = '1' then
                 frame_sr    <= frame_sr sll 1;
                 frame_sr(0) <= rxdata_i;
                 case can_mq is
-                    when save_long_header_st =>
-                        usr_eff_o  <= frame_sr(14);       --IDE
-                        rx_id_v    := frame_sr(1 to 12) & frame_sr(15 to 31); --ID_B
-                        usr_rsvd_o <= frame_sr(33 to 34); --R1 & R0
-                        usr_dlc_o  <= frame_sr(35 to 38); --DLC
-                        usr_id_o   <= rx_id_v;
+                    when idle_st =>
+                        usr_eff_o    <= '0';
+                        usr_rtr_o    <= '0';
+                        rx_id_v      := (others => '0');
+                        usr_rsvd_o   <= (others => '0');
+                        usr_dlc_o    <= (others => '0');
+                        usr_id_o     <= (others => '0');
+                        crc_s        <= (others => '0');
+                        address_ok_s <= '0';
+
+                    when save_header_st =>
+                        rx_id_v               := (others=>'0');
+                        rx_id_v(11 downto 0)  := frame_sr(18 downto 7); --ID_A
+                        usr_rtr_o             <= frame_sr(6);           --RTR
+                        usr_eff_o             <= '0';                   --IDE
+                        usr_rsvd_o(0)         <= frame_sr(4);           --R0
+                        usr_dlc_o             <= frame_sr(3 downto 0);  --DLC
+                        usr_id_o              <= rx_id_v;
                         if ((rx_id_v and reg_id_mask_i) = (reg_id_i and reg_id_mask_i)) then
                             address_ok_s <= '1';
                         else
                             address_ok_s <= '0';
                         end if;
 
-                    when save_short_header_st =>
-                        rx_id_v(11 downto 0)  := frame_sr(1 to 12);  --ID_A
-                        usr_rtr_o             <= frame_sr(13);       --RTR
-                        usr_eff_o             <= '0';                --IDE
-                        usr_rsvd_o(0)         <= frame_sr(15);       --R0
-                        usr_dlc_o             <= frame_sr(16 to 19); --DLC
+                    when save_extended_header_st =>
+                        rx_id_v               := (others=>'0');
+                        rx_id_v(28 downto 18) := frame_sr(37 downto 27); --ID_A
+                        --usr_srr_o            <= frame_sr(26);            --SRR
+                        usr_eff_o             <= frame_sr(25);           --IDE
+                        rx_id_v(17 downto 0)  := frame_sr(24 downto 7);  --ID_B
+                        usr_rtr_o             <= frame_sr(6);            --RTR
+                        usr_rsvd_o            <= frame_sr(5 downto 4);   --R1 & R0
+                        usr_dlc_o             <= frame_sr(3 downto 0);   --DLC
+                        usr_id_o              <= rx_id_v;
                         if ((rx_id_v and reg_id_mask_i) = (reg_id_i and reg_id_mask_i)) then
                             address_ok_s <= '1';
                         else
@@ -216,47 +259,62 @@ begin
                         data_o <= frame_sr;
 
                     when save_crc_st =>
-                        crc_s <= frame_sr(0 to 14);
+                        crc_s <= frame_sr(14 downto 0);
 
                     when others =>
                 end case;
+
             end if;
         end if;
     end process frame_shift_p;
 
+
     crc_p : process (mclk_i, rst_i)
+        variable can_sr_v : std_logic_vector(14 downto 0);
     begin
         if rst_i = '1' then
+            can_sr_v := (others => '0');
             crc_sr   <= (others => '0');
             crc_ok_s <= '0';
         elsif rising_edge(mclk_i) then
             rx_crc_error_o <= '0';
             if rx_clken_s = '1' then
                 case can_mq is
-                    when idle_st =>
-                        crc_ok_s <= '0';
-                        crc_sr    <= (others => '0');
+                    when header_st =>
+                        crc15(can_sr_v, rxdata_i);
 
-                    when abort_st =>
-                        crc_ok_s <= '0';
-                        crc_sr <= (others => '0');
+                    when save_header_st =>
+                        crc15(can_sr_v, rxdata_i);
 
-                    when save_st =>
-                        crc_ok_s <= '0';
-                        crc_sr <= (others => '0');
+                    when extended_header_st =>
+                        crc15(can_sr_v, rxdata_i);
+
+                    when save_extended_header_st =>
+                        crc15(can_sr_v, rxdata_i);
+
+                    when get_data_st =>
+                        crc15(can_sr_v, rxdata_i);
+
+                    when save_data_st =>
+                        crc15(can_sr_v, rxdata_i);
+
+                    when get_crc_st =>
+                        null;
 
                     when crc_delimiter_st =>
-                        if crc_s /= crc_sr then
+                        if crc_s /= can_sr_v then
                             crc_ok_s <= '0';
                         else
                             crc_ok_s <= '1';
                         end if;
 
                     when others =>
-                        crc15(crc_sr, rxdata_i);
+                        crc_ok_s <= '0';
+                        can_sr_v := (others => '0');
 
                 end case;
             end if;
+            crc_sr <= can_sr_v;
         end if;
     end process;
 
@@ -284,8 +342,8 @@ begin
     end process stuffing_p;
 
     --the machine stops during stuffing.
-    rx_clken_s <=   rx_clken_i when stuff_disable_s = '1' else
-                    rx_clken_i when stuff_en = '0' else
+    rx_clken_s <=   rx_clken_i when stuff_disable_s = '1'   else
+                    rx_clken_i when stuff_en = '0'          else
                     '0';
 
 end rtl;

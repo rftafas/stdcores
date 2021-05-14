@@ -273,6 +273,44 @@ begin
         read_bus(net,axi_handle,64,rdata_v);
         check_equal(rdata_v(0),'1',result("Test Third Read: tx_ready_i = 1."));
 
+      elsif run("Send data: 64 bits, all zeroes") then
+        wdata_v := to_std_logic_vector(200,32);
+        write_bus(net,axi_handle,8,wdata_v,"0011");
+
+        --Setting tx_id_o
+        wdata_v := x"00000000";
+        write_bus(net,axi_handle,72,wdata_v,"1111");
+
+        --data length
+        wdata_v := to_std_logic_vector(1,32);
+        write_bus(net,axi_handle,68,wdata_v,"0001");
+
+        --Setting tx_data
+        wdata_v := x"00000000";
+        write_bus(net,axi_handle,76,wdata_v,"1111");
+        wdata_v := x"00000000";
+        write_bus(net,axi_handle,80,wdata_v,"1111");
+
+        --Command to send
+        wdata_v(1) := '1';
+        write_bus(net,axi_handle,64,wdata_v,"0001");
+
+        --Testing tx_busy_i
+        set_timeout(runner, now + 110 us);
+        wait for 100 us;
+
+        read_bus(net,axi_handle,64,rdata_v);
+        check_equal(rdata_v(8),'1',result("Test Read: tx_busy_i."));
+
+        set_timeout(runner, now + 1001 us);
+        wait for 1000 us;
+
+        -- --Testing tx_busy_i
+        -- read_bus(net,axi_handle,64,rdata_v);
+        -- check_equal(rdata_v(8),'0',result("Test Read: tx_busy_i."));
+
+        check_passed(result("Test Force Dominant: Pass."));
+
       elsif run("Send data: 64 bits") then
         wdata_v := to_std_logic_vector(200,32);
         write_bus(net,axi_handle,8,wdata_v,"0011");
