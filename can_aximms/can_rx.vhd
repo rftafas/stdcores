@@ -24,29 +24,30 @@ use work.can_aximm_pkg.all;
 
 entity can_rx is
     port (
-        rst_i      : in std_logic;
-        mclk_i     : in std_logic;
-        rx_clken_i : in std_logic;
-        fb_clken_i : in std_logic;
+        rst_i          : in  std_logic;
+        mclk_i         : in  std_logic;
+        rx_clken_i     : in  std_logic;
+        fb_clken_i     : in  std_logic;
         --can signals can be bundled in TUSER
-        usr_eff_o    : out std_logic;
-        usr_id_o     : out std_logic_vector(28 downto 0);
-        usr_rtr_o    : out std_logic;
-        usr_dlc_o    : out std_logic_vector(3 downto 0);
-        usr_rsvd_o   : out std_logic_vector(1 downto 0);
-        data_o       : out std_logic_vector(63 downto 0);
-        data_ready_i : in std_logic;
-        data_valid_o : out std_logic;
-        data_last_o  : out std_logic;
+        usr_eff_o      : out std_logic;
+        usr_id_o       : out std_logic_vector(28 downto 0);
+        usr_rtr_o      : out std_logic;
+        usr_dlc_o      : out std_logic_vector(3 downto 0);
+        usr_rsvd_o     : out std_logic_vector(1 downto 0);
+        data_o         : out std_logic_vector(63 downto 0);
+        data_ready_i   : in  std_logic;
+        data_valid_o   : out std_logic;
+        data_last_o    : out std_logic;
         --status
-        reg_id_i       : in std_logic_vector(28 downto 0);
-        reg_id_mask_i  : in std_logic_vector(28 downto 0);
+        reg_id_i       : in  std_logic_vector(28 downto 0);
+        reg_id_mask_i  : in  std_logic_vector(28 downto 0);
+        promiscuous_i  : in  std_logic;
         busy_o         : out std_logic;
         rx_crc_error_o : out std_logic;
         send_ack_o     : out std_logic;
         --Signals to PHY
-        collision_i : in std_logic;
-        rxdata_i    : in std_logic
+        collision_i    : in std_logic;
+        rxdata_i       : in std_logic
     );
 end can_rx;
 
@@ -103,7 +104,7 @@ begin
 
                     when header_st =>
                         frame_cnt := frame_cnt + 1;
-                        if frame_cnt = 19 then
+                        if frame_cnt = 18 then
                             if frame_sr(5) = '0' then
                                 can_mq <= save_header_st;
                             else
@@ -135,9 +136,9 @@ begin
 
                     when get_data_st =>
                         frame_cnt := frame_cnt + 1;
-                        if frame_cnt = 64 then
+                        if frame_cnt = 63 then
                             can_mq <= save_data_st;
-                        elsif frame_cnt = (usr_dlc_o * 8) then
+                        elsif frame_cnt = (usr_dlc_o * 8 - 1) then
                             can_mq <= save_data_st;
                         end if;
 
@@ -147,15 +148,15 @@ begin
 
                     when get_crc_st =>
                         frame_cnt := frame_cnt + 1;
-                        if frame_cnt = 15 then
+                        if frame_cnt = 14 then
                             can_mq <= save_crc_st;
                         end if;
 
                     when save_crc_st =>
-                        frame_cnt := 0;
-                        can_mq <= crc_delimiter_st;
+                    --    frame_cnt := 0;
+                    --    can_mq <= crc_delimiter_st;
 
-                    when crc_delimiter_st =>
+                    --when crc_delimiter_st =>
                         frame_cnt := 0;
                         if address_ok_s = '1' and crc_ok_s = '1' and data_ready_i = '1' then
                             can_mq <= ack_slot_st;
@@ -184,16 +185,21 @@ begin
     data_valid_o <= '1' when can_mq = save_st else '0';
 
     --we disable the stuffing after the CRC (delimiter is not stuffed)
-    stuff_disable_s <=  '1' when can_mq = crc_delimiter_st  else
-                        '1' when can_mq = eof_st            else
-                        '1' when can_mq = ack_slot_st       else
-                        '1' when can_mq = idle_st           else
+    stuff_disable_s <=  '1' when can_mq = crc_delimiter_st else
+                        '1' when can_mq = eof_st           else
+                        '1' when can_mq = ack_slot_st      else
+                        '1' when can_mq = no_ack_slot_st   else
+                        '1' when can_mq = idle_st          else
                         '0';
 
-    send_ack_o <= '1' when can_mq = ack_slot_st else '0';
+    send_ack_o      <=  '1' when can_mq = ack_slot_st      else
+                        '0';
 
-    busy_o  <=  '0' when can_mq = idle_st else
-                '1';
+    busy_o          <=  '0' when can_mq = idle_st          else
+                        '1';
+
+    data_valid_o    <=  '1' when can_mq = ack_slot_st      else
+                        '0';
 
     frame_shift_p : process (mclk_i, rst_i)
         variable rx_id_v : std_logic_vector(28 downto 0);
@@ -212,18 +218,22 @@ begin
 
         elsif rising_edge(mclk_i) then
             if rx_clken_s = '1' then
-                frame_sr    <= frame_sr sll 1;
-                frame_sr(0) <= rxdata_i;
                 case can_mq is
                     when idle_st =>
-                        usr_eff_o    <= '0';
-                        usr_rtr_o    <= '0';
-                        rx_id_v      := (others => '0');
-                        usr_rsvd_o   <= (others => '0');
-                        usr_dlc_o    <= (others => '0');
-                        usr_id_o     <= (others => '0');
+                        -- usr_eff_o    <= '0';
+                        -- usr_rtr_o    <= '0';
+                        -- rx_id_v      := (others => '0');
+                        -- usr_rsvd_o   <= (others => '0');
+                        -- usr_dlc_o    <= (others => '0');
+                        -- usr_id_o     <= (others => '0');
                         crc_s        <= (others => '0');
                         address_ok_s <= '0';
+                        frame_sr     <= frame_sr sll 1;
+                        frame_sr(0)  <= rxdata_i;
+
+                    when header_st =>
+                        frame_sr    <= frame_sr sll 1;
+                        frame_sr(0) <= rxdata_i;
 
                     when save_header_st =>
                         rx_id_v               := (others=>'0');
@@ -233,11 +243,20 @@ begin
                         usr_rsvd_o(0)         <= frame_sr(4);           --R0
                         usr_dlc_o             <= frame_sr(3 downto 0);  --DLC
                         usr_id_o              <= rx_id_v;
-                        if ((rx_id_v and reg_id_mask_i) = (reg_id_i and reg_id_mask_i)) then
+                        if promiscuous_i = '1' then
+                            address_ok_s <= '1';
+                        elsif ((rx_id_v and reg_id_mask_i) = (reg_id_i and reg_id_mask_i)) then
                             address_ok_s <= '1';
                         else
                             address_ok_s <= '0';
                         end if;
+                        frame_sr    <= (others=>'1');
+                        frame_sr(0) <= rxdata_i;
+
+                    when extended_header_st =>
+                        frame_sr    <= frame_sr sll 1;
+                        frame_sr(0) <= rxdata_i;
+
 
                     when save_extended_header_st =>
                         rx_id_v               := (others=>'0');
@@ -254,14 +273,47 @@ begin
                         else
                             address_ok_s <= '0';
                         end if;
+                        frame_sr    <= (others=>'1');
+                        frame_sr(0) <= rxdata_i;
+
+                    when get_data_st =>
+                        frame_sr    <= frame_sr sll 1;
+                        frame_sr(0) <= rxdata_i;
 
                     when save_data_st =>
                         data_o <= frame_sr;
+                        frame_sr    <= (others=>'1');
+                        frame_sr(0) <= rxdata_i;
+
+                    when get_crc_st =>
+                        frame_sr    <= frame_sr sll 1;
+                        frame_sr(0) <= rxdata_i;
+
+                    when crc_delimiter_st =>
+                        frame_sr    <= (others=>'1');
+
+                    when ack_slot_st =>
+                        frame_sr    <= (others=>'1');
+
+                    when no_ack_slot_st =>
+                        frame_sr    <= (others=>'1');
 
                     when save_crc_st =>
                         crc_s <= frame_sr(14 downto 0);
+                        frame_sr    <= (others=>'1');
+                        frame_sr(0) <= rxdata_i;
 
                     when others =>
+                        -- usr_eff_o    <= '0';
+                        -- usr_rtr_o    <= '0';
+                        -- rx_id_v      := (others => '0');
+                        -- usr_rsvd_o   <= (others => '0');
+                        -- usr_dlc_o    <= (others => '0');
+                        -- usr_id_o     <= (others => '0');
+                        crc_s        <= (others => '0');
+                        address_ok_s <= '0';
+                        frame_sr    <= (others=>'1');
+
                 end case;
 
             end if;
@@ -275,48 +327,53 @@ begin
         if rst_i = '1' then
             can_sr_v := (others => '0');
             crc_sr   <= (others => '0');
-            crc_ok_s <= '0';
         elsif rising_edge(mclk_i) then
-            rx_crc_error_o <= '0';
             if rx_clken_s = '1' then
                 case can_mq is
                     when header_st =>
+                        crc_sr <= can_sr_v;
                         crc15(can_sr_v, rxdata_i);
 
                     when save_header_st =>
+                        crc_sr <= can_sr_v;
                         crc15(can_sr_v, rxdata_i);
 
                     when extended_header_st =>
+                        crc_sr <= can_sr_v;
                         crc15(can_sr_v, rxdata_i);
 
                     when save_extended_header_st =>
+                        crc_sr <= can_sr_v;
                         crc15(can_sr_v, rxdata_i);
 
                     when get_data_st =>
+                        crc_sr <= can_sr_v;
                         crc15(can_sr_v, rxdata_i);
 
                     when save_data_st =>
+                        crc_sr <= can_sr_v;
                         crc15(can_sr_v, rxdata_i);
 
                     when get_crc_st =>
                         null;
 
+                    when save_crc_st =>
+
+
                     when crc_delimiter_st =>
-                        if crc_s /= can_sr_v then
-                            crc_ok_s <= '0';
-                        else
-                            crc_ok_s <= '1';
-                        end if;
+                        null;
 
                     when others =>
-                        crc_ok_s <= '0';
                         can_sr_v := (others => '0');
 
                 end case;
             end if;
-            crc_sr <= can_sr_v;
         end if;
     end process;
+
+    crc_ok_s       <= '1' when crc_s  = crc_sr else '0';
+    rx_crc_error_o <= '1' when crc_s /= crc_sr else '0';
+
 
     stuffing_p : process (mclk_i, rst_i)
         variable stuff_sr : std_logic_vector(4 downto 0);

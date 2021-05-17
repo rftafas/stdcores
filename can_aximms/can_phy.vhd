@@ -58,10 +58,11 @@ end can_phy;
 
 architecture rtl of can_phy is
 
-    signal rx_s     : std_logic;
-    signal rx_int_s : std_logic;
-    signal tx_s     : std_logic;
-    signal tx_en_s  : std_logic;
+    signal rx_s        : std_logic;
+    signal rx_int_s    : std_logic;
+    signal rx_sync_o_s : std_logic;
+    signal tx_s        : std_logic;
+    signal tx_en_s     : std_logic;
 
     signal force_error_s : std_logic;
     signal lock_end_en   : std_logic;
@@ -143,8 +144,9 @@ begin
         rst_i  => '0',
         mclk_i => mclk_i,
         din    => rx_int_s,
-        dout   => rx_sync_o
+        dout   => rx_sync_o_s
     );
+    rx_sync_o <= rx_sync_o_s and not send_ack_i;
 
     --send the data.
     rx_o <= rx_int_s;

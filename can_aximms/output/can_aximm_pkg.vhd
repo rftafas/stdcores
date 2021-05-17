@@ -35,7 +35,7 @@ package can_aximm_pkg is
     --Package Generics go here.
   --);
 
-  constant package_version_c : String := "20210423_1604";
+  constant package_version_c : String := "20210517_1405";
   component can_aximm is
     generic (
       C_S_AXI_ADDR_WIDTH : integer := 7;
@@ -66,6 +66,7 @@ package can_aximm_pkg is
       g1_i : in std_logic_vector(31 downto 0);
       iso_mode_o : out std_logic;
       fd_enable_o : out std_logic;
+      promiscuous_o : out std_logic;
       sample_rate_o : out std_logic_vector(15 downto 0);
       rx_irq_i : in std_logic;
       rx_irq_mask_o : out std_logic;

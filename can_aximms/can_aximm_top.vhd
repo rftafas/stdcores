@@ -105,6 +105,7 @@ architecture behavior of can_aximm_top is
   signal rx_irq_mask_s     : std_logic;
   signal rx_busy_down_s    : std_logic;
   signal rx_crc_error_s    : std_logic;
+  signal promiscuous_s     : std_logic;
 
   --PHY
   signal collision_s       : std_logic;
@@ -283,6 +284,7 @@ begin
       data_last_o    => open,
       reg_id_i       => reg_id_s,
       reg_id_mask_i  => reg_id_mask_s,
+      promiscuous_i  => promiscuous_s,
       busy_o         => rx_busy_s,
       rx_crc_error_o => rx_crc_error_s,
       send_ack_o     => send_ack_s,

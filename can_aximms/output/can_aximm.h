@@ -2,7 +2,7 @@
 #define CAN_AXIMM_H
 
 /*This auto-generated header file was created using hdltools. File version:*/
-#define CAN_AXIMM_VERSION "20210423_1604"
+#define CAN_AXIMM_VERSION "20210517_1405"
 
 /*Register Golden address */
 #define GOLDEN_OFFSET 0x0
@@ -24,6 +24,11 @@
 #define CONFIG 1_FD_ENABLE_FIELD_WIDTH 1
 #define CONFIG 1_FD_ENABLE_FIELD_MASK 0x2
 #define CONFIG 1_FD_ENABLE_RESET 0x0
+/*Register Config 1 field promiscuous */
+#define CONFIG 1_PROMISCUOUS_FIELD_OFFSET 8
+#define CONFIG 1_PROMISCUOUS_FIELD_WIDTH 1
+#define CONFIG 1_PROMISCUOUS_FIELD_MASK 0x100
+#define CONFIG 1_PROMISCUOUS_RESET 0x0
 
 /*Register Config 1 address */
 #define CONFIG 1_OFFSET 0x2

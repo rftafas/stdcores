@@ -6,7 +6,7 @@ Register Bank: can_aximm
   
 Data Width: 32  
 Number of registers: 18  
-Version: v20210408_1704  
+Version: v20210517_1405  
 Register Bank auto-generated using the hdltools/regbank_gen.py  
 
 # List of Registers
@@ -14,32 +14,33 @@ Register Bank auto-generated using the hdltools/regbank_gen.py
 
 ## Register 0: Golden
   
-Address: BASE + 0x0  
+Address: 0x0 | 0   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
-|31-0|g1|ReadOnly|0x0||
+|31-0|g1|ReadOnly|0x0|Reference register for READ_ONLY|
 
 ## Register 1: Config 1
   
-Address: BASE + 0x1  
+Address: 0x4 | 4   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
-|0|iso_mode|ReadWrite|0x0||
-|1|fd_enable|ReadWrite|0x0||
+|0|iso_mode|ReadWrite|0x0|Reserved for ISO Modes compatibility. Not Implemented.|
+|1|fd_enable|ReadWrite|0x0|Reserved for ISO Modes compatibility. Not Implemented.|
+|8|promiscuous|ReadWrite|0x0|Promiscuous mode Enable. Will receive and acknowledge any frames with any ID.|
 
 ## Register 2: Config 1
   
-Address: BASE + 0x2  
+Address: 0x8 | 8   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
-|15-0|sample_rate|ReadWrite|0x0||
+|15-0|sample_rate|ReadWrite|0x0|Sample rate configuration in multiples of 1kHz. Starts with 0kHz.|
 
 ## Register 3: IRQ
   
-Address: BASE + 0x3  
+Address: 0xc | 12   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -50,17 +51,17 @@ Address: BASE + 0x3
 
 ## Register 4: Line Status
   
-Address: BASE + 0x4  
+Address: 0x10 | 16   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
 |0|stuff_violation|Write2Clear|0x0||
 |1|collision|Write2Clear|0x0||
-|8|channel_ready|Write2Clear|0x0||
+|8|channel_ready|ReadOnly|0x0||
 
 ## Register 7: TEST Control 1
   
-Address: BASE + 0x7  
+Address: 0x1c | 28   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -70,7 +71,7 @@ Address: BASE + 0x7
 
 ## Register 8: RX STATUS
   
-Address: BASE + 0x8  
+Address: 0x20 | 32   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -84,7 +85,7 @@ Address: BASE + 0x8
 
 ## Register 9: ID Filter 1
   
-Address: BASE + 0x9  
+Address: 0x24 | 36   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -92,7 +93,7 @@ Address: BASE + 0x9
 
 ## Register 10: ID Filter 1 MASK
   
-Address: BASE + 0xa  
+Address: 0x28 | 40   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -100,7 +101,7 @@ Address: BASE + 0xa
 
 ## Register 11: RX DLC
   
-Address: BASE + 0xb  
+Address: 0x2c | 44   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -108,7 +109,7 @@ Address: BASE + 0xb
 
 ## Register 12: RX ID
   
-Address: BASE + 0xc  
+Address: 0x30 | 48   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -116,7 +117,7 @@ Address: BASE + 0xc
 
 ## Register 13: RX DATA0
   
-Address: BASE + 0xd  
+Address: 0x34 | 52   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -124,7 +125,7 @@ Address: BASE + 0xd
 
 ## Register 14: RX DATA1
   
-Address: BASE + 0xe  
+Address: 0x38 | 56   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -132,7 +133,7 @@ Address: BASE + 0xe
 
 ## Register 16: TX STATUS
   
-Address: BASE + 0x10  
+Address: 0x40 | 64   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -147,7 +148,7 @@ Address: BASE + 0x10
 
 ## Register 17: TX DLC
   
-Address: BASE + 0x11  
+Address: 0x44 | 68   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -155,7 +156,7 @@ Address: BASE + 0x11
 
 ## Register 18: TX ID
   
-Address: BASE + 0x12  
+Address: 0x48 | 72   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -163,7 +164,7 @@ Address: BASE + 0x12
 
 ## Register 19: TX DATA0
   
-Address: BASE + 0x13  
+Address: 0x4c | 76   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -171,7 +172,7 @@ Address: BASE + 0x13
 
 ## Register 20: TX DATA1
   
-Address: BASE + 0x14  
+Address: 0x50 | 80   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |

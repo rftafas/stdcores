@@ -8,17 +8,25 @@ can_aximm = hdltools.RegisterBank("can_aximm", "rtl", 32, 32)
 can_aximm.add(0, "Golden")
 # REG0 FIELDS
 can_aximm.reg[0].add("g1", "ReadOnly", 0, 32)
-
+can_aximm.reg[0][0].addDescription("Reference register for READ_ONLY")
 # REG1
 can_aximm.add(1, "Config 1")
 # REG1 FIELDS
 can_aximm.reg[1].add("iso_mode", "ReadWrite", 0, 1)
+can_aximm.reg[1][0].addDescription("Reserved for ISO Modes compatibility. Not Implemented.")
+
 can_aximm.reg[1].add("fd_enable", "ReadWrite", 1, 1)
+can_aximm.reg[1][1].addDescription("Reserved for ISO Modes compatibility. Not Implemented.")
+
+can_aximm.reg[1].add("promiscuous", "ReadWrite", 8, 1)
+can_aximm.reg[1][8].addDescription("Promiscuous mode Enable. Will receive and acknowledge any frames with any ID.")
 
 # REG2
 can_aximm.add(2, "Config 1")
 # REG2 FIELDS
 can_aximm.reg[2].add("sample_rate", "ReadWrite", 0, 16)
+can_aximm.reg[2][0].addDescription("Sample rate configuration in multiples of 1kHz. Starts with 0kHz.")
+
 
 # REG_3
 can_aximm.add(3, "IRQ")

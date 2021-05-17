@@ -82,6 +82,7 @@ architecture simulation of can_aximm_tb is
   signal g1_i : std_logic_vector(31 downto 0);
   signal iso_mode_o : std_logic;
   signal fd_enable_o : std_logic;
+  signal promiscuous_o : std_logic;
   signal sample_rate_o : std_logic_vector(15 downto 0);
   signal rx_irq_i : std_logic;
   signal rx_irq_mask_o : std_logic;
@@ -191,97 +192,103 @@ begin
 
         elsif run("Read and Write Test") then
           --Testing iso_mode_o
-          wdata_v := "11000101011010101001011110111110";
+          wdata_v := "11000010101011011111001111011100";
           write_bus(net,axi_handle,4,wdata_v,"0001");
           read_bus(net,axi_handle,4,rdata_v);
           check_equal(rdata_v(0),wdata_v(0),result("Test Readback and Port value: iso_mode_o."));
           check_equal(iso_mode_o,wdata_v(0),result("Test Readback and Port value: iso_mode_o."));
           --Testing fd_enable_o
-          wdata_v := "10110101100101011000011010101110";
+          wdata_v := "01010010110111111111010111011101";
           write_bus(net,axi_handle,4,wdata_v,"0001");
           read_bus(net,axi_handle,4,rdata_v);
           check_equal(rdata_v(1),wdata_v(1),result("Test Readback and Port value: fd_enable_o."));
           check_equal(fd_enable_o,wdata_v(1),result("Test Readback and Port value: fd_enable_o."));
+          --Testing promiscuous_o
+          wdata_v := "10101100111110100001011010001001";
+          write_bus(net,axi_handle,4,wdata_v,"0010");
+          read_bus(net,axi_handle,4,rdata_v);
+          check_equal(rdata_v(8),wdata_v(8),result("Test Readback and Port value: promiscuous_o."));
+          check_equal(promiscuous_o,wdata_v(8),result("Test Readback and Port value: promiscuous_o."));
           --Testing sample_rate_o
-          wdata_v := "10101100110000100010011010010111";
+          wdata_v := "10100110000000101100111010011111";
           write_bus(net,axi_handle,8,wdata_v,"0011");
           read_bus(net,axi_handle,8,rdata_v);
           check_equal(rdata_v(15 downto 0),wdata_v(15 downto 0),result("Test Readback and Port value: sample_rate_o."));
           check_equal(sample_rate_o,wdata_v(15 downto 0),result("Test Readback and Port value: sample_rate_o."));
           --Testing rx_irq_mask_o
-          wdata_v := "10100001010011111010001010000111";
+          wdata_v := "01001101011111100011101000100010";
           write_bus(net,axi_handle,12,wdata_v,"0001");
           read_bus(net,axi_handle,12,rdata_v);
           check_equal(rdata_v(1),wdata_v(1),result("Test Readback and Port value: rx_irq_mask_o."));
           check_equal(rx_irq_mask_o,wdata_v(1),result("Test Readback and Port value: rx_irq_mask_o."));
           --Testing tx_irq_mask_o
-          wdata_v := "01111111001110010111111110111110";
+          wdata_v := "11010111110011001100000001101101";
           write_bus(net,axi_handle,12,wdata_v,"0010");
           read_bus(net,axi_handle,12,rdata_v);
           check_equal(rdata_v(9),wdata_v(9),result("Test Readback and Port value: tx_irq_mask_o."));
           check_equal(tx_irq_mask_o,wdata_v(9),result("Test Readback and Port value: tx_irq_mask_o."));
           --Testing loop_enable_o
-          wdata_v := "11110101000111000111100111111100";
+          wdata_v := "11110011000110101100000010011111";
           write_bus(net,axi_handle,28,wdata_v,"0001");
           read_bus(net,axi_handle,28,rdata_v);
           check_equal(rdata_v(0),wdata_v(0),result("Test Readback and Port value: loop_enable_o."));
           check_equal(loop_enable_o,wdata_v(0),result("Test Readback and Port value: loop_enable_o."));
           --Testing force_dominant_o
-          wdata_v := "10010110111011111110110001110000";
+          wdata_v := "00111100001100111001010011101010";
           write_bus(net,axi_handle,28,wdata_v,"0100");
           read_bus(net,axi_handle,28,rdata_v);
           check_equal(rdata_v(16),wdata_v(16),result("Test Readback and Port value: force_dominant_o."));
           check_equal(force_dominant_o,wdata_v(16),result("Test Readback and Port value: force_dominant_o."));
           --Testing id1_o
-          wdata_v := "01101101000100010111000001101001";
+          wdata_v := "11110110001001101100100001110111";
           write_bus(net,axi_handle,36,wdata_v,"1111");
           read_bus(net,axi_handle,36,rdata_v);
           check_equal(rdata_v(28 downto 0),wdata_v(28 downto 0),result("Test Readback and Port value: id1_o."));
           check_equal(id1_o,wdata_v(28 downto 0),result("Test Readback and Port value: id1_o."));
           --Testing id1_mask_o
-          wdata_v := "11011110100010110000101011111111";
+          wdata_v := "00010011110010001101011101001011";
           write_bus(net,axi_handle,40,wdata_v,"1111");
           read_bus(net,axi_handle,40,rdata_v);
           check_equal(rdata_v(28 downto 0),wdata_v(28 downto 0),result("Test Readback and Port value: id1_mask_o."));
           check_equal(id1_mask_o,wdata_v(28 downto 0),result("Test Readback and Port value: id1_mask_o."));
           --Testing tx_rtr_o
-          wdata_v := "10010011101110001110110100001011";
+          wdata_v := "10010101111110011010001001111100";
           write_bus(net,axi_handle,64,wdata_v,"0100");
           read_bus(net,axi_handle,64,rdata_v);
           check_equal(rdata_v(16),wdata_v(16),result("Test Readback and Port value: tx_rtr_o."));
           check_equal(tx_rtr_o,wdata_v(16),result("Test Readback and Port value: tx_rtr_o."));
           --Testing tx_eff_o
-          wdata_v := "01010001101101000001100110100110";
+          wdata_v := "11100111111010110000101110000001";
           write_bus(net,axi_handle,64,wdata_v,"1000");
           read_bus(net,axi_handle,64,rdata_v);
           check_equal(rdata_v(24),wdata_v(24),result("Test Readback and Port value: tx_eff_o."));
           check_equal(tx_eff_o,wdata_v(24),result("Test Readback and Port value: tx_eff_o."));
           --Testing tx_reserved_o
-          wdata_v := "00010010010100011101000101010011";
+          wdata_v := "01011110110100111010111011001111";
           write_bus(net,axi_handle,64,wdata_v,"1000");
           read_bus(net,axi_handle,64,rdata_v);
           check_equal(rdata_v(26 downto 25),wdata_v(26 downto 25),result("Test Readback and Port value: tx_reserved_o."));
           check_equal(tx_reserved_o,wdata_v(26 downto 25),result("Test Readback and Port value: tx_reserved_o."));
           --Testing tx_dlc_o
-          wdata_v := "00011011010001000101111011001000";
+          wdata_v := "00101101000110101010001000010011";
           write_bus(net,axi_handle,68,wdata_v,"0001");
           read_bus(net,axi_handle,68,rdata_v);
           check_equal(rdata_v(3 downto 0),wdata_v(3 downto 0),result("Test Readback and Port value: tx_dlc_o."));
           check_equal(tx_dlc_o,wdata_v(3 downto 0),result("Test Readback and Port value: tx_dlc_o."));
           --Testing tx_id_o
-          wdata_v := "10111010101000110100000100111100";
+          wdata_v := "11010000111010010110010001001111";
           write_bus(net,axi_handle,72,wdata_v,"1111");
           read_bus(net,axi_handle,72,rdata_v);
           check_equal(rdata_v(28 downto 0),wdata_v(28 downto 0),result("Test Readback and Port value: tx_id_o."));
           check_equal(tx_id_o,wdata_v(28 downto 0),result("Test Readback and Port value: tx_id_o."));
           --Testing tx_data0_o
-          wdata_v := "11101101010010100011110011000011";
+          wdata_v := "01001111010101001000110000111011";
           write_bus(net,axi_handle,76,wdata_v,"1111");
           read_bus(net,axi_handle,76,rdata_v);
           check_equal(rdata_v(31 downto 0),wdata_v(31 downto 0),result("Test Readback and Port value: tx_data0_o."));
           check_equal(tx_data0_o,wdata_v(31 downto 0),result("Test Readback and Port value: tx_data0_o."));
           --Testing tx_data1_o
-          wdata_v := "10011001111101111101010110100110";
+          wdata_v := "11101001110111001100101010000010";
           write_bus(net,axi_handle,80,wdata_v,"1111");
           read_bus(net,axi_handle,80,rdata_v);
           check_equal(rdata_v(31 downto 0),wdata_v(31 downto 0),result("Test Readback and Port value: tx_data1_o."));
@@ -456,6 +463,7 @@ test_runner_watchdog(runner, 101 us);
       g1_i => g1_i,
       iso_mode_o => iso_mode_o,
       fd_enable_o => fd_enable_o,
+      promiscuous_o => promiscuous_o,
       sample_rate_o => sample_rate_o,
       rx_irq_i => rx_irq_i,
       rx_irq_mask_o => rx_irq_mask_o,
@@ -496,31 +504,31 @@ test_runner_watchdog(runner, 101 us);
 
 
     --Read Only: g1_i;
-    g1_i <= "01010000011001001100010110100101";
+    g1_i <= "01111101101110100001011101001011";
     --Read Only: channel_ready_i;
     channel_ready_i <= '0';
     --Read Only: rx_busy_i;
-    rx_busy_i <= '0';
+    rx_busy_i <= '1';
     --Read Only: rx_crc_error_i;
     rx_crc_error_i <= '1';
     --Read Only: rx_rtr_i;
     rx_rtr_i <= '0';
     --Read Only: rx_ide_i;
-    rx_ide_i <= '0';
+    rx_ide_i <= '1';
     --Read Only: rx_reserved_i;
-    rx_reserved_i <= "11";
+    rx_reserved_i <= "01";
     --Read Only: rx_size_i;
-    rx_size_i <= "1101";
+    rx_size_i <= "1111";
     --Read Only: rx_id_i;
-    rx_id_i <= "01100001110011101111111110001";
+    rx_id_i <= "11100011110010110001010100100";
     --Read Only: rx_data0_i;
-    rx_data0_i <= "00010001111010001110100000001011";
+    rx_data0_i <= "00111110111110100010010110101010";
     --Read Only: rx_data1_i;
-    rx_data1_i <= "01100001100011111111111011000101";
+    rx_data1_i <= "11011101010001101110011010101001";
     --Read Only: tx_ready_i;
-    tx_ready_i <= '1';
+    tx_ready_i <= '0';
     --Read Only: tx_busy_i;
-    tx_busy_i <= '0';
+    tx_busy_i <= '1';
 
 end simulation;
 

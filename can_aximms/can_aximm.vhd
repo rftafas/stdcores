@@ -63,6 +63,7 @@ entity can_aximm is
     g1_i : in std_logic_vector(31 downto 0);
     iso_mode_o : out std_logic;
     fd_enable_o : out std_logic;
+    promiscuous_o : out std_logic;
     sample_rate_o : out std_logic_vector(15 downto 0);
     rx_irq_i : in std_logic;
     rx_irq_mask_o : out std_logic;
@@ -107,7 +108,7 @@ architecture rtl of can_aximm is
   --architecture_declaration_tag
 
 
-  constant register_bank_version_c : String := "20210423_1504";
+  constant register_bank_version_c : String := "20210517_1405";
   constant C_S_AXI_ADDR_LSB : integer := 2;
   constant REG_NUM : integer := 2**(C_S_AXI_ADDR_WIDTH-C_S_AXI_ADDR_LSB);
 
@@ -143,7 +144,7 @@ begin
     report "Package and Register Bank version mismatch."
     severity warning;
 
-
+  
       ------------------------------------------------------------------------------------------------
       -- I/O Connections assignments
       ------------------------------------------------------------------------------------------------
@@ -154,7 +155,7 @@ begin
       S_AXI_ARREADY <= arready_s;
       S_AXI_RRESP   <= rresp_s;
       S_AXI_RVALID  <= rvalid_s;
-
+  
       ------------------------------------------------------------------------------------------------
       --write
       ------------------------------------------------------------------------------------------------
@@ -174,7 +175,7 @@ begin
               end if;
           end if;
       end process;
-
+  
       wdata_p : process (S_AXI_ACLK)
       begin
           if S_AXI_ARESETN = '0' then
@@ -189,7 +190,7 @@ begin
               end if;
           end if;
       end process;
-
+  
       wreg_en_p : process (S_AXI_ACLK)
           variable lock_v : std_logic;
       begin
@@ -211,7 +212,7 @@ begin
               end if;
           end if;
       end process;
-
+  
       wresp_p : process (S_AXI_ACLK)
       begin
           if S_AXI_ARESETN = '0' then
@@ -236,7 +237,7 @@ begin
               end if;
           end if;
       end process;
-
+  
       wtimer_p : process (S_AXI_ACLK)
       begin
           if S_AXI_ARESETN = '0' then
@@ -252,7 +253,7 @@ begin
               end if;
           end if;
       end process;
-
+  
       wreg_p : process (S_AXI_ACLK)
           variable loc_addr : INTEGER;
       begin
@@ -275,7 +276,7 @@ begin
               end loop;
           end if;
       end process;
-
+  
       ------------------------------------------------------------------------------------------------
       --Read
       ------------------------------------------------------------------------------------------------
@@ -301,7 +302,7 @@ begin
               end if;
           end if;
       end process;
-
+  
       --AXI uses same channel for data and response.
       --one can consider that AXI-S RRESP is sort of TUSER.
       rresp_rdata_p : process (S_AXI_ARESETN, S_AXI_ACLK)
@@ -327,7 +328,7 @@ begin
               end if;
           end if;
       end process;
-
+  
       rtimer_p : process (S_AXI_ACLK)
       begin
           if S_AXI_ARESETN = '0' then
@@ -341,7 +342,7 @@ begin
               end if;
           end if;
       end process;
-
+  
       --get data from ports to bus
       read_reg_p : process( S_AXI_ACLK ) is
           variable loc_addr : integer;
@@ -380,6 +381,8 @@ begin
     regread_s(1)(0) <= regwrite_s(1)(0);
     fd_enable_o <= regwrite_s(1)(1);
     regread_s(1)(1) <= regwrite_s(1)(1);
+    promiscuous_o <= regwrite_s(1)(8);
+    regread_s(1)(8) <= regwrite_s(1)(8);
     sample_rate_o <= regwrite_s(2)(15 downto 0);
     regread_s(2)(15 downto 0) <= regwrite_s(2)(15 downto 0);
     rx_irq_mask_o <= regwrite_s(3)(1);
@@ -423,7 +426,7 @@ begin
     regread_s(19)(31 downto 0) <= regwrite_s(19)(31 downto 0);
     tx_data1_o <= regwrite_s(20)(31 downto 0);
     regread_s(20)(31 downto 0) <= regwrite_s(20)(31 downto 0);
-
+  
 
     --Set Connection for Write to Clear
     regset_s(3)(0) <= rx_irq_i;
@@ -433,7 +436,7 @@ begin
     regset_s(8)(0) <= rx_data_valid_i;
     regset_s(16)(9) <= tx_arb_lost_i;
     regset_s(16)(10) <= tx_retry_error_i;
-
+  
     --External Clear Connection
     regclear_s(3)(0) <= regwrite_s(3)(0);
     regclear_s(3)(8) <= regwrite_s(3)(8);
