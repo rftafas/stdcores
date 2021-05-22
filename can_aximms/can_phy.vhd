@@ -101,13 +101,15 @@ begin
                 tx_s    <= '0';
                 tx_en_s <= '1';
             elsif tx_clken_i = '1' then
-                tx_en_s <= tx_en_i;
                 if send_ack_i = '1' then
-                    tx_s <= '0';
+                    tx_s    <= '0';
+                    tx_en_s <= '1';
                 elsif force_error_s = '1' then
-                    tx_s <= not tx_i;
+                    tx_s    <= not tx_i;
+                    tx_en_s <= '1';
                 else
-                    tx_s <= tx_i;
+                    tx_s    <= tx_i;
+                    tx_en_s <= tx_en_i;
                 end if;
             end if;
 

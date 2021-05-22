@@ -260,6 +260,7 @@ begin
       busy_o       => tx_busy_s,
       ch_ready_i   => channel_ready_s,
       collision_i  => collision_s,
+      rxdata_i     => rx_serial_data_s,
       txdata_o     => tx_serial_data_s,
       txen_o       => tx_serial_data_en
     );

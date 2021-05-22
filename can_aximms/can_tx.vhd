@@ -46,6 +46,7 @@ entity can_tx is
         --Signals to PHY
         ch_ready_i  : in std_logic;
         collision_i : in std_logic;
+        rxdata_i    : in std_logic;
         txdata_o    : out std_logic;
         txen_o      : out std_logic
     );
@@ -132,7 +133,7 @@ begin
                                 else
                                     can_mq <= load_data_st;
                                 end if;
-                            elsif usr_eff_i = '1' and frame_cnt = 38 then
+                            elsif usr_eff_i = '1' and frame_cnt = 39 then
                                 if usr_dlc_i = "0000" then
                                     can_mq <= load_crc_st;
                                 else
@@ -184,8 +185,7 @@ begin
                             elsif retry_cnt = 7 then
                                 can_mq <= retry_error_st;
                             else
-                                can_mq <= idle_st;
-                                retry_cnt := retry_cnt + 1;
+                                can_mq <= abort_st;
                             end if;
                         end if;
 
@@ -228,7 +228,7 @@ begin
             txen_o          <= '0';
             busy_o          <= '0';
             rtry_error_o    <= '0';
-            crc_sr := (others   => '0');
+            crc_sr   := (others => '0');
             frame_sr <= (others => '1');
         elsif rising_edge(mclk_i) then
             if tx_clken_s = '1' then
@@ -254,15 +254,18 @@ begin
                         rtry_error_o    <= '0';
                         crc_sr      := (others => '0');
                         frame_sr    <= (others => '1');
-                        frame_sr(0) <= '0';                           --SOF
-                        if usr_eff_i = '1' then                       --29 bit ID
+                        frame_sr(0) <= '0';                               --SOF
+
+                        if usr_eff_i = '1' then                           --29 bit ID
                             frame_sr(1 to 11)  <= usr_id_i(28 downto 18); --ID_A
                             frame_sr(12)       <= '0';                    --SRR
                             frame_sr(13)       <= '1';                    --IDE
                             frame_sr(14 to 31) <= usr_id_i(17 downto 0);  --ID_B
-                            frame_sr(32 to 33) <= usr_rsvd_i;             --R1 & R0
-                            frame_sr(34 to 37) <= usr_dlc_i;              --DLC
-                        else                                          --11 bit ID
+                            frame_sr(32)       <= usr_rtr_i;              --RTR
+                            frame_sr(33 to 34) <= usr_rsvd_i;             --R1 & R0
+                            frame_sr(35 to 38) <= usr_dlc_i;              --DLC
+
+                        else                                              --11 bit ID
                             frame_sr(1 to 11)  <= usr_id_i(10 downto 0);  --ID_A
                             frame_sr(12)       <= usr_rtr_i;              --RTR
                             frame_sr(13)       <= '0';                    --IDE
@@ -353,8 +356,8 @@ begin
                         frame_sr     <= (others => '1');
 
                     when ack_delimiter_st =>
-                        ack_s           <=     collision_i;
-                        ack_error_o     <= not collision_i;
+                        ack_s           <= not rxdata_i;
+                        ack_error_o     <= rxdata_i;
                         stuff_disable_s <= '1';
                         arb_lost_o      <= '0';
                         txen_o          <= '1';

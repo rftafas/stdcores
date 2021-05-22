@@ -277,7 +277,7 @@ begin
                 read_bus(net, axi_handle, 64, rdata_v);
                 check_equal(rdata_v(0), '1', result("Test Third Read: tx_ready_i = 1."));
 
-            elsif run("Send 0 bytes, short header") then
+            elsif run("Send 0 bytes, short header, all zeroes") then
                 --set speed
                 wdata_v := to_std_logic_vector(200, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
@@ -318,9 +318,9 @@ begin
                 read_bus(net, axi_handle, 44, rdata_v);
                 check_equal(rdata_v(3 downto 0), std_logic_vector'("0000"), result("Test Read: rx_busy_i."));
 
-                check_passed(result("Test Send No Data: Pass."));
+                check_passed(result("Send 0 bytes, short header, all zeroes: Pass."));
 
-            elsif run("Send 0 bytes, short header, ID all ones") then
+            elsif run("Send 0 bytes, short header, all ones") then
                 --set speed
                 wdata_v := to_std_logic_vector(200, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
@@ -426,122 +426,6 @@ begin
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
 
                 --set id
-                wdata_v := (others => '1');
-                write_bus(net, axi_handle, 36, wdata_v, "1111");
-                write_bus(net, axi_handle, 40, wdata_v, "1111");
-                write_bus(net, axi_handle, 72, wdata_v, "1111");
-
-                --data length
-                wdata_v := to_std_logic_vector(1, 32);
-                write_bus(net, axi_handle, 68, wdata_v, "0001");
-
-                --Setting tx_data
-                wdata_v := x"00000000";
-                write_bus(net, axi_handle, 76, wdata_v, "1111");
-                wdata_v := x"00000000";
-                write_bus(net, axi_handle, 80, wdata_v, "1111");
-
-                --Command to send
-                wdata_v(1) := '1';
-                write_bus(net, axi_handle, 64, wdata_v, "0001");
-
-                set_timeout(runner, now + 110 us);
-                wait for 100 us;
-
-                --Testing tx_busy_i
-                read_bus(net, axi_handle, 64, rdata_v);
-                check_equal(rdata_v(8), '1', result("Test Read: tx_busy_i."));
-                --Testing rx_busy_i
-                read_bus(net, axi_handle, 32, rdata_v);
-                check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
-
-                set_timeout(runner, now + 301 us);
-                wait for 300 us;
-
-                --Testing tx_busy_i
-                read_bus(net, axi_handle, 64, rdata_v);
-                check_equal(rdata_v(8), '0', result("Test Read: tx_busy_i."));
-                --Testing rx_busy_i
-                read_bus(net, axi_handle, 32, rdata_v);
-                check_equal(rdata_v(8), '0', result("Test Read: rx_busy_i."));
-
-                --read RXID
-                read_bus(net, axi_handle, 48, rdata_v);
-                check_equal(rdata_v, std_logic_vector'(x"00000000"), result("Test Read: rx_busy_i."));
-
-                --RX DLC
-                read_bus(net, axi_handle, 44, rdata_v);
-                check_equal(rdata_v(3 downto 0), std_logic_vector'("0000"), result("Test Read: rx_busy_i."));
-
-                --RX DATA
-                read_bus(net, axi_handle, 52, rdata_v);
-                check_equal(rdata_v, std_logic_vector'(x"00000000"), result("Test Read: rx_busy_i."));
-
-                check_passed(result("Test Send 0 bytes, short header, all zeroes: Pass."));
-
-            elsif run("Send 1 byte, short header, all ones") then
-                wdata_v := to_std_logic_vector(200, 32);
-                write_bus(net, axi_handle, 8, wdata_v, "0011");
-
-                --set id
-                wdata_v := (others => '1');
-                write_bus(net, axi_handle, 36, wdata_v, "1111");
-                write_bus(net, axi_handle, 40, wdata_v, "1111");
-                write_bus(net, axi_handle, 72, wdata_v, "1111");
-
-                --data length
-                wdata_v := to_std_logic_vector(1, 32);
-                write_bus(net, axi_handle, 68, wdata_v, "0001");
-
-                --Setting tx_data
-                wdata_v := x"FFFFFFFF";
-                write_bus(net, axi_handle, 76, wdata_v, "1111");
-                wdata_v := x"FFFFFFFF";
-                write_bus(net, axi_handle, 80, wdata_v, "1111");
-
-                --Command to send
-                wdata_v(1) := '1';
-                write_bus(net, axi_handle, 64, wdata_v, "0001");
-
-                set_timeout(runner, now + 110 us);
-                wait for 100 us;
-
-                --Testing tx_busy_i
-                read_bus(net, axi_handle, 64, rdata_v);
-                check_equal(rdata_v(8), '1', result("Test Read: tx_busy_i."));
-                --Testing rx_busy_i
-                read_bus(net, axi_handle, 32, rdata_v);
-                check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
-
-                set_timeout(runner, now + 301 us);
-                wait for 300 us;
-
-                --Testing tx_busy_i
-                read_bus(net, axi_handle, 64, rdata_v);
-                check_equal(rdata_v(8), '0', result("Test Read: tx_busy_i."));
-                --Testing rx_busy_i
-                read_bus(net, axi_handle, 32, rdata_v);
-                check_equal(rdata_v(8), '0', result("Test Read: rx_busy_i."));
-
-                --read RXID
-                read_bus(net, axi_handle, 48, rdata_v);
-                check_equal(rdata_v, std_logic_vector'(x"00000000"), result("Test Read: rx_busy_i."));
-
-                --RX DLC
-                read_bus(net, axi_handle, 44, rdata_v);
-                check_equal(rdata_v(3 downto 0), std_logic_vector'("0000"), result("Test Read: rx_busy_i."));
-
-                --RX DATA
-                read_bus(net, axi_handle, 52, rdata_v);
-                check_equal(rdata_v, std_logic_vector'(x"000000FF"), result("Test Read: rx_busy_i."));
-
-                check_passed(result("Send 1 byte, short header, all ones: Pass."));
-
-            elsif run("Send 64 bytes, short header, all zeroes") then
-                wdata_v := to_std_logic_vector(200, 32);
-                write_bus(net, axi_handle, 8, wdata_v, "0011");
-
-                --set id
                 wdata_v := (others => '0');
                 write_bus(net, axi_handle, 36, wdata_v, "1111");
                 write_bus(net, axi_handle, 40, wdata_v, "1111");
@@ -583,24 +467,308 @@ begin
 
                 --read RXID
                 read_bus(net, axi_handle, 48, rdata_v);
+                check_equal(rdata_v, std_logic_vector'(x"00000000"), result("Test Read: rx_id."));
+
+                --RX DLC
+                read_bus(net, axi_handle, 44, rdata_v);
+                check_equal(rdata_v(3 downto 0), std_logic_vector'("0001"), result("Test Read: rx_dlc."));
+
+                --RX DATA
+                read_bus(net, axi_handle, 52, rdata_v);
+                check_equal(rdata_v, std_logic_vector'(x"00000000"), result("Test Read: rx_data."));
+
+                check_passed(result("Test Send 0 bytes, short header, all zeroes: Pass."));
+
+            elsif run("Send 1 byte, short header, all ones") then
+                wdata_v := to_std_logic_vector(200, 32);
+                write_bus(net, axi_handle, 8, wdata_v, "0011");
+
+                --set id
+                wdata_v := (others => '1');
+                write_bus(net, axi_handle, 36, wdata_v, "1111");
+                write_bus(net, axi_handle, 40, wdata_v, "1111");
+                write_bus(net, axi_handle, 72, wdata_v, "1111");
+
+                --data length
+                wdata_v := to_std_logic_vector(1, 32);
+                write_bus(net, axi_handle, 68, wdata_v, "0001");
+
+                --Setting tx_data
+                wdata_v := (others => '1');
+                write_bus(net, axi_handle, 76, wdata_v, "1111");
+                wdata_v := (others => '1');
+                write_bus(net, axi_handle, 80, wdata_v, "1111");
+
+                --Command to send
+                wdata_v(1) := '1';
+                write_bus(net, axi_handle, 64, wdata_v, "0001");
+
+                set_timeout(runner, now + 110 us);
+                wait for 100 us;
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: tx_busy_i."));
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
+
+                set_timeout(runner, now + 301 us);
+                wait for 300 us;
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '0', result("Test Read: tx_busy_i."));
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '0', result("Test Read: rx_busy_i."));
+
+                --read RXID
+                read_bus(net, axi_handle, 48, rdata_v);
+                check_equal(rdata_v, std_logic_vector'(x"000007FF"), result("Test Read: rx_id."));
+
+                --RX DLC
+                read_bus(net, axi_handle, 44, rdata_v);
+                check_equal(rdata_v(3 downto 0), std_logic_vector'("0001"), result("Test Read: rx_dlc."));
+
+                --RX DATA
+                read_bus(net, axi_handle, 52, rdata_v);
+                check_equal(rdata_v, std_logic_vector'(x"000000FF"), result("Test Read: rx_data."));
+
+                check_passed(result("Send 1 byte, short header, all ones: Pass."));
+
+            elsif run("Send 8 bytes, short header, all zeroes") then
+                wdata_v := to_std_logic_vector(200, 32);
+                write_bus(net, axi_handle, 8, wdata_v, "0011");
+
+                --set id
+                wdata_v := (others => '0');
+                write_bus(net, axi_handle, 36, wdata_v, "1111");
+                write_bus(net, axi_handle, 40, wdata_v, "1111");
+                write_bus(net, axi_handle, 72, wdata_v, "1111");
+
+                --data length
+                wdata_v := to_std_logic_vector(8, 32);
+                write_bus(net, axi_handle, 68, wdata_v, "0001");
+
+                --Setting tx_data
+                wdata_v := (others => '0');
+                write_bus(net, axi_handle, 76, wdata_v, "1111");
+                wdata_v := (others => '0');
+                write_bus(net, axi_handle, 80, wdata_v, "1111");
+
+                --Command to send
+                wdata_v(1) := '1';
+                write_bus(net, axi_handle, 64, wdata_v, "0001");
+
+                set_timeout(runner, now + 110 us);
+                wait for 100 us;
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: tx_busy_i."));
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
+
+                set_timeout(runner, now +601 us);
+                wait for 600 us;
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '0', result("Test Read: tx_busy_i."));
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '0', result("Test Read: rx_busy_i."));
+
+                --read RXID
+                read_bus(net, axi_handle, 48, rdata_v);
+                check_equal(rdata_v(11 downto 0), std_logic_vector'(x"000"), result("Test Read: rx_id."));
+
+                --RX DLC
+                read_bus(net, axi_handle, 44, rdata_v);
+                check_equal(rdata_v(3 downto 0), std_logic_vector'("1000"), result("Test Read: rx_dlc."));
+
+                --RX DATA
+                read_bus(net, axi_handle, 52, rdata_v);
+                check_equal(rdata_v, std_logic_vector'(x"00000000"), result("Test Read: rx_data."));
+                read_bus(net, axi_handle, 56, rdata_v);
+                check_equal(rdata_v, std_logic_vector'(x"00000000"), result("Test Read: rx_data."));
+
+                check_passed(result("Send 8 bytes, short header, all ones: Pass."));
+
+            elsif run("Send 8 bytes, short header, all ones") then
+                wdata_v := to_std_logic_vector(200, 32);
+                write_bus(net, axi_handle, 8, wdata_v, "0011");
+
+                --set id
+                wdata_v := (others => '1');
+                write_bus(net, axi_handle, 36, wdata_v, "1111");
+                write_bus(net, axi_handle, 40, wdata_v, "1111");
+                write_bus(net, axi_handle, 72, wdata_v, "1111");
+
+                --data length
+                wdata_v := to_std_logic_vector(8, 32);
+                write_bus(net, axi_handle, 68, wdata_v, "0001");
+
+                --Setting tx_data
+                wdata_v := (others => '0');
+                write_bus(net, axi_handle, 76, wdata_v, "1111");
+                wdata_v := (others => '0');
+                write_bus(net, axi_handle, 80, wdata_v, "1111");
+
+                --Command to send
+                wdata_v(1) := '1';
+                write_bus(net, axi_handle, 64, wdata_v, "0001");
+
+                set_timeout(runner, now + 110 us);
+                wait for 100 us;
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: tx_busy_i."));
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
+
+                set_timeout(runner, now + 501 us);
+                wait for 500 us;
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '0', result("Test Read: tx_busy_i."));
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '0', result("Test Read: rx_busy_i."));
+
+                --read RXID
+                read_bus(net, axi_handle, 48, rdata_v);
+                check_equal(rdata_v(11 downto 0), std_logic_vector'(x"7FF"), result("Test Read: rx_id."));
+
+                --RX DLC
+                read_bus(net, axi_handle, 44, rdata_v);
+                check_equal(rdata_v(3 downto 0), std_logic_vector'("1000"), result("Test Read: rx_dlc."));
+
+                --RX DATA
+                read_bus(net, axi_handle, 52, rdata_v);
+                check_equal(rdata_v, std_logic_vector'(x"FFFFFFFF"), result("Test Read: rx_data."));
+                read_bus(net, axi_handle, 56, rdata_v);
+                check_equal(rdata_v, std_logic_vector'(x"FFFFFFFF"), result("Test Read: rx_data."));
+
+                check_passed(result("Send 8 bytes, short header, all ones: Pass."));
+
+            elsif run("Send 0 bytes, long header, all zeroes") then
+                --set speed
+                wdata_v := to_std_logic_vector(200, 32);
+                write_bus(net, axi_handle, 8, wdata_v, "0011");
+
+                --data length
+                wdata_v := to_std_logic_vector(0, 32);
+                write_bus(net, axi_handle, 68, wdata_v, "0001");
+
+                --Command to send
+                wdata_v := (1 => '1', 24 => '1', others =>'0');
+                write_bus(net, axi_handle, 64, wdata_v, "1001");
+
+                set_timeout(runner, now + 110 us);
+                wait for 100 us;
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: tx_busy_i."));
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
+
+                set_timeout(runner, now + 401 us);
+                wait for 400 us;
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '0', result("Test Read: tx_busy_i."));
+
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '0', result("Test Read: rx_busy_i."));
+                check_equal(rdata_v(24), '1', result("Test Read: rx_eff."));
+
+                --read RXID
+                read_bus(net, axi_handle, 48, rdata_v);
                 check_equal(rdata_v, std_logic_vector'(x"00000000"), result("Test Read: rx_busy_i."));
 
                 --RX DLC
                 read_bus(net, axi_handle, 44, rdata_v);
                 check_equal(rdata_v(3 downto 0), std_logic_vector'("0000"), result("Test Read: rx_busy_i."));
 
-                --RX DATA
-                read_bus(net, axi_handle, 52, rdata_v);
-                check_equal(rdata_v, std_logic_vector'(x"00000000"), result("Test Read: rx_busy_i."));
+                check_passed(result("Send 0 bytes, long header, all zeroes: Pass."));
 
-                check_passed(result("Send 64 bytes, short header, all ones: Pass."));
+            elsif run("Send 0 bytes, long header, all ones") then
 
+                --set speed
+                wdata_v := to_std_logic_vector(200, 32);
+                write_bus(net, axi_handle, 8, wdata_v, "0011");
 
+                --set id
+                wdata_v := (others => '1');
+                write_bus(net, axi_handle, 36, wdata_v, "1111");
+                write_bus(net, axi_handle, 40, wdata_v, "1111");
+                write_bus(net, axi_handle, 72, wdata_v, "1111");
 
+                --data length
+                wdata_v := to_std_logic_vector(0, 32);
+                write_bus(net, axi_handle, 68, wdata_v, "0001");
 
+                --Command to send
+                wdata_v := (1 => '1', 24 => '1', others =>'0');
+                write_bus(net, axi_handle, 64, wdata_v, "1001");
 
+                set_timeout(runner, now + 110 us);
+                wait for 100 us;
 
-            elsif run("Send 64 bytes, short header, all ones") then
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: tx_busy_i."));
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
+
+                set_timeout(runner, now + 401 us);
+                wait for 400 us;
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '0', result("Test Read: tx_busy_i."));
+
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '0', result("Test Read: rx_busy_i."));
+                check_equal(rdata_v(24), '1', result("Test Read: rx_eff."));
+
+                --read RXID
+                read_bus(net, axi_handle, 48, rdata_v);
+                check_equal(rdata_v, std_logic_vector'(x"3FFFFFFF"), result("Test Read: rx_busy_i."));
+
+                --RX DLC
+                read_bus(net, axi_handle, 44, rdata_v);
+                check_equal(rdata_v(3 downto 0), std_logic_vector'("0000"), result("Test Read: rx_busy_i."));
+
+                check_passed(result("Send 0 bytes, long header, all ones: Pass."));
+
+            elsif run("Send 1 byte, long header, all zeroes") then
+                check_passed(result("Send 1 byte, long header, all zeroes: Pass."));
+
+            elsif run("Send 1 byte, long header, all ones") then
+                check_passed(result("Send 1 byte, long header, all ones: Pass."));
+
+            elsif run("Send 8 bytes, long header, all zeroes") then
+                check_passed(result("Send 8 bytes, long header, all zeroes: Pass."));
+
+            elsif run("Send 8 bytes, long header, all ones") then
+                check_passed(result("Send 8 bytes, long header, all ones: Pass."));
+
+            elsif run("Send 8 bytes, short header, Force DLC to ones") then
+                check_passed(result("Send 8 bytes, long header, all ones: Pass."));
+
             end if;
         end loop;
         test_runner_cleanup(runner); -- Simulation ends here

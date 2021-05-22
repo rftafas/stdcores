@@ -105,7 +105,7 @@ begin
                     when header_st =>
                         frame_cnt := frame_cnt + 1;
                         if frame_cnt = 18 then
-                            if frame_sr(5) = '0' then
+                            if frame_sr(4) = '0' then
                                 can_mq <= save_header_st;
                             else
                                 can_mq <= extended_header_st;
@@ -122,7 +122,7 @@ begin
 
                     when extended_header_st =>
                         frame_cnt := frame_cnt + 1;
-                        if frame_cnt = 25 then
+                        if frame_cnt = 38 then
                             can_mq <= save_extended_header_st;
                         end if;
 
@@ -149,14 +149,14 @@ begin
                     when get_crc_st =>
                         frame_cnt := frame_cnt + 1;
                         if frame_cnt = 14 then
-                            can_mq <= save_crc_st;
+                            can_mq <= crc_delimiter_st;
                         end if;
 
-                    when save_crc_st =>
+                    --when save_crc_st =>
                     --    frame_cnt := 0;
                     --    can_mq <= crc_delimiter_st;
 
-                    --when crc_delimiter_st =>
+                    when crc_delimiter_st =>
                         frame_cnt := 0;
                         if address_ok_s = '1' and crc_ok_s = '1' and data_ready_i = '1' then
                             can_mq <= ack_slot_st;
@@ -182,8 +182,6 @@ begin
         end if;
     end process;
 
-    data_valid_o <= '1' when can_mq = save_st else '0';
-
     --we disable the stuffing after the CRC (delimiter is not stuffed)
     stuff_disable_s <=  '1' when can_mq = crc_delimiter_st else
                         '1' when can_mq = eof_st           else
@@ -205,7 +203,7 @@ begin
         variable rx_id_v : std_logic_vector(28 downto 0);
     begin
         if rst_i = '1' then
-            frame_sr     <= (others => '1');
+            frame_sr     <= (others => '0');
             usr_eff_o    <= '0';
             usr_rtr_o    <= '0';
             rx_id_v      := (others => '0');
@@ -250,7 +248,7 @@ begin
                         else
                             address_ok_s <= '0';
                         end if;
-                        frame_sr    <= (others=>'1');
+                        frame_sr    <= (others=>'0');
                         frame_sr(0) <= rxdata_i;
 
                     when extended_header_st =>
@@ -261,7 +259,7 @@ begin
                     when save_extended_header_st =>
                         rx_id_v               := (others=>'0');
                         rx_id_v(28 downto 18) := frame_sr(37 downto 27); --ID_A
-                        --usr_srr_o            <= frame_sr(26);            --SRR
+                        --usr_srr_o            <= frame_sr(26);          --SRR
                         usr_eff_o             <= frame_sr(25);           --IDE
                         rx_id_v(17 downto 0)  := frame_sr(24 downto 7);  --ID_B
                         usr_rtr_o             <= frame_sr(6);            --RTR
@@ -273,7 +271,7 @@ begin
                         else
                             address_ok_s <= '0';
                         end if;
-                        frame_sr    <= (others=>'1');
+                        frame_sr    <= (others=>'0');
                         frame_sr(0) <= rxdata_i;
 
                     when get_data_st =>
@@ -282,26 +280,24 @@ begin
 
                     when save_data_st =>
                         data_o <= frame_sr;
-                        frame_sr    <= (others=>'1');
+                        frame_sr    <= (others=>'0');
                         frame_sr(0) <= rxdata_i;
 
                     when get_crc_st =>
                         frame_sr    <= frame_sr sll 1;
                         frame_sr(0) <= rxdata_i;
+                        crc_s       <= frame_sr(13 downto 0) & rxdata_i;
 
                     when crc_delimiter_st =>
-                        frame_sr    <= (others=>'1');
+                        crc_s <= frame_sr(14 downto 0);
+                        frame_sr    <= (others=>'0');
+                        frame_sr(0) <= rxdata_i;
 
                     when ack_slot_st =>
-                        frame_sr    <= (others=>'1');
+                        frame_sr    <= (others=>'0');
 
                     when no_ack_slot_st =>
-                        frame_sr    <= (others=>'1');
-
-                    when save_crc_st =>
-                        crc_s <= frame_sr(14 downto 0);
-                        frame_sr    <= (others=>'1');
-                        frame_sr(0) <= rxdata_i;
+                        frame_sr    <= (others=>'0');
 
                     when others =>
                         -- usr_eff_o    <= '0';
@@ -312,7 +308,7 @@ begin
                         -- usr_id_o     <= (others => '0');
                         crc_s        <= (others => '0');
                         address_ok_s <= '0';
-                        frame_sr    <= (others=>'1');
+                        frame_sr    <= (others=>'0');
 
                 end case;
 
