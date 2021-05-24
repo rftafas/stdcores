@@ -37,7 +37,7 @@ package can_aximm_pkg is
   constant golden_c           : std_logic_vector(31 downto 0) := x"A1A2A3A4";
   constant C_S_AXI_ADDR_WIDTH : integer                       := 7;
   constant C_S_AXI_DATA_WIDTH : integer                       := 32;
-  constant package_version_c  : string                        := "20210517_1405";
+  constant package_version_c : String := "20210524_1305";
 
   component can_aximm_top is
     generic (
@@ -128,7 +128,6 @@ package can_aximm_pkg is
       rst_i      : in std_logic;
       mclk_i     : in std_logic;
       tx_clken_i : in std_logic;
-      fb_clken_i : in std_logic;
       --can signals can be bundled in TUSER
       usr_eff_i    : in std_logic;                     -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
       usr_id_i     : in std_logic_vector(28 downto 0); -- 32 bit can_id + eff/rtr/err flags             can_id           : in  std_logic_vector (31 downto 0);-- 32 bit can_id + eff/rtr/err flags
@@ -147,7 +146,7 @@ package can_aximm_pkg is
       --Signals to PHY
       ch_ready_i  : in std_logic;
       collision_i : in std_logic;
-      rxdata_i    : in std_logic;
+      read_ack_i  : in std_logic;
       txdata_o    : out std_logic;
       txen_o      : out std_logic
     );
@@ -169,19 +168,20 @@ package can_aximm_pkg is
       collision_o       : out std_logic;
       channel_ready_o   : out std_logic;
       --commands
-      send_ack_i : in std_logic;
+      read_ack_o : out std_logic;
+      send_ack_i : in  std_logic;
       -- data channel;
-      tx_clken_i : in std_logic;
-      rx_clken_i : in std_logic;
-      fb_clken_i : in std_logic;
-      tx_i       : in std_logic;
-      tx_en_i    : in std_logic;
+      tx_clken_i : in  std_logic;
+      rx_clken_i : in  std_logic;
+      fb_clken_i : in  std_logic;
+      tx_i       : in  std_logic;
+      tx_en_i    : in  std_logic;
       rx_o       : out std_logic;
       rx_sync_o  : out std_logic;
       --external PHY
       txo_o : out std_logic;
       txo_t : out std_logic;
-      rxi   : in std_logic;
+      rxi   : in  std_logic;
       --internal phy
       can_l : inout std_logic;
       can_h : inout std_logic
@@ -220,10 +220,14 @@ package can_aximm_pkg is
       fd_enable_o       : out std_logic;
       promiscuous_o     : out std_logic;
       sample_rate_o     : out std_logic_vector(15 downto 0);
-      rx_irq_i          : in std_logic;
-      rx_irq_mask_o     : out std_logic;
-      tx_irq_i          : in std_logic;
-      tx_irq_mask_o     : out std_logic;
+      rx_data_irq_i     : in std_logic;
+      rx_error_irq_i    : in std_logic;
+      tx_data_irq_i     : in std_logic;
+      tx_error_irq_i    : in std_logic;
+      rx_data_mask_o    : out std_logic;
+      rx_error_mask_o   : out std_logic;
+      tx_data_mask_o    : out std_logic;
+      tx_error_mask_o   : out std_logic;
       stuff_violation_i : in std_logic;
       collision_i       : in std_logic;
       channel_ready_i   : in std_logic;
@@ -257,6 +261,7 @@ package can_aximm_pkg is
       tx_data1_o        : out std_logic_vector(31 downto 0)
     );
   end component;
+
   procedure crc15(vector : inout std_logic_vector(14 downto 0); input : in std_logic);
   --procedure crc15( signal vector : inout std_logic_vector(14 downto 0); input : in  std_logic);
 

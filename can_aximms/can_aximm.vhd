@@ -65,10 +65,14 @@ entity can_aximm is
     fd_enable_o : out std_logic;
     promiscuous_o : out std_logic;
     sample_rate_o : out std_logic_vector(15 downto 0);
-    rx_irq_i : in std_logic;
-    rx_irq_mask_o : out std_logic;
-    tx_irq_i : in std_logic;
-    tx_irq_mask_o : out std_logic;
+    rx_data_irq_i : in std_logic;
+    rx_error_irq_i : in std_logic;
+    tx_data_irq_i : in std_logic;
+    tx_error_irq_i : in std_logic;
+    rx_data_mask_o : out std_logic;
+    rx_error_mask_o : out std_logic;
+    tx_data_mask_o : out std_logic;
+    tx_error_mask_o : out std_logic;
     stuff_violation_i : in std_logic;
     collision_i : in std_logic;
     channel_ready_i : in std_logic;
@@ -108,7 +112,7 @@ architecture rtl of can_aximm is
   --architecture_declaration_tag
 
 
-  constant register_bank_version_c : String := "20210517_1405";
+  constant register_bank_version_c : String := "20210524_1305";
   constant C_S_AXI_ADDR_LSB : integer := 2;
   constant REG_NUM : integer := 2**(C_S_AXI_ADDR_WIDTH-C_S_AXI_ADDR_LSB);
 
@@ -385,10 +389,14 @@ begin
     regread_s(1)(8) <= regwrite_s(1)(8);
     sample_rate_o <= regwrite_s(2)(15 downto 0);
     regread_s(2)(15 downto 0) <= regwrite_s(2)(15 downto 0);
-    rx_irq_mask_o <= regwrite_s(3)(1);
-    regread_s(3)(1) <= regwrite_s(3)(1);
-    tx_irq_mask_o <= regwrite_s(3)(9);
-    regread_s(3)(9) <= regwrite_s(3)(9);
+    rx_data_mask_o <= regwrite_s(3)(16);
+    regread_s(3)(16) <= regwrite_s(3)(16);
+    rx_error_mask_o <= regwrite_s(3)(17);
+    regread_s(3)(17) <= regwrite_s(3)(17);
+    tx_data_mask_o <= regwrite_s(3)(24);
+    regread_s(3)(24) <= regwrite_s(3)(24);
+    tx_error_mask_o <= regwrite_s(3)(25);
+    regread_s(3)(25) <= regwrite_s(3)(25);
     regread_s(4)(8) <= channel_ready_i;
     loop_enable_o <= regwrite_s(7)(0);
     regread_s(7)(0) <= regwrite_s(7)(0);
@@ -429,8 +437,10 @@ begin
   
 
     --Set Connection for Write to Clear
-    regset_s(3)(0) <= rx_irq_i;
-    regset_s(3)(8) <= tx_irq_i;
+    regset_s(3)(0) <= rx_data_irq_i;
+    regset_s(3)(1) <= rx_error_irq_i;
+    regset_s(3)(8) <= tx_data_irq_i;
+    regset_s(3)(9) <= tx_error_irq_i;
     regset_s(4)(0) <= stuff_violation_i;
     regset_s(4)(1) <= collision_i;
     regset_s(8)(0) <= rx_data_valid_i;
@@ -439,7 +449,9 @@ begin
   
     --External Clear Connection
     regclear_s(3)(0) <= regwrite_s(3)(0);
+    regclear_s(3)(1) <= regwrite_s(3)(1);
     regclear_s(3)(8) <= regwrite_s(3)(8);
+    regclear_s(3)(9) <= regwrite_s(3)(9);
     regclear_s(4)(0) <= regwrite_s(4)(0);
     regclear_s(4)(1) <= regwrite_s(4)(1);
     regclear_s(7)(8) <= regwrite_s(7)(8);

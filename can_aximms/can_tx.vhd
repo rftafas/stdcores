@@ -27,7 +27,6 @@ entity can_tx is
         rst_i      : in std_logic;
         mclk_i     : in std_logic;
         tx_clken_i : in std_logic;
-        fb_clken_i : in std_logic;
         --can signals can be bundled in TUSER
         usr_eff_i    : in std_logic;
         usr_id_i     : in std_logic_vector(28 downto 0);
@@ -46,7 +45,7 @@ entity can_tx is
         --Signals to PHY
         ch_ready_i  : in std_logic;
         collision_i : in std_logic;
-        rxdata_i    : in std_logic;
+        read_ack_i  : in std_logic;
         txdata_o    : out std_logic;
         txen_o      : out std_logic
     );
@@ -295,7 +294,11 @@ begin
                         rtry_error_o    <= '0';
                         crc15(crc_sr, frame_sr(0));
                         frame_sr                         <= (others => '1');
-                        frame_sr(0 to 8 * usr_dlc_i - 1) <= data_i(8 * usr_dlc_i - 1 downto 0);
+                        if usr_dlc_i < 9 then
+                            frame_sr(0 to 8 * usr_dlc_i - 1) <= data_i(8 * usr_dlc_i - 1 downto 0);
+                        else
+                            frame_sr(0 to 63) <= data_i(63 downto 0);
+                        end if;
 
                     when data_st =>
                         ack_s           <= '0';
@@ -320,6 +323,7 @@ begin
                         crc15(crc_sr, frame_sr(0));
                         frame_sr          <= (others => '1');
                         frame_sr(0 to 14) <= crc_sr;
+                        frame_sr(0 to 14) <= (others=>'-');
 
                     when crc_st =>
                         ack_s           <= '0';
@@ -345,8 +349,8 @@ begin
                         frame_sr     <= (others => '1');
 
                     when ack_slot_st =>
-                        ack_s           <= '0';
-                        ack_error_o     <= '0';
+                        ack_s           <= read_ack_i;
+                        ack_error_o     <= not read_ack_i;
                         stuff_disable_s <= '1';
                         arb_lost_o      <= '0';
                         txen_o          <= '1';
@@ -356,8 +360,8 @@ begin
                         frame_sr     <= (others => '1');
 
                     when ack_delimiter_st =>
-                        ack_s           <= not rxdata_i;
-                        ack_error_o     <= rxdata_i;
+                        --ack_s           <= read_ack_i;
+                        --ack_error_o     <= not read_ack_i;
                         stuff_disable_s <= '1';
                         arb_lost_o      <= '0';
                         txen_o          <= '1';

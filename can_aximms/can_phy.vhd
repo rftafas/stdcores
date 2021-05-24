@@ -37,7 +37,8 @@ entity can_phy is
         collision_o       : out std_logic;
         channel_ready_o   : out std_logic;
         --commands
-        send_ack_i : in std_logic;
+        send_ack_i : in  std_logic;
+        read_ack_o : out std_logic;
         -- data channel;
         tx_clken_i : in  std_logic;
         rx_clken_i : in  std_logic;
@@ -66,6 +67,7 @@ architecture rtl of can_phy is
 
     signal force_error_s : std_logic;
     signal lock_end_en   : std_logic;
+    signal lock_start_en : std_logic;
 
 begin
 
@@ -79,6 +81,14 @@ begin
         dout_o => force_error_s
     );
 
+    lock_start_u : det_up
+    port map(
+        rst_i  => rst_i,
+        mclk_i => mclk_i,
+        din    => lock_dominant_i,
+        dout   => lock_start_en
+    );
+
     lock_end_u : det_down
     port map(
         rst_i  => rst_i,
@@ -87,30 +97,38 @@ begin
         dout   => lock_end_en
     );
 
+
     --we sample TX_I so it should place an FFD the closest to the IO.
     tx_p : process (mclk_i, rst_i)
+        variable dominant_lock : boolean := false;
+        variable ack_lock      : boolean := false;
     begin
         if rst_i = '1' then
             tx_s    <= '1';
             tx_en_s <= '0';
         elsif rising_edge(mclk_i) then
-            if lock_end_en = '1' then
-                tx_s    <= '1';
-                tx_en_s <= '0';
-            elsif lock_dominant_i = '1' then
+
+            if lock_start_en = '1' then
+                dominant_lock := true;
+            elsif lock_end_en = '1' then
+                dominant_lock := false;
+            end if;
+
+            if send_ack_i = '1' and tx_clken_i = '1' then
+                ack_lock := true;
+            elsif tx_clken_i = '1' then
+                ack_lock := false;
+            end if;
+
+            if dominant_lock then
                 tx_s    <= '0';
                 tx_en_s <= '1';
-            elsif tx_clken_i = '1' then
-                if send_ack_i = '1' then
-                    tx_s    <= '0';
-                    tx_en_s <= '1';
-                elsif force_error_s = '1' then
-                    tx_s    <= not tx_i;
-                    tx_en_s <= '1';
-                else
-                    tx_s    <= tx_i;
-                    tx_en_s <= tx_en_i;
-                end if;
+            elsif ack_lock then
+                tx_s    <= '0';
+                tx_en_s <= '1';
+            else
+                tx_s    <= tx_i;
+                tx_en_s <= tx_en_i;
             end if;
 
         end if;
@@ -152,6 +170,19 @@ begin
 
     --send the data.
     rx_o <= rx_int_s;
+
+
+    --we can only detect when we send a 1 but the bus remains low.
+    read_ack_p : process (mclk_i, rst_i)
+    begin
+        if rst_i = '1' then
+            read_ack_o <= '0';
+        elsif rising_edge(mclk_i) then
+            if rx_clken_i = '1' then
+                read_ack_o <= not rx_int_s;
+            end if;
+        end if;
+    end process;
 
     --we can only detect when we send a 1 but the bus remains low.
     col_det_p : process (mclk_i, rst_i)

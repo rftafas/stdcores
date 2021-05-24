@@ -81,13 +81,11 @@ architecture behavior of can_aximm_top is
   signal tx_ready_s        : std_logic;
   signal ack_error_s       : std_logic;
   signal arb_lost_s        : std_logic;
+  signal tx_error_s        : std_logic;
   signal rtry_error_s      : std_logic;
   signal tx_busy_s         : std_logic;
   signal tx_serial_data_s  : std_logic;
   signal tx_serial_data_en : std_logic;
-  signal tx_irq_s          : std_logic;
-  signal tx_irq_mask_s     : std_logic;
-  signal tx_busy_down_s    : std_logic;
 
   --CAN RX
   signal rx_eff_s          : std_logic;
@@ -101,9 +99,6 @@ architecture behavior of can_aximm_top is
   signal rx_data_s         : std_logic_vector(63 downto 0);
   signal rx_busy_s         : std_logic;
   signal rx_serial_data_s  : std_logic;
-  signal rx_irq_s          : std_logic;
-  signal rx_irq_mask_s     : std_logic;
-  signal rx_busy_down_s    : std_logic;
   signal rx_crc_error_s    : std_logic;
   signal promiscuous_s     : std_logic;
 
@@ -116,6 +111,17 @@ architecture behavior of can_aximm_top is
   signal stuff_violation_s : std_logic;
   signal channel_ready_s   : std_logic;
   signal send_ack_s        : std_logic;
+  signal read_ack_s        : std_logic;
+
+  --IRQ
+  signal rx_data_irq_s     : std_logic;
+  signal rx_error_irq_s    : std_logic;
+  signal tx_data_irq_s     : std_logic;
+  signal tx_error_irq_s    : std_logic;
+  signal rx_data_mask_s    : std_logic;
+  signal rx_error_mask_s   : std_logic;
+  signal tx_data_mask_s    : std_logic;
+  signal tx_error_mask_s   : std_logic;
 
 begin
 
@@ -154,10 +160,14 @@ begin
       iso_mode_o        => open,
       fd_enable_o       => open,
       sample_rate_o     => baud_rate_s,
-      rx_irq_i          => rx_irq_s,
-      rx_irq_mask_o     => rx_irq_mask_s,
-      tx_irq_i          => tx_irq_s,
-      tx_irq_mask_o     => tx_irq_mask_s,
+      rx_data_irq_i     => rx_data_irq_s,
+      rx_error_irq_i    => rx_error_irq_s,
+      tx_data_irq_i     => tx_data_irq_s,
+      tx_error_irq_i    => tx_error_irq_s,
+      rx_data_mask_o    => rx_data_mask_s,
+      rx_error_mask_o   => rx_error_mask_s,
+      tx_data_mask_o    => tx_data_mask_s,
+      tx_error_mask_o   => tx_error_mask_s,
       stuff_violation_i => stuff_violation_s,
       collision_i       => collision_s,
       channel_ready_i   => channel_ready_s,
@@ -196,28 +206,46 @@ begin
   ----------------------------------------------------------------------------------
   --IRQ
   ----------------------------------------------------------------------------------
-  tx_irq_u : det_down
+  rx_data_irq_u : det_up
+    port map (
+      rst_i  => '0',
+      mclk_i => mclk_i,
+      din    => rx_data_valid_s,
+      dout   => rx_data_irq_s
+    );
+
+  rx_error_irq_u : det_up
+    port map (
+      rst_i  => '0',
+      mclk_i => mclk_i,
+      din    => rx_crc_error_s,
+      dout   => rx_error_irq_s
+    );
+
+  rx_data_irq_s  <= rx_data_irq_s  and  rx_data_mask_s;
+  rx_error_irq_s <= rx_error_irq_s and rx_error_mask_s;
+  rx_irq_o       <= rx_data_irq_s  or   rx_error_irq_s;
+  tx_error_s     <= ack_error_s or arb_lost_s or rtry_error_s;
+
+  tx_data_irq_u : det_down
     port map (
       rst_i  => '0',
       mclk_i => mclk_i,
       din    => tx_busy_s,
-      dout   => tx_busy_down_s
+      dout   => tx_data_irq_s
     );
 
-
-  rx_irq_u : det_down
+  tx_error_irq_u : det_up
     port map (
       rst_i  => '0',
       mclk_i => mclk_i,
-      din    => rx_busy_s,
-      dout   => rx_busy_down_s
+      din    => tx_error_s,
+      dout   => tx_error_irq_s
     );
 
-    tx_irq_s <= tx_irq_mask_s and tx_busy_down_s;
-    rx_irq_s <= rx_irq_mask_s and rx_busy_down_s;
-    tx_irq_o <= tx_irq_s;
-    rx_irq_o <= rx_irq_s;
-
+  tx_data_irq_s  <= tx_data_irq_s  and  tx_data_mask_s;
+  tx_error_irq_s <= tx_error_irq_s and tx_error_mask_s;
+  tx_irq_o       <= tx_data_irq_s  or   tx_error_irq_s;
 
   ----------------------------------------------------------------------------------
   --CLOCK AND QUANTA
@@ -244,7 +272,6 @@ begin
       rst_i        => rst_i,
       mclk_i       => mclk_i,
       tx_clken_i   => tx_clken_s,
-      fb_clken_i   => fb_clken_s,
       usr_eff_i    => tx_eff_s,
       usr_id_i     => tx_id_s,
       usr_rtr_i    => tx_rtr_s,
@@ -260,7 +287,7 @@ begin
       busy_o       => tx_busy_s,
       ch_ready_i   => channel_ready_s,
       collision_i  => collision_s,
-      rxdata_i     => rx_serial_data_s,
+      read_ack_i   => rx_serial_data_s,
       txdata_o     => tx_serial_data_s,
       txen_o       => tx_serial_data_en
     );
@@ -313,6 +340,7 @@ begin
       collision_o       => collision_s,
       channel_ready_o   => channel_ready_s,
       send_ack_i        => send_ack_s,
+      read_ack_o        => read_ack_s,
       tx_i              => tx_serial_data_s,
       tx_en_i           => tx_serial_data_en,
       rx_o              => rx_serial_data_s,
