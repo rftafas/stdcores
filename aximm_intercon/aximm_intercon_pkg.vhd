@@ -202,7 +202,7 @@ package body aximm_intercon_pkg is
   begin
     for j in table'range loop
       tmp := j;
-      exit when address = table(j);
+      exit when std_match( address, table(j) );
     end loop;
     return tmp;
   end address_decode;
@@ -214,8 +214,8 @@ package body aximm_intercon_pkg is
     variable tmp : boolean := false;
   begin
     for j in table'range loop
-      tmp := address = table(j);
-      exit when tmp;
+      tmp := std_match( address, table(j) );
+      exit when std_match( address, table(j) );
     end loop;
     return tmp;
   end address_valid;
