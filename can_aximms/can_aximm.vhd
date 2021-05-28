@@ -112,7 +112,7 @@ architecture rtl of can_aximm is
   --architecture_declaration_tag
 
 
-  constant register_bank_version_c : String := "20210524_1305";
+  constant register_bank_version_c : String := "20210528_1505";
   constant C_S_AXI_ADDR_LSB : integer := 2;
   constant REG_NUM : integer := 2**(C_S_AXI_ADDR_WIDTH-C_S_AXI_ADDR_LSB);
 

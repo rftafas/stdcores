@@ -37,7 +37,7 @@ package can_aximm_pkg is
   constant golden_c           : std_logic_vector(31 downto 0) := x"A1A2A3A4";
   constant C_S_AXI_ADDR_WIDTH : integer                       := 7;
   constant C_S_AXI_DATA_WIDTH : integer                       := 32;
-  constant package_version_c : String := "20210524_1305";
+  constant package_version_c : String := "20210528_1505";
 
   component can_aximm_top is
     generic (

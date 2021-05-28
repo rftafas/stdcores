@@ -3,26 +3,26 @@ Register Bank: can_aximm
 ========================
 
 # Details
-
-Data Width: 32
-Number of registers: 18
-Version: v20210524_1005
-Register Bank auto-generated using the hdltools/regbank_gen.py
+  
+Data Width: 32  
+Number of registers: 18  
+Version: v20210528_1505  
+Register Bank auto-generated using the hdltools/regbank_gen.py  
 
 # List of Registers
-
+  
 
 ## Register 0: Golden
-
-Address: 0x0 | 0
+  
+Address: 0x0 | 0   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
 |31-0|g1|ReadOnly|0x0|Reference register for READ_ONLY|
 
-## Register 1: Config 1
-
-Address: 0x4 | 4
+## Register 1: Config_1
+  
+Address: 0x4 | 4   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -30,17 +30,17 @@ Address: 0x4 | 4
 |1|fd_enable|ReadWrite|0x0|Reserved for ISO Modes compatibility. Not Implemented.|
 |8|promiscuous|ReadWrite|0x0|Promiscuous mode Enable. Will receive and acknowledge any frames with any ID.|
 
-## Register 2: Config 1
-
-Address: 0x8 | 8
+## Register 2: Config_2
+  
+Address: 0x8 | 8   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
 |15-0|sample_rate|ReadWrite|0x0|Sample rate configuration in multiples of 1kHz. Starts with 0kHz.|
 
 ## Register 3: IRQ
-
-Address: 0xc | 12
+  
+Address: 0xc | 12   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -50,12 +50,12 @@ Address: 0xc | 12
 |9|tx_error_irq|Write2Clear|0x0|Sample rate configuration in multiples of 1kHz. Starts with 0kHz.|
 |16|rx_data_mask|ReadWrite|0x0|Enable rx_data_irq.|
 |17|rx_error_mask|ReadWrite|0x0|Enable rx_error_irq.|
-|24|tx_data_mask|Write2Clear|0x0|Enable tx_data_irq.|
+|24|tx_data_mask|ReadWrite|0x0|Enable tx_data_irq.|
 |25|tx_error_mask|ReadWrite|0x0|Enable tx_error_irq.|
 
-## Register 4: Line Status
-
-Address: 0x10 | 16
+## Register 4: Line_Status
+  
+Address: 0x10 | 16   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -63,9 +63,9 @@ Address: 0x10 | 16
 |1|collision|Write2Clear|0x0|Signals detection onf TX data different from RX Data.|
 |8|channel_ready|ReadOnly|0x0|Signals CAN bus is not being used.|
 
-## Register 7: TEST Control 1
-
-Address: 0x1c | 28
+## Register 7: TEST_Control
+  
+Address: 0x1c | 28   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -73,9 +73,9 @@ Address: 0x1c | 28
 |8|insert_error|Write2Pulse|0x0|Inserts an TX CLK aligned error (inverts current bit).|
 |16|force_dominant|ReadWrite|0x0|Forces CAN Bus to dominant signal.|
 
-## Register 8: RX STATUS
-
-Address: 0x20 | 32
+## Register 8: RX_STATUS
+  
+Address: 0x20 | 32   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -87,57 +87,57 @@ Address: 0x20 | 32
 |24|rx_ide|ReadOnly|0x0|IDE Value received with current data.|
 |26-25|rx_reserved|ReadOnly|0x0|Reserved bits received with current data.|
 
-## Register 9: ID Filter 1
-
-Address: 0x24 | 36
+## Register 9: ID_Filter
+  
+Address: 0x24 | 36   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
 |28-0|id1|ReadWrite|0x0|ID value to consider RX Frame. For 11 bits, use [10-0].|
 
-## Register 10: ID Filter 1 MASK
-
-Address: 0x28 | 40
+## Register 10: ID_Filter_MASK
+  
+Address: 0x28 | 40   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
 |28-0|id1_mask|ReadWrite|0x0|MASK to evaluate ID bits. For 11 bits, use [10-0].|
 
-## Register 11: RX DLC
-
-Address: 0x2c | 44
+## Register 11: RX_DLC
+  
+Address: 0x2c | 44   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
 |3-0|rx_size|ReadOnly|0x0|Current frame DLC content.|
 
-## Register 12: RX ID
-
-Address: 0x30 | 48
+## Register 12: RX_ID
+  
+Address: 0x30 | 48   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
 |28-0|rx_id|ReadOnly|0x0|Current frame ID content. For 11 bits, use [10-0].|
 
-## Register 13: RX DATA0
-
-Address: 0x34 | 52
+## Register 13: RX_DATA0
+  
+Address: 0x34 | 52   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
 |31-0|rx_data0|ReadOnly|0x0|RX Data Bytes 3 (31 downto 24) to 0 (7 downto 0).|
 
-## Register 14: RX DATA1
-
-Address: 0x38 | 56
+## Register 14: RX_DATA1
+  
+Address: 0x38 | 56   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
 |31-0|rx_data1|ReadOnly|0x0|RX Data Bytes 7 (31 downto 24) to 4 (7 downto 0).|
 
-## Register 16: TX STATUS
-
-Address: 0x40 | 64
+## Register 16: TX_STATUS
+  
+Address: 0x40 | 64   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
@@ -150,37 +150,37 @@ Address: 0x40 | 64
 |24|tx_eff|ReadWrite|0x0|IDE Value to be sent with current frame.|
 |26-25|tx_reserved|ReadWrite|0x0|Reserved bits value to be sent with current frame.|
 
-## Register 17: TX DLC
-
-Address: 0x44 | 68
+## Register 17: TX_DLC
+  
+Address: 0x44 | 68   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
 |3-0|tx_dlc|ReadWrite|0x0|TX DLC for current frame. If '0000', no data is sent. If '1111' will transmit 8 bytes max (behave like '1000').|
 
-## Register 18: TX ID
-
-Address: 0x48 | 72
+## Register 18: TX_ID
+  
+Address: 0x48 | 72   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
 |28-0|tx_id|ReadWrite|0x0|TX ID to be sent with current frame.|
 
-## Register 19: TX DATA0
-
-Address: 0x4c | 76
+## Register 19: TX_DATA0
+  
+Address: 0x4c | 76   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
 |31-0|tx_data0|ReadWrite|0x0|TX Data Bytes 3 (31 downto 24) to 0 (7 downto 0).|
 
-## Register 20: TX DATA1
-
-Address: 0x50 | 80
+## Register 20: TX_DATA1
+  
+Address: 0x50 | 80   
 
 |Bit|Field|Type|Reset|Description|
 | :---: | :---: | :---: | :---: | :---: |
 |31-0|tx_data1|ReadWrite|0x0|TX Data Bytes 7 (31 downto 24) to 4 (7 downto 0).|
-
-
+  
+  
 hdltools available at https://github.com/rftafas/hdltools.

@@ -10,7 +10,7 @@ can_aximm.add(0, "Golden")
 can_aximm.reg[0].add("g1", "ReadOnly", 0, 32)
 can_aximm.reg[0][0].addDescription("Reference register for READ_ONLY")
 # REG1
-can_aximm.add(1, "Config 1")
+can_aximm.add(1, "Config_1")
 # REG1 FIELDS
 can_aximm.reg[1].add("iso_mode", "ReadWrite", 0, 1)
 can_aximm.reg[1][0].addDescription("Reserved for ISO Modes compatibility. Not Implemented.")
@@ -22,7 +22,7 @@ can_aximm.reg[1].add("promiscuous", "ReadWrite", 8, 1)
 can_aximm.reg[1][8].addDescription("Promiscuous mode Enable. Will receive and acknowledge any frames with any ID.")
 
 # REG2
-can_aximm.add(2, "Config 1")
+can_aximm.add(2, "Config_2")
 # REG2 FIELDS
 can_aximm.reg[2].add("sample_rate", "ReadWrite", 0, 16)
 can_aximm.reg[2][0].addDescription("Sample rate configuration in multiples of 1kHz. Starts with 0kHz.")
@@ -49,7 +49,7 @@ can_aximm.reg[3].add("tx_error_mask", "ReadWrite", 25, 1)
 can_aximm.reg[3][25].addDescription("Enable tx_error_irq.")
 
 # REG_4
-can_aximm.add(4, "Line Status")
+can_aximm.add(4, "Line_Status")
 # REG_4 FIELDS
 can_aximm.reg[4].add("stuff_violation", "Write2Clear", 0, 1)
 can_aximm.reg[4][0].addDescription("Detected 6 consecutive bits and missing of stuff bit.")
@@ -59,7 +59,7 @@ can_aximm.reg[4].add("channel_ready", "ReadOnly", 8, 1)
 can_aximm.reg[4][8].addDescription("Signals CAN bus is not being used.")
 
 # REG_7
-can_aximm.add(7, "TEST Control 1")
+can_aximm.add(7, "TEST_Control")
 # REG_7 FIELDS
 can_aximm.reg[7].add("loop_enable", "ReadWrite", 0, 1)
 can_aximm.reg[7][0].addDescription("Creates an internal loop between TX and RX.")
@@ -69,7 +69,7 @@ can_aximm.reg[7].add("force_dominant", "ReadWrite", 16, 1)
 can_aximm.reg[7][16].addDescription("Forces CAN Bus to dominant signal.")
 
 # REG_8s
-can_aximm.add(8, "RX STATUS")
+can_aximm.add(8, "RX_STATUS")
 # REG_8 FIELDS
 can_aximm.reg[8].add("rx_data_valid", "Write2Clear", 0, 1)
 can_aximm.reg[8][0].addDescription("Valid RX data available.")
@@ -88,45 +88,45 @@ can_aximm.reg[8][25].addDescription("Reserved bits received with current data.")
 
 
 # REG_9
-can_aximm.add(9, "ID Filter 1")
+can_aximm.add(9, "ID_Filter")
 # REG_9 FIELDS
 can_aximm.reg[9].add("id1", "ReadWrite", 0, 29)
 can_aximm.reg[9][0].addDescription("ID value to consider RX Frame. For 11 bits, use [10-0].")
 
 # REG_10
-can_aximm.add(10, "ID Filter 1 MASK")
+can_aximm.add(10, "ID_Filter_MASK")
 # REG_10 FIELDS
 can_aximm.reg[10].add("id1_mask", "ReadWrite", 0, 29)
 can_aximm.reg[10][0].addDescription("MASK to evaluate ID bits. For 11 bits, use [10-0].")
 
 # REG_11
-can_aximm.add(11, "RX DLC")
+can_aximm.add(11, "RX_DLC")
 # REG_11 FIELDS
 can_aximm.reg[11].add("rx_size", "ReadOnly", 0, 4)
 can_aximm.reg[11][0].addDescription("Current frame DLC content.")
 
 
 # REG_12
-can_aximm.add(12, "RX ID")
+can_aximm.add(12, "RX_ID")
 # REG_12 FIELDS
 can_aximm.reg[12].add("rx_id", "ReadOnly", 0, 29)
 can_aximm.reg[12][0].addDescription("Current frame ID content. For 11 bits, use [10-0].")
 
 # REG_13
-can_aximm.add(13, "RX DATA0")
+can_aximm.add(13, "RX_DATA0")
 # REG_13 FIELDS
 can_aximm.reg[13].add("rx_data0", "ReadOnly", 0, 32)
 can_aximm.reg[13][0].addDescription("RX Data Bytes 3 (31 downto 24) to 0 (7 downto 0).")
 
 # REG14
-can_aximm.add(14, "RX DATA1")
+can_aximm.add(14, "RX_DATA1")
 # REG14 FIELDS
 can_aximm.reg[14].add("rx_data1", "ReadOnly", 0, 32)
 can_aximm.reg[14][0].addDescription("RX Data Bytes 7 (31 downto 24) to 4 (7 downto 0).")
 
 
 # REG_16
-can_aximm.add(16, "TX STATUS")
+can_aximm.add(16, "TX_STATUS")
 # REG_16 FIELDS
 can_aximm.reg[16].add("tx_ready", "ReadOnly", 0, 1)
 can_aximm.reg[16][0].addDescription("TX Channel is ready to receive new data for transmission.")
@@ -146,28 +146,28 @@ can_aximm.reg[16].add("tx_reserved", "ReadWrite", 25, 2)
 can_aximm.reg[16][25].addDescription("Reserved bits value to be sent with current frame.")
 
 # REG_17
-can_aximm.add(17, "TX DLC")
+can_aximm.add(17, "TX_DLC")
 # REG_17 FIELDS
 can_aximm.reg[17].add("tx_dlc", "ReadWrite", 0, 4)
 can_aximm.reg[17][0].addDescription("TX DLC for current frame. If '0000', no data is sent. If '1111' will transmit 8 bytes max (behave like '1000').")
 
 
 # REG_18
-can_aximm.add(18, "TX ID")
+can_aximm.add(18, "TX_ID")
 # REG_18 FIELDS
 can_aximm.reg[18].add("tx_id", "ReadWrite", 0, 29)
 can_aximm.reg[18][0].addDescription("TX ID to be sent with current frame.")
 
 
 # REG_19
-can_aximm.add(19, "TX DATA0")
+can_aximm.add(19, "TX_DATA0")
 # REG_19 FIELDS
 can_aximm.reg[19].add("tx_data0", "ReadWrite", 0, 32)
 can_aximm.reg[19][0].addDescription("TX Data Bytes 3 (31 downto 24) to 0 (7 downto 0).")
 
 
 # REG_20
-can_aximm.add(20, "TX DATA1")
+can_aximm.add(20, "TX_DATA1")
 # REG_20 FIELDS
 can_aximm.reg[20].add("tx_data1", "ReadWrite", 0, 32)
 can_aximm.reg[20][0].addDescription("TX Data Bytes 7 (31 downto 24) to 4 (7 downto 0).")
