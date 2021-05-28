@@ -65,21 +65,10 @@ architecture rtl of can_phy is
     signal tx_s        : std_logic;
     signal tx_en_s     : std_logic;
 
-    signal force_error_s : std_logic;
     signal lock_end_en   : std_logic;
     signal lock_start_en : std_logic;
 
 begin
-
-    --error injection. we have to guarantee that the command from registerbank is captured by the phy.
-    pulse_error_u : stretch_sync
-    port map(
-        rst_i  => '0',
-        mclk_i => mclk_i,
-        da_i   => tx_clken_i,
-        db_i   => force_error_i,
-        dout_o => force_error_s
-    );
 
     lock_start_u : det_up
     port map(
@@ -102,11 +91,17 @@ begin
     tx_p : process (mclk_i, rst_i)
         variable dominant_lock : boolean := false;
         variable ack_lock      : boolean := false;
+        variable error_lock    : boolean := false;
     begin
         if rst_i = '1' then
             tx_s    <= '1';
             tx_en_s <= '0';
         elsif rising_edge(mclk_i) then
+            if force_error_i = '1' then
+                error_lock := true;
+            elsif tx_clken_i = '1' then
+                error_lock := false;
+            end if;
 
             if lock_start_en = '1' then
                 dominant_lock := true;
@@ -122,6 +117,9 @@ begin
 
             if dominant_lock then
                 tx_s    <= '0';
+                tx_en_s <= '1';
+            elsif error_lock then
+                tx_s    <= not tx_i;
                 tx_en_s <= '1';
             elsif ack_lock then
                 tx_s    <= '0';
@@ -145,8 +143,9 @@ begin
         'Z';
 
     --internal PHY: ex from RXI, external PHY: RX from CANH/L
-    rx_s <= rxi when not internal_phy else
-            '1' when can_h = '1' and can_l = '0' else
+    rx_s <= tx_s when loopback_i = '1'            else
+            rxi  when not internal_phy            else
+            '1'  when can_h = '1' and can_l = '0' else
             '0';
 
     --we always sync it.
@@ -174,6 +173,7 @@ begin
 
     --we can only detect when we send a 1 but the bus remains low.
     read_ack_p : process (mclk_i, rst_i)
+        variable read_ack_tmp : std_logic;
     begin
         if rst_i = '1' then
             read_ack_o <= '0';
@@ -210,7 +210,10 @@ begin
                 stuff_sr    := stuff_sr sll 1;
                 stuff_sr(0) := rx_int_s;
             end if;
-            if channel_ready_o = '1' then
+            if loopback_i = '1' then
+                channel_ready_o   <= '1';
+                stuff_violation_o <= '0';
+            elsif channel_ready_o = '1' then
                 if stuff_sr = "11111110" then
                     channel_ready_o   <= '0';
                     stuff_violation_o <= '0';

@@ -1,0 +1,390 @@
+[mRe-compile not needed
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Sanity check for system
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Sanity_check_for_system_f266edc3d6e2b18c94a4d5d7f79b00a969869935/output.txt
+[32;1mpass[0m[m (P=1 S=0 F=0 T=24) can_aximm.can_aximm_top_tb.run_time.Sanity check for system (1.1 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Simple Run
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Simple_Run_2966f7918c4b246c4fabce26b1de127b64b26da1/output.txt
+[32;1mpass[0m[m (P=2 S=0 F=0 T=24) can_aximm.can_aximm_top_tb.run_time.Simple Run (16.0 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Test Read Golden Reg and Idle Status
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Test_Read_Golden_Reg_and_Idle_Status_e5c2b4b4bc501ddedd8c6a2bb796d75ad97e1229/output.txt
+[32;1mpass[0m[m (P=3 S=0 F=0 T=24) can_aximm.can_aximm_top_tb.run_time.Test Read Golden Reg and Idle Status (0.3 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Test Read and Write Registers
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Test_Read_and_Write_Registers_4c6c40ea121a690e8dab5bcb58bd4a9f5a4763b0/output.txt
+[32;1mpass[0m[m (P=4 S=0 F=0 T=24) can_aximm.can_aximm_top_tb.run_time.Test Read and Write Registers (0.8 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Test Force Dominant
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Test_Force_Dominant_de168a55a4bbc644048d1e0ff88d5f15d9a72ffc/output.txt
+[32;1mpass[0m[m (P=5 S=0 F=0 T=24) can_aximm.can_aximm_top_tb.run_time.Test Force Dominant (0.4 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Test Channel Ready
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Test_Channel_Ready_e323c55bcc9fb13fa23b29e58d200b4e9432e7a8/output.txt
+[32;1mpass[0m[m (P=6 S=0 F=0 T=24) can_aximm.can_aximm_top_tb.run_time.Test Channel Ready (45.8 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Send 0 bytes, short header, all zeroes
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_0_bytes,_short_header,_all_zeroes_22f56c9ef928850580951e82c81f3a05ff84068e/output.txt
+[32;1mpass[0m[m (P=7 S=0 F=0 T=24) can_aximm.can_aximm_top_tb.run_time.Send 0 bytes, short header, all zeroes (56.8 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Send 0 bytes, short header, all ones
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_0_bytes,_short_header,_all_ones_4e4ee5d0d6b61f839e59f34748b63646d777ffe5/output.txt
+[32;1mpass[0m[m (P=8 S=0 F=0 T=24) can_aximm.can_aximm_top_tb.run_time.Send 0 bytes, short header, all ones (54.2 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Send 0 bytes, short header, Promiscuous mode
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_0_bytes,_short_header,_Promiscuous_mode_c5eaa9985cc73125d2cefc3aa858720c0fc2ba13/output.txt
+[32;1mpass[0m[m (P=9 S=0 F=0 T=24) can_aximm.can_aximm_top_tb.run_time.Send 0 bytes, short header, Promiscuous mode (53.4 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Send 1 byte, short header, all zeroes
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_1_byte,_short_header,_all_zeroes_7cdb9399dfd0302ebcc0f079269d46be76beadeb/output.txt
+[32;1mpass[0m[m (P=10 S=0 F=0 T=24) can_aximm.can_aximm_top_tb.run_time.Send 1 byte, short header, all zeroes (62.2 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Send 1 byte, short header, all ones
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_1_byte,_short_header,_all_ones_792f5a59e72b28d83d4f44b7798a23b132b70bbd/output.txt
+[32;1mpass[0m[m (P=11 S=0 F=0 T=24) can_aximm.can_aximm_top_tb.run_time.Send 1 byte, short header, all ones (61.2 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Send 8 bytes, short header, all zeroes
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_8_bytes,_short_header,_all_zeroes_8ccd2c595b40eb21cbf154131a33559e18a0485b/output.txt
+[32;1mpass[0m[m (P=12 S=0 F=0 T=24) can_aximm.can_aximm_top_tb.run_time.Send 8 bytes, short header, all zeroes (113.6 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Send 8 bytes, short header, all ones
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_8_bytes,_short_header,_all_ones_3f632180bf25d18d6bd2f7693fcc0154879ffc87/output.txt
+[32;1mpass[0m[m (P=13 S=0 F=0 T=24) can_aximm.can_aximm_top_tb.run_time.Send 8 bytes, short header, all ones (111.2 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Send 0 bytes, long header, all zeroes
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_0_bytes,_long_header,_all_zeroes_9b0f3df40ba216d936d5cd2bf0a99d0e1039a1a9/output.txt
+# End time: 22:51:35 on May 25,2021, Elapsed time: 0:01:51
+# Errors: 0, Warnings: 1
+# vsim -modelsimini /home/rftafas/Projects/stdcores/can_aximms/vunit_out/modelsim/modelsim.ini -wlf /home/rftafas/Projects/stdcores/can_aximms/vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_0_bytes,_long_header,_all_zeroes_9b0f3df40ba216d936d5cd2bf0a99d0e1039a1a9/modelsim/vsim.wlf -quiet -t ps -onfinish stop can_aximm.can_aximm_top_tb(simulation) -L vunit_lib -L osvvm -L expert -L stdblocks -L can_aximm -g/can_aximm_top_tb/run_time=100 -g/can_aximm_top_tb/runner_cfg="active python runner : true,enabled_test_cases : Send 0 bytes,,,, long header,,,, all zeroes,output path : /home/rftafas/Projects/stdcores/can_aximms/vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_0_bytes,,_long_header,,_all_zeroes_9b0f3df40ba216d936d5cd2bf0a99d0e1039a1a9/,tb path : /home/rftafas/Projects/stdcores/can_aximms/,use_color : true" 
+# Start time: 22:51:35 on May 25,2021
+# ** Warning: Design size of 51213 statements exceeds ModelSim-Intel FPGA Starter Edition recommended capacity.
+# Expect performance to be adversely affected.
+#     420985000 ps - check                        -   ERROR - Equality check failed Test Read: tx_busy_i. - Got 1. Expected 0.
+# ** Failure: Stop simulation on log level error
+#    Time: 420985 ns  Iteration: 1  Process: /can_aximm_top_tb/main File: /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd
+# Break in Subprogram core_failure at /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd line 84
+# Stopped at /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd line 84
+# 
+# Test Run Failed!
+# 
+# Stack trace result from 'tb' command
+#  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd 84 return [address 0xf6a66ada] Subprogram core_failure
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 748 return [address 0xf6a7663e] Subprogram decrease_stop_count
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 743 return [address 0xf6a76726] Subprogram decrease_stop_count
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 920 return [address 0xf6a70f29] Subprogram log
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/checker_pkg-body.vhd 119 return [address 0xf6a83925] Subprogram failing_check
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/check.vhd 3713 return [address 0xf6a92240] Subprogram check_equal
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/check.vhd 3665 return [address 0xf6a91fe4] Subprogram check_equal
+# called from  /home/rftafas/Projects/stdcores/can_aximms/can_aximm_top_tb.vhd 808 return [address 0xf718887e] Process main
+# 
+# 
+# Surrounding code from 'see' command
+#   79 :   begin
+#   80 :     if core_failure_is_mocked then
+#   81 :       set(core_failure_mock_state, core_failure_called_idx, 1);
+#   82 :       reallocate(to_string_ptr(get(core_failure_mock_state, core_failure_message_idx)), msg);
+#   83 :     else
+# ->84 :       report msg severity failure;
+#   85 :     end if;
+#   86 :   end;
+#   87 : 
+#   88 :   procedure check_core_failure(msg : string := "") is
+# 
+[31;1mfail[0m[m (P=13 S=0 F=1 T=24) can_aximm.can_aximm_top_tb.run_time.Send 0 bytes, long header, all zeroes (69.0 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Send 0 bytes, long header, all ones
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_0_bytes,_long_header,_all_ones_fdca7befd062f879da3bce644c1fc9d7cce2be52/output.txt
+# End time: 22:52:44 on May 25,2021, Elapsed time: 0:01:09
+# Errors: 1, Warnings: 1
+# vsim -modelsimini /home/rftafas/Projects/stdcores/can_aximms/vunit_out/modelsim/modelsim.ini -wlf /home/rftafas/Projects/stdcores/can_aximms/vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_0_bytes,_long_header,_all_ones_fdca7befd062f879da3bce644c1fc9d7cce2be52/modelsim/vsim.wlf -quiet -t ps -onfinish stop can_aximm.can_aximm_top_tb(simulation) -L vunit_lib -L osvvm -L expert -L stdblocks -L can_aximm -g/can_aximm_top_tb/run_time=100 -g/can_aximm_top_tb/runner_cfg="active python runner : true,enabled_test_cases : Send 0 bytes,,,, long header,,,, all ones,output path : /home/rftafas/Projects/stdcores/can_aximms/vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_0_bytes,,_long_header,,_all_ones_fdca7befd062f879da3bce644c1fc9d7cce2be52/,tb path : /home/rftafas/Projects/stdcores/can_aximms/,use_color : true" 
+# Start time: 22:52:44 on May 25,2021
+# ** Warning: Design size of 51213 statements exceeds ModelSim-Intel FPGA Starter Edition recommended capacity.
+# Expect performance to be adversely affected.
+#     411125000 ps - check                        -   ERROR - Equality check failed Test Read: tx_busy_i. - Got 1. Expected 0.
+# ** Failure: Stop simulation on log level error
+#    Time: 411125 ns  Iteration: 1  Process: /can_aximm_top_tb/main File: /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd
+# Break in Subprogram core_failure at /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd line 84
+# Stopped at /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd line 84
+# 
+# Test Run Failed!
+# 
+# Stack trace result from 'tb' command
+#  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd 84 return [address 0xf6a66ada] Subprogram core_failure
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 748 return [address 0xf6a7663e] Subprogram decrease_stop_count
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 743 return [address 0xf6a76726] Subprogram decrease_stop_count
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 920 return [address 0xf6a70f29] Subprogram log
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/checker_pkg-body.vhd 119 return [address 0xf6a83925] Subprogram failing_check
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/check.vhd 3713 return [address 0xf6a92240] Subprogram check_equal
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/check.vhd 3665 return [address 0xf6a91fe4] Subprogram check_equal
+# called from  /home/rftafas/Projects/stdcores/can_aximms/can_aximm_top_tb.vhd 872 return [address 0xf718982e] Process main
+# 
+# 
+# Surrounding code from 'see' command
+#   79 :   begin
+#   80 :     if core_failure_is_mocked then
+#   81 :       set(core_failure_mock_state, core_failure_called_idx, 1);
+#   82 :       reallocate(to_string_ptr(get(core_failure_mock_state, core_failure_message_idx)), msg);
+#   83 :     else
+# ->84 :       report msg severity failure;
+#   85 :     end if;
+#   86 :   end;
+#   87 : 
+#   88 :   procedure check_core_failure(msg : string := "") is
+# 
+[31;1mfail[0m[m (P=13 S=0 F=2 T=24) can_aximm.can_aximm_top_tb.run_time.Send 0 bytes, long header, all ones (78.2 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Send 1 byte, long header, all zeroes
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_1_byte,_long_header,_all_zeroes_2f70e5f2f17d45020d48fdabc34e986b684b5bf2/output.txt
+# End time: 22:54:02 on May 25,2021, Elapsed time: 0:01:18
+# Errors: 1, Warnings: 1
+# vsim -modelsimini /home/rftafas/Projects/stdcores/can_aximms/vunit_out/modelsim/modelsim.ini -wlf /home/rftafas/Projects/stdcores/can_aximms/vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_1_byte,_long_header,_all_zeroes_2f70e5f2f17d45020d48fdabc34e986b684b5bf2/modelsim/vsim.wlf -quiet -t ps -onfinish stop can_aximm.can_aximm_top_tb(simulation) -L vunit_lib -L osvvm -L expert -L stdblocks -L can_aximm -g/can_aximm_top_tb/run_time=100 -g/can_aximm_top_tb/runner_cfg="active python runner : true,enabled_test_cases : Send 1 byte,,,, long header,,,, all zeroes,output path : /home/rftafas/Projects/stdcores/can_aximms/vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_1_byte,,_long_header,,_all_zeroes_2f70e5f2f17d45020d48fdabc34e986b684b5bf2/,tb path : /home/rftafas/Projects/stdcores/can_aximms/,use_color : true" 
+# Start time: 22:54:02 on May 25,2021
+# ** Warning: Design size of 51213 statements exceeds ModelSim-Intel FPGA Starter Edition recommended capacity.
+# Expect performance to be adversely affected.
+#     399805000 ps - check                        -   ERROR - Equality check failed Reading RX DATA IRQ during error. - Got 0. Expected 1.
+# ** Failure: Stop simulation on log level error
+#    Time: 399805 ns  Iteration: 1  Process: /can_aximm_top_tb/main File: /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd
+# Break in Subprogram core_failure at /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd line 84
+# Stopped at /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd line 84
+# 
+# Test Run Failed!
+# 
+# Stack trace result from 'tb' command
+#  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd 84 return [address 0xf6a66ada] Subprogram core_failure
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 748 return [address 0xf6a7663e] Subprogram decrease_stop_count
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 743 return [address 0xf6a76726] Subprogram decrease_stop_count
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 920 return [address 0xf6a70f29] Subprogram log
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/checker_pkg-body.vhd 119 return [address 0xf6a83925] Subprogram failing_check
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/check.vhd 3713 return [address 0xf6a92240] Subprogram check_equal
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/check.vhd 3665 return [address 0xf6a91fe4] Subprogram check_equal
+# called from  /home/rftafas/Projects/stdcores/can_aximms/can_aximm_top_tb.vhd 918 return [address 0xf718a254] Process main
+# 
+# 
+# Surrounding code from 'see' command
+#   79 :   begin
+#   80 :     if core_failure_is_mocked then
+#   81 :       set(core_failure_mock_state, core_failure_called_idx, 1);
+#   82 :       reallocate(to_string_ptr(get(core_failure_mock_state, core_failure_message_idx)), msg);
+#   83 :     else
+# ->84 :       report msg severity failure;
+#   85 :     end if;
+#   86 :   end;
+#   87 : 
+#   88 :   procedure check_core_failure(msg : string := "") is
+# 
+[31;1mfail[0m[m (P=13 S=0 F=3 T=24) can_aximm.can_aximm_top_tb.run_time.Send 1 byte, long header, all zeroes (61.4 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Send 1 byte, long header, all ones
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_1_byte,_long_header,_all_ones_28c54382e645882984bf099105bb1de22dc033f2/output.txt
+# End time: 22:55:04 on May 25,2021, Elapsed time: 0:01:02
+# Errors: 1, Warnings: 1
+# vsim -modelsimini /home/rftafas/Projects/stdcores/can_aximms/vunit_out/modelsim/modelsim.ini -wlf /home/rftafas/Projects/stdcores/can_aximms/vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_1_byte,_long_header,_all_ones_28c54382e645882984bf099105bb1de22dc033f2/modelsim/vsim.wlf -quiet -t ps -onfinish stop can_aximm.can_aximm_top_tb(simulation) -L vunit_lib -L osvvm -L expert -L stdblocks -L can_aximm -g/can_aximm_top_tb/run_time=100 -g/can_aximm_top_tb/runner_cfg="active python runner : true,enabled_test_cases : Send 1 byte,,,, long header,,,, all ones,output path : /home/rftafas/Projects/stdcores/can_aximms/vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_1_byte,,_long_header,,_all_ones_28c54382e645882984bf099105bb1de22dc033f2/,tb path : /home/rftafas/Projects/stdcores/can_aximms/,use_color : true" 
+# Start time: 22:55:04 on May 25,2021
+# ** Warning: Design size of 51213 statements exceeds ModelSim-Intel FPGA Starter Edition recommended capacity.
+# Expect performance to be adversely affected.
+#     404875000 ps - check                        -   ERROR - Equality check failed Reading RX DATA IRQ. - Got 0. Expected 1.
+# ** Failure: Stop simulation on log level error
+#    Time: 404875 ns  Iteration: 1  Process: /can_aximm_top_tb/main File: /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd
+# Break in Subprogram core_failure at /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd line 84
+# Stopped at /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd line 84
+# 
+# Test Run Failed!
+# 
+# Stack trace result from 'tb' command
+#  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd 84 return [address 0xf6a66ada] Subprogram core_failure
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 748 return [address 0xf6a7663e] Subprogram decrease_stop_count
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 743 return [address 0xf6a76726] Subprogram decrease_stop_count
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 920 return [address 0xf6a70f29] Subprogram log
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/checker_pkg-body.vhd 119 return [address 0xf6a83925] Subprogram failing_check
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/check.vhd 3713 return [address 0xf6a92240] Subprogram check_equal
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/check.vhd 3665 return [address 0xf6a91fe4] Subprogram check_equal
+# called from  /home/rftafas/Projects/stdcores/can_aximms/can_aximm_top_tb.vhd 992 return [address 0xf718b3e4] Process main
+# 
+# 
+# Surrounding code from 'see' command
+#   79 :   begin
+#   80 :     if core_failure_is_mocked then
+#   81 :       set(core_failure_mock_state, core_failure_called_idx, 1);
+#   82 :       reallocate(to_string_ptr(get(core_failure_mock_state, core_failure_message_idx)), msg);
+#   83 :     else
+# ->84 :       report msg severity failure;
+#   85 :     end if;
+#   86 :   end;
+#   87 : 
+#   88 :   procedure check_core_failure(msg : string := "") is
+# 
+[31;1mfail[0m[m (P=13 S=0 F=4 T=24) can_aximm.can_aximm_top_tb.run_time.Send 1 byte, long header, all ones (80.4 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Send 8 bytes, long header, all zeroes
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_8_bytes,_long_header,_all_zeroes_08dae14715726a0c84d8a2903df7af2a6432b76a/output.txt
+# End time: 22:56:24 on May 25,2021, Elapsed time: 0:01:20
+# Errors: 1, Warnings: 1
+# vsim -modelsimini /home/rftafas/Projects/stdcores/can_aximms/vunit_out/modelsim/modelsim.ini -wlf /home/rftafas/Projects/stdcores/can_aximms/vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_8_bytes,_long_header,_all_zeroes_08dae14715726a0c84d8a2903df7af2a6432b76a/modelsim/vsim.wlf -quiet -t ps -onfinish stop can_aximm.can_aximm_top_tb(simulation) -L vunit_lib -L osvvm -L expert -L stdblocks -L can_aximm -g/can_aximm_top_tb/run_time=100 -g/can_aximm_top_tb/runner_cfg="active python runner : true,enabled_test_cases : Send 8 bytes,,,, long header,,,, all zeroes,output path : /home/rftafas/Projects/stdcores/can_aximms/vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_8_bytes,,_long_header,,_all_zeroes_08dae14715726a0c84d8a2903df7af2a6432b76a/,tb path : /home/rftafas/Projects/stdcores/can_aximms/,use_color : true" 
+# Start time: 22:56:24 on May 25,2021
+# ** Warning: Design size of 51213 statements exceeds ModelSim-Intel FPGA Starter Edition recommended capacity.
+# Expect performance to be adversely affected.
+#     796895000 ps - check                        -   ERROR - Equality check failed Test Read: tx_busy_i. - Got 1. Expected 0.
+# ** Failure: Stop simulation on log level error
+#    Time: 796895 ns  Iteration: 1  Process: /can_aximm_top_tb/main File: /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd
+# Break in Subprogram core_failure at /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd line 84
+# Stopped at /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd line 84
+# 
+# Test Run Failed!
+# 
+# Stack trace result from 'tb' command
+#  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd 84 return [address 0xf6a66ada] Subprogram core_failure
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 748 return [address 0xf6a7663e] Subprogram decrease_stop_count
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 743 return [address 0xf6a76726] Subprogram decrease_stop_count
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 920 return [address 0xf6a70f29] Subprogram log
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/checker_pkg-body.vhd 119 return [address 0xf6a83925] Subprogram failing_check
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/check.vhd 3713 return [address 0xf6a92240] Subprogram check_equal
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/check.vhd 3665 return [address 0xf6a91fe4] Subprogram check_equal
+# called from  /home/rftafas/Projects/stdcores/can_aximms/can_aximm_top_tb.vhd 1066 return [address 0xf718c74e] Process main
+# 
+# 
+# Surrounding code from 'see' command
+#   79 :   begin
+#   80 :     if core_failure_is_mocked then
+#   81 :       set(core_failure_mock_state, core_failure_called_idx, 1);
+#   82 :       reallocate(to_string_ptr(get(core_failure_mock_state, core_failure_message_idx)), msg);
+#   83 :     else
+# ->84 :       report msg severity failure;
+#   85 :     end if;
+#   86 :   end;
+#   87 : 
+#   88 :   procedure check_core_failure(msg : string := "") is
+# 
+[31;1mfail[0m[m (P=13 S=0 F=5 T=24) can_aximm.can_aximm_top_tb.run_time.Send 8 bytes, long header, all zeroes (132.4 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Send 8 bytes, long header, all ones
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_8_bytes,_long_header,_all_ones_ba5e5c34637975c6f519dc4bd62bb8dae57a469f/output.txt
+# End time: 22:58:37 on May 25,2021, Elapsed time: 0:02:13
+# Errors: 1, Warnings: 1
+# vsim -modelsimini /home/rftafas/Projects/stdcores/can_aximms/vunit_out/modelsim/modelsim.ini -wlf /home/rftafas/Projects/stdcores/can_aximms/vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_8_bytes,_long_header,_all_ones_ba5e5c34637975c6f519dc4bd62bb8dae57a469f/modelsim/vsim.wlf -quiet -t ps -onfinish stop can_aximm.can_aximm_top_tb(simulation) -L vunit_lib -L osvvm -L expert -L stdblocks -L can_aximm -g/can_aximm_top_tb/run_time=100 -g/can_aximm_top_tb/runner_cfg="active python runner : true,enabled_test_cases : Send 8 bytes,,,, long header,,,, all ones,output path : /home/rftafas/Projects/stdcores/can_aximms/vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_8_bytes,,_long_header,,_all_ones_ba5e5c34637975c6f519dc4bd62bb8dae57a469f/,tb path : /home/rftafas/Projects/stdcores/can_aximms/,use_color : true" 
+# Start time: 22:58:37 on May 25,2021
+# ** Warning: Design size of 51213 statements exceeds ModelSim-Intel FPGA Starter Edition recommended capacity.
+# Expect performance to be adversely affected.
+#     791965000 ps - check                        -   ERROR - Equality check failed Test Read: tx_busy_i. - Got 1. Expected 0.
+# ** Failure: Stop simulation on log level error
+#    Time: 791965 ns  Iteration: 1  Process: /can_aximm_top_tb/main File: /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd
+# Break in Subprogram core_failure at /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd line 84
+# Stopped at /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd line 84
+# 
+# Test Run Failed!
+# 
+# Stack trace result from 'tb' command
+#  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd 84 return [address 0xf6a66ada] Subprogram core_failure
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 748 return [address 0xf6a7663e] Subprogram decrease_stop_count
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 743 return [address 0xf6a76726] Subprogram decrease_stop_count
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 920 return [address 0xf6a70f29] Subprogram log
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/checker_pkg-body.vhd 119 return [address 0xf6a83925] Subprogram failing_check
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/check.vhd 3713 return [address 0xf6a92240] Subprogram check_equal
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/check/src/check.vhd 3665 return [address 0xf6a91fe4] Subprogram check_equal
+# called from  /home/rftafas/Projects/stdcores/can_aximms/can_aximm_top_tb.vhd 1142 return [address 0xf718d9be] Process main
+# 
+# 
+# Surrounding code from 'see' command
+#   79 :   begin
+#   80 :     if core_failure_is_mocked then
+#   81 :       set(core_failure_mock_state, core_failure_called_idx, 1);
+#   82 :       reallocate(to_string_ptr(get(core_failure_mock_state, core_failure_message_idx)), msg);
+#   83 :     else
+# ->84 :       report msg severity failure;
+#   85 :     end if;
+#   86 :   end;
+#   87 : 
+#   88 :   procedure check_core_failure(msg : string := "") is
+# 
+[31;1mfail[0m[m (P=13 S=0 F=6 T=24) can_aximm.can_aximm_top_tb.run_time.Send 8 bytes, long header, all ones (122.6 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Send 8 bytes, short header, Force DLC to ones
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Send_8_bytes,_short_header,_Force_DLC_to_ones_9b209f7f00f3eb48a990c492eced26cf9652a902/output.txt
+[32;1mpass[0m[m (P=14 S=0 F=6 T=24) can_aximm.can_aximm_top_tb.run_time.Send 8 bytes, short header, Force DLC to ones (111.4 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Inject Error, test retry
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Inject_Error,_test_retry_4f5ba8901fa2e6f479429a6bb2f193fe549bfbc3/output.txt
+# End time: 23:02:31 on May 25,2021, Elapsed time: 0:01:52
+# Errors: 0, Warnings: 1
+# vsim -modelsimini /home/rftafas/Projects/stdcores/can_aximms/vunit_out/modelsim/modelsim.ini -wlf /home/rftafas/Projects/stdcores/can_aximms/vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Inject_Error,_test_retry_4f5ba8901fa2e6f479429a6bb2f193fe549bfbc3/modelsim/vsim.wlf -quiet -t ps -onfinish stop can_aximm.can_aximm_top_tb(simulation) -L vunit_lib -L osvvm -L expert -L stdblocks -L can_aximm -g/can_aximm_top_tb/run_time=100 -g/can_aximm_top_tb/runner_cfg="active python runner : true,enabled_test_cases : Inject Error,,,, test retry,output path : /home/rftafas/Projects/stdcores/can_aximms/vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Inject_Error,,_test_retry_4f5ba8901fa2e6f479429a6bb2f193fe549bfbc3/,tb path : /home/rftafas/Projects/stdcores/can_aximms/,use_color : true" 
+# Start time: 23:02:31 on May 25,2021
+# ** Warning: Design size of 51213 statements exceeds ModelSim-Intel FPGA Starter Edition recommended capacity.
+# Expect performance to be adversely affected.
+#    1000070000 ps - runner                       -   ERROR - Test runner timeout after 1000035000 ps.
+# ** Failure: Stop simulation on log level error
+#    Time: 1000070 ns  Iteration: 2  Process: /can_aximm_top_tb/line__1427 File: /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd
+# Break in Subprogram core_failure at /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd line 84
+# Stopped at /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd line 84
+# 
+# Test Run Failed!
+# 
+# Stack trace result from 'tb' command
+#  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/core/src/core_pkg.vhd 84 return [address 0xf6a66ada] Subprogram core_failure
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 748 return [address 0xf6a7663e] Subprogram decrease_stop_count
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 743 return [address 0xf6a76726] Subprogram decrease_stop_count
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 920 return [address 0xf6a70f29] Subprogram log
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/logging/src/logger_pkg-body.vhd 973 return [address 0xf6a70549] Subprogram error
+# called from  /home/rftafas/.local/lib/python3.8/site-packages/vunit/vhdl/run/src/run.vhd 309 return [address 0xf6dbcb03] Subprogram test_runner_watchdog
+# called from  /home/rftafas/Projects/stdcores/can_aximms/can_aximm_top_tb.vhd 1427 return [address 0xf7191ea4] Architecture simulation
+# 
+# 
+# Surrounding code from 'see' command
+#   79 :   begin
+#   80 :     if core_failure_is_mocked then
+#   81 :       set(core_failure_mock_state, core_failure_called_idx, 1);
+#   82 :       reallocate(to_string_ptr(get(core_failure_mock_state, core_failure_message_idx)), msg);
+#   83 :     else
+# ->84 :       report msg severity failure;
+#   85 :     end if;
+#   86 :   end;
+#   87 : 
+#   88 :   procedure check_core_failure(msg : string := "") is
+# 
+[31;1mfail[0m[m (P=14 S=0 F=7 T=24) can_aximm.can_aximm_top_tb.run_time.Inject Error, test retry (154.2 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Force Error, test retry
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Force_Error,_test_retry_f672ca9d1eaaec7f73cf33ab2b7ad7b3d5976cb2/output.txt
+[32;1mpass[0m[m (P=15 S=0 F=7 T=24) can_aximm.can_aximm_top_tb.run_time.Force Error, test retry (111.2 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Loop Test, send 0 bytes, short header, all ones
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Loop_Test,_send_0_bytes,_short_header,_all_ones_509bd496fe90fc96f2b3931bfa197aab84b9902c/output.txt
+[32;1mpass[0m[m (P=16 S=0 F=7 T=24) can_aximm.can_aximm_top_tb.run_time.Loop Test, send 0 bytes, short header, all ones (0.4 seconds)
+[0m
+Starting can_aximm.can_aximm_top_tb.run_time.Test TX/RX DATA IRQ MASK
+Output file: vunit_out/test_output/can_aximm.can_aximm_top_tb.run_time.Test_TX_RX_DATA_IRQ_MASK_d733a6c9b0db7f6a6bdf6e11831bd6f4c9140f65/output.txt
+[32;1mpass[0m[m (P=17 S=0 F=7 T=24) can_aximm.can_aximm_top_tb.run_time.Test TX/RX DATA IRQ MASK (0.4 seconds)
+[0m
+[m==== Summary ===============================================================================================
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Sanity check for system                         (1.1 seconds)
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Simple Run                                      (16.0 seconds)
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Test Read Golden Reg and Idle Status            (0.3 seconds)
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Test Read and Write Registers                   (0.8 seconds)
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Test Force Dominant                             (0.4 seconds)
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Test Channel Ready                              (45.8 seconds)
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Send 0 bytes, short header, all zeroes          (56.8 seconds)
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Send 0 bytes, short header, all ones            (54.2 seconds)
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Send 0 bytes, short header, Promiscuous mode    (53.4 seconds)
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Send 1 byte, short header, all zeroes           (62.2 seconds)
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Send 1 byte, short header, all ones             (61.2 seconds)
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Send 8 bytes, short header, all zeroes          (113.6 seconds)
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Send 8 bytes, short header, all ones            (111.2 seconds)
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Send 8 bytes, short header, Force DLC to ones   (111.4 seconds)
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Force Error, test retry                         (111.2 seconds)
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Loop Test, send 0 bytes, short header, all ones (0.4 seconds)
+[0m[32;1mpass[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Test TX/RX DATA IRQ MASK                        (0.4 seconds)
+[0m[31;1mfail[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Send 0 bytes, long header, all zeroes           (69.0 seconds)
+[0m[31;1mfail[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Send 0 bytes, long header, all ones             (78.2 seconds)
+[0m[31;1mfail[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Send 1 byte, long header, all zeroes            (61.4 seconds)
+[0m[31;1mfail[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Send 1 byte, long header, all ones              (80.4 seconds)
+[0m[31;1mfail[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Send 8 bytes, long header, all zeroes           (132.4 seconds)
+[0m[31;1mfail[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Send 8 bytes, long header, all ones             (122.6 seconds)
+[0m[31;1mfail[0m[m [0m[mcan_aximm.can_aximm_top_tb.run_time.Inject Error, test retry                        (154.2 seconds)
+[0m[m============================================================================================================
+[0m[32;1mpass[0m[m 17 of 24
+[0m[31;1mfail[0m[m 7 of 24
+[0m[m============================================================================================================
+[0m[mTotal time was 1498.6 seconds
+[0m[mElapsed time was 1498.6 seconds
+[0m[m============================================================================================================
+[0m[31;1mSome failed![0m[m
+[0m

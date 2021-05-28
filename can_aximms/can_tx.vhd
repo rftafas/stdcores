@@ -132,7 +132,7 @@ begin
                                 else
                                     can_mq <= load_data_st;
                                 end if;
-                            elsif usr_eff_i = '1' and frame_cnt = 39 then
+                            elsif usr_eff_i = '1' and frame_cnt = 38 then
                                 if usr_dlc_i = "0000" then
                                     can_mq <= load_crc_st;
                                 else
@@ -323,7 +323,6 @@ begin
                         crc15(crc_sr, frame_sr(0));
                         frame_sr          <= (others => '1');
                         frame_sr(0 to 14) <= crc_sr;
-                        frame_sr(0 to 14) <= (others=>'-');
 
                     when crc_st =>
                         ack_s           <= '0';

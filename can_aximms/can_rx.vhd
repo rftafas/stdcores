@@ -203,31 +203,33 @@ begin
         variable rx_id_v : std_logic_vector(28 downto 0);
     begin
         if rst_i = '1' then
-            frame_sr     <= (others => '0');
-            usr_eff_o    <= '0';
-            usr_rtr_o    <= '0';
-            rx_id_v      := (others => '0');
-            usr_rsvd_o   <= (others => '0');
-            usr_dlc_o    <= (others => '0');
-            usr_id_o     <= (others => '0');
-            crc_s        <= (others => '0');
-            address_ok_s <= '0';
-            data_o       <= (others => '0');
+            frame_sr       <= (others => '0');
+            usr_eff_o      <= '0';
+            usr_rtr_o      <= '0';
+            rx_id_v        := (others => '0');
+            usr_rsvd_o     <= (others => '0');
+            usr_dlc_o      <= (others => '0');
+            usr_id_o       <= (others => '0');
+            crc_s          <= (others => '0');
+            address_ok_s   <= '0';
+            rx_crc_error_o <= '0';
+            data_o         <= (others => '0');
 
         elsif rising_edge(mclk_i) then
             if rx_clken_s = '1' then
                 case can_mq is
                     when idle_st =>
-                        -- usr_eff_o    <= '0';
-                        -- usr_rtr_o    <= '0';
-                        -- rx_id_v      := (others => '0');
-                        -- usr_rsvd_o   <= (others => '0');
-                        -- usr_dlc_o    <= (others => '0');
-                        -- usr_id_o     <= (others => '0');
-                        crc_s        <= (others => '0');
-                        address_ok_s <= '0';
-                        frame_sr     <= frame_sr sll 1;
-                        frame_sr(0)  <= rxdata_i;
+                        rx_crc_error_o <= '0';
+                        --usr_eff_o    <= '0';
+                        --usr_rtr_o    <= '0';
+                        --rx_id_v      := (others => '0');
+                        --usr_rsvd_o   <= (others => '0');
+                        --usr_dlc_o    <= (others => '0');
+                        --usr_id_o     <= (others => '0');
+                        crc_s          <= (others => '0');
+                        address_ok_s   <= '0';
+                        frame_sr       <= frame_sr sll 1;
+                        frame_sr(0)    <= rxdata_i;
 
                     when header_st =>
                         frame_sr    <= frame_sr sll 1;
@@ -289,11 +291,13 @@ begin
                         crc_s       <= frame_sr(13 downto 0) & rxdata_i;
 
                     when crc_delimiter_st =>
-                        crc_s <= frame_sr(14 downto 0);
-                        frame_sr    <= (others=>'0');
-                        frame_sr(0) <= rxdata_i;
+                        rx_crc_error_o <= not crc_ok_s;
+                        crc_s          <= frame_sr(14 downto 0);
+                        frame_sr       <= (others=>'0');
+                        frame_sr(0)    <= rxdata_i;
 
                     when ack_slot_st =>
+                        rx_crc_error_o <= '0';
                         frame_sr    <= (others=>'0');
 
                     when no_ack_slot_st =>
@@ -367,9 +371,7 @@ begin
         end if;
     end process;
 
-    crc_ok_s       <= '1' when crc_s  = crc_sr else '0';
-    rx_crc_error_o <= '1' when crc_s /= crc_sr else '0';
-
+    crc_ok_s <= '1' when crc_s = crc_sr else '0';
 
     stuffing_p : process (mclk_i, rst_i)
         variable stuff_sr : std_logic_vector(4 downto 0);

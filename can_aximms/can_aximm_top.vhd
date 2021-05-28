@@ -159,6 +159,7 @@ begin
       g1_i              => golden_c,
       iso_mode_o        => open,
       fd_enable_o       => open,
+      promiscuous_o     => promiscuous_s,
       sample_rate_o     => baud_rate_s,
       rx_data_irq_i     => rx_data_irq_s,
       rx_error_irq_i    => rx_error_irq_s,
@@ -222,10 +223,8 @@ begin
       dout   => rx_error_irq_s
     );
 
-  rx_data_irq_s  <= rx_data_irq_s  and  rx_data_mask_s;
-  rx_error_irq_s <= rx_error_irq_s and rx_error_mask_s;
-  rx_irq_o       <= rx_data_irq_s  or   rx_error_irq_s;
-  tx_error_s     <= ack_error_s or arb_lost_s or rtry_error_s;
+  rx_irq_o   <= (rx_data_irq_s  and  rx_data_mask_s) or (rx_error_irq_s and rx_error_mask_s);
+  tx_error_s <= ack_error_s or arb_lost_s or rtry_error_s;
 
   tx_data_irq_u : det_down
     port map (
@@ -243,9 +242,7 @@ begin
       dout   => tx_error_irq_s
     );
 
-  tx_data_irq_s  <= tx_data_irq_s  and  tx_data_mask_s;
-  tx_error_irq_s <= tx_error_irq_s and tx_error_mask_s;
-  tx_irq_o       <= tx_data_irq_s  or   tx_error_irq_s;
+  tx_irq_o <= (tx_data_irq_s and tx_data_mask_s) or (tx_error_irq_s and tx_error_mask_s);
 
   ----------------------------------------------------------------------------------
   --CLOCK AND QUANTA
@@ -287,7 +284,7 @@ begin
       busy_o       => tx_busy_s,
       ch_ready_i   => channel_ready_s,
       collision_i  => collision_s,
-      read_ack_i   => rx_serial_data_s,
+      read_ack_i   => read_ack_s,
       txdata_o     => tx_serial_data_s,
       txen_o       => tx_serial_data_en
     );

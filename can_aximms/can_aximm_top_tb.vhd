@@ -26,15 +26,16 @@
 ---------------------------------------------------------------------------------
 
 library IEEE;
-use IEEE.std_logic_1164.all;
-use IEEE.numeric_std.all;
+    use IEEE.std_logic_1164.all;
+    use IEEE.numeric_std.all;
+    use IEEE.math_real.all;
 library expert;
-use expert.std_logic_expert.all;
+    use expert.std_logic_expert.all;
 library std;
-use std.textio.all;
+    use std.textio.all;
 library vunit_lib;
-context vunit_lib.vunit_context;
-context vunit_lib.vc_context;
+    context vunit_lib.vunit_context;
+    context vunit_lib.vc_context;
 
 use work.can_aximm_pkg.all;
 
@@ -52,6 +53,9 @@ architecture simulation of can_aximm_top_tb is
 
     constant axi_handle       : bus_master_t := new_bus(data_length => C_S_AXI_DATA_WIDTH, address_length => C_S_AXI_ADDR_WIDTH);
     constant addr_increment_c : integer      := 4;
+    constant data_rate_c      : natural      := 500;
+    constant data_period_real : real := real(1000/data_rate_c);
+    constant data_period_c    : time := integer(data_period_real) * 1 us;
 
     signal mclk_i        : std_logic := '0';
     signal rst_i         : std_logic;
@@ -82,6 +86,8 @@ architecture simulation of can_aximm_top_tb is
     signal rxi      : std_logic;
     signal can_l    : std_logic;
     signal can_h    : std_logic;
+
+    signal force_line : boolean := false;
 
 begin
 
@@ -289,8 +295,11 @@ begin
 
             elsif run("Send 0 bytes, short header, all zeroes") then
                 --set speed
-                wdata_v := to_std_logic_vector(200, 32);
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
 
                 --data length
                 wdata_v := to_std_logic_vector(0, 32);
@@ -299,8 +308,8 @@ begin
                 wdata_v(1) := '1';
                 write_bus(net, axi_handle, 64, wdata_v, "0001");
 
-                set_timeout(runner, now + 110 us);
-                wait for 100 us;
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -309,8 +318,22 @@ begin
                 read_bus(net, axi_handle, 32, rdata_v);
                 check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
 
-                set_timeout(runner, now + 301 us);
-                wait for 300 us;
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '1',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(8), '0',result("Clearing TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Clearing TX ERROR IRQ."));
+                wait for 1 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -322,18 +345,21 @@ begin
 
                 --read RXID
                 read_bus(net, axi_handle, 48, rdata_v);
-                check_equal(rdata_v, std_logic_vector'(x"00000000"), result("Test Read: rx_busy_i."));
+                check_equal(rdata_v, std_logic_vector'(x"00000000"), result("Test Read: rx_id."));
 
                 --RX DLC
                 read_bus(net, axi_handle, 44, rdata_v);
-                check_equal(rdata_v(3 downto 0), std_logic_vector'("0000"), result("Test Read: rx_busy_i."));
+                check_equal(rdata_v(3 downto 0), std_logic_vector'("0000"), result("Test Read: rx_dlc."));
 
                 check_passed(result("Send 0 bytes, short header, all zeroes: Pass."));
 
             elsif run("Send 0 bytes, short header, all ones") then
                 --set speed
-                wdata_v := to_std_logic_vector(200, 32);
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
 
                 --set id
                 wdata_v := (10 downto 0 => '1', others => '0');
@@ -349,8 +375,8 @@ begin
                 wdata_v(1) := '1';
                 write_bus(net, axi_handle, 64, wdata_v, "0001");
 
-                set_timeout(runner, now + 110 us);
-                wait for 100 us;
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -359,8 +385,23 @@ begin
                 read_bus(net, axi_handle, 32, rdata_v);
                 check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
 
-                set_timeout(runner, now + 301 us);
-                wait for 300 us;
+                --wait for RX completed IRQ.
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '1',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(8), '0',result("Clearing TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Clearing TX ERROR IRQ."));
+                wait for 1 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -382,8 +423,11 @@ begin
 
             elsif run("Send 0 bytes, short header, Promiscuous mode") then
                 --set speed
-                wdata_v := to_std_logic_vector(200, 32);
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
 
                 --set id
                 wdata_v := (others => '1');
@@ -400,8 +444,8 @@ begin
                 wdata_v(1) := '1';
                 write_bus(net, axi_handle, 64, wdata_v, "0001");
 
-                set_timeout(runner, now + 110 us);
-                wait for 100 us;
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -410,8 +454,22 @@ begin
                 read_bus(net, axi_handle, 32, rdata_v);
                 check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
 
-                set_timeout(runner, now + 301 us);
-                wait for 300 us;
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '1',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(8), '0',result("Clearing TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Clearing TX ERROR IRQ."));
+                wait for 1 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -432,8 +490,12 @@ begin
                 check_passed(result("Send 0 bytes, short header, Promiscuous mode: Pass."));
 
             elsif run("Send 1 byte, short header, all zeroes") then
-                wdata_v := to_std_logic_vector(200, 32);
+                --set speed
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
 
                 --set id
                 wdata_v := (others => '0');
@@ -455,8 +517,8 @@ begin
                 wdata_v(1) := '1';
                 write_bus(net, axi_handle, 64, wdata_v, "0001");
 
-                set_timeout(runner, now + 110 us);
-                wait for 100 us;
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -465,8 +527,22 @@ begin
                 read_bus(net, axi_handle, 32, rdata_v);
                 check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
 
-                set_timeout(runner, now + 301 us);
-                wait for 300 us;
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '1',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(8), '0',result("Clearing TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Clearing TX ERROR IRQ."));
+                wait for 1 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -490,8 +566,12 @@ begin
                 check_passed(result("Test Send 0 bytes, short header, all zeroes: Pass."));
 
             elsif run("Send 1 byte, short header, all ones") then
-                wdata_v := to_std_logic_vector(200, 32);
+                --set speed
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
 
                 --set id
                 wdata_v := (10 downto 0 => '1', others => '0');
@@ -513,8 +593,8 @@ begin
                 wdata_v(1) := '1';
                 write_bus(net, axi_handle, 64, wdata_v, "0001");
 
-                set_timeout(runner, now + 110 us);
-                wait for 100 us;
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -523,8 +603,22 @@ begin
                 read_bus(net, axi_handle, 32, rdata_v);
                 check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
 
-                set_timeout(runner, now + 301 us);
-                wait for 300 us;
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '1',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(8), '0',result("Clearing TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Clearing TX ERROR IRQ."));
+                wait for 1 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -548,8 +642,12 @@ begin
                 check_passed(result("Send 1 byte, short header, all ones: Pass."));
 
             elsif run("Send 8 bytes, short header, all zeroes") then
-                wdata_v := to_std_logic_vector(200, 32);
+                --set speed
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
 
                 --set id
                 wdata_v := (others => '0');
@@ -571,8 +669,8 @@ begin
                 wdata_v(1) := '1';
                 write_bus(net, axi_handle, 64, wdata_v, "0001");
 
-                set_timeout(runner, now + 110 us);
-                wait for 100 us;
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -581,8 +679,22 @@ begin
                 read_bus(net, axi_handle, 32, rdata_v);
                 check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
 
-                set_timeout(runner, now +601 us);
-                wait for 600 us;
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '1',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(8), '0',result("Clearing TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Clearing TX ERROR IRQ."));
+                wait for 1 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -608,8 +720,12 @@ begin
                 check_passed(result("Send 8 bytes, short header, all ones: Pass."));
 
             elsif run("Send 8 bytes, short header, all ones") then
-                wdata_v := to_std_logic_vector(200, 32);
+                --set speed
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
 
                 --set id
                 wdata_v := (10 downto 0 => '1', others => '0');
@@ -631,8 +747,8 @@ begin
                 wdata_v(1) := '1';
                 write_bus(net, axi_handle, 64, wdata_v, "0001");
 
-                set_timeout(runner, now + 110 us);
-                wait for 100 us;
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -641,8 +757,22 @@ begin
                 read_bus(net, axi_handle, 32, rdata_v);
                 check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
 
-                set_timeout(runner, now + 601 us);
-                wait for 600 us;
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '1',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(8), '0',result("Clearing TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Clearing TX ERROR IRQ."));
+                wait for 1 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -669,8 +799,11 @@ begin
 
             elsif run("Send 0 bytes, long header, all zeroes") then
                 --set speed
-                wdata_v := to_std_logic_vector(200, 32);
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
 
                 --data length
                 wdata_v := to_std_logic_vector(0, 32);
@@ -680,8 +813,8 @@ begin
                 wdata_v := (1 => '1', 24 => '1', others =>'0');
                 write_bus(net, axi_handle, 64, wdata_v, "1001");
 
-                set_timeout(runner, now + 110 us);
-                wait for 100 us;
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -690,8 +823,22 @@ begin
                 read_bus(net, axi_handle, 32, rdata_v);
                 check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
 
-                set_timeout(runner, now + 401 us);
-                wait for 400 us;
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '1',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(8), '0',result("Clearing TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Clearing TX ERROR IRQ."));
+                wait for 1 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -713,10 +860,12 @@ begin
                 check_passed(result("Send 0 bytes, long header, all zeroes: Pass."));
 
             elsif run("Send 0 bytes, long header, all ones") then
-
                 --set speed
-                wdata_v := to_std_logic_vector(200, 32);
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
 
                 --set id
                 wdata_v := (others => '1');
@@ -732,8 +881,8 @@ begin
                 wdata_v := (1 => '1', 24 => '1', others =>'0');
                 write_bus(net, axi_handle, 64, wdata_v, "1001");
 
-                set_timeout(runner, now + 110 us);
-                wait for 100 us;
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -742,8 +891,22 @@ begin
                 read_bus(net, axi_handle, 32, rdata_v);
                 check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
 
-                set_timeout(runner, now + 401 us);
-                wait for 400 us;
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '1',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(8), '0',result("Clearing TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Clearing TX ERROR IRQ."));
+                wait for 1 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -766,8 +929,11 @@ begin
 
             elsif run("Send 1 byte, long header, all zeroes") then
                 --set speed
-                wdata_v := to_std_logic_vector(200, 32);
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
 
                 --data length
                 wdata_v := to_std_logic_vector(1, 32);
@@ -777,8 +943,8 @@ begin
                 wdata_v := (1 => '1', 24 => '1', others =>'0');
                 write_bus(net, axi_handle, 64, wdata_v, "1001");
 
-                set_timeout(runner, now + 110 us);
-                wait for 100 us;
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -787,8 +953,22 @@ begin
                 read_bus(net, axi_handle, 32, rdata_v);
                 check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
 
-                set_timeout(runner, now + 401 us);
-                wait for 400 us;
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '1',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(8), '0',result("Clearing TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Clearing TX ERROR IRQ."));
+                wait for 1 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -815,8 +995,11 @@ begin
 
             elsif run("Send 1 byte, long header, all ones") then
                 --set speed
-                wdata_v := to_std_logic_vector(200, 32);
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
 
                 --set id
                 wdata_v := (28 downto 0 => '1', others => '0');
@@ -838,8 +1021,8 @@ begin
                 wdata_v := (1 => '1', 24 => '1', others =>'0');
                 write_bus(net, axi_handle, 64, wdata_v, "1001");
 
-                set_timeout(runner, now + 110 us);
-                wait for 100 us;
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -848,8 +1031,22 @@ begin
                 read_bus(net, axi_handle, 32, rdata_v);
                 check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
 
-                set_timeout(runner, now + 401 us);
-                wait for 400 us;
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '1',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(8), '0',result("Clearing TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Clearing TX ERROR IRQ."));
+                wait for 1 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -876,8 +1073,11 @@ begin
 
             elsif run("Send 8 bytes, long header, all zeroes") then
                 --set speed
-                wdata_v := to_std_logic_vector(200, 32);
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
 
                 --data length
                 wdata_v := to_std_logic_vector(8, 32);
@@ -887,8 +1087,8 @@ begin
                 wdata_v := (1 => '1', 24 => '1', others =>'0');
                 write_bus(net, axi_handle, 64, wdata_v, "1001");
 
-                set_timeout(runner, now + 110 us);
-                wait for 100 us;
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -897,8 +1097,22 @@ begin
                 read_bus(net, axi_handle, 32, rdata_v);
                 check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
 
-                set_timeout(runner, now + 401 us);
-                wait for 400 us;
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '1',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(8), '0',result("Clearing TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Clearing TX ERROR IRQ."));
+                wait for 1 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -927,8 +1141,11 @@ begin
 
             elsif run("Send 8 bytes, long header, all ones") then
                 --set speed
-                wdata_v := to_std_logic_vector(200, 32);
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
 
                 --set id
                 wdata_v := (28 downto 0 => '1', others => '0');
@@ -950,8 +1167,8 @@ begin
                 wdata_v := (1 => '1', 24 => '1', others =>'0');
                 write_bus(net, axi_handle, 64, wdata_v, "1001");
 
-                set_timeout(runner, now + 110 us);
-                wait for 100 us;
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -960,8 +1177,22 @@ begin
                 read_bus(net, axi_handle, 32, rdata_v);
                 check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
 
-                set_timeout(runner, now + 401 us);
-                wait for 400 us;
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '1',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(8), '0',result("Clearing TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Clearing TX ERROR IRQ."));
+                wait for 1 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -989,8 +1220,12 @@ begin
                 check_passed(result("Send 8 bytes, long header, all ones: Pass."));
 
             elsif run("Send 8 bytes, short header, Force DLC to ones") then
-                wdata_v := to_std_logic_vector(200, 32);
+                --set speed
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
 
                 --set id
                 wdata_v := (10 downto 0 => '1', others => '0');
@@ -1012,8 +1247,8 @@ begin
                 wdata_v(1) := '1';
                 write_bus(net, axi_handle, 64, wdata_v, "0001");
 
-                set_timeout(runner, now + 110 us);
-                wait for 100 us;
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -1022,8 +1257,22 @@ begin
                 read_bus(net, axi_handle, 32, rdata_v);
                 check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
 
-                set_timeout(runner, now + 601 us);
-                wait for 600 us;
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '1',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(8), '0',result("Clearing TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Clearing TX ERROR IRQ."));
+                wait for 1 * data_period_c;
 
                 --Testing tx_busy_i
                 read_bus(net, axi_handle, 64, rdata_v);
@@ -1048,10 +1297,365 @@ begin
 
                 check_passed(result("Send 8 bytes, long header, all ones: Pass."));
 
+            elsif run("Inject Error, test retry") then
+                --set speed
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
+                write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
+
+                --set id
+                wdata_v := (10 downto 0 => '1', others => '0');
+                write_bus(net, axi_handle, 36, wdata_v, "1111");
+                write_bus(net, axi_handle, 40, wdata_v, "1111");
+                write_bus(net, axi_handle, 72, wdata_v, "1111");
+
+                --data length
+                wdata_v := to_std_logic_vector(1, 32);
+                write_bus(net, axi_handle, 68, wdata_v, "0001");
+
+                --Setting tx_data
+                wdata_v := (others => '1');
+                write_bus(net, axi_handle, 76, wdata_v, "1111");
+                wdata_v := (others => '1');
+                write_bus(net, axi_handle, 80, wdata_v, "1111");
+
+                --Command to send
+                wdata_v := (1 => '1', others => '0');
+                write_bus(net, axi_handle, 64, wdata_v, "0001");
+
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: tx_busy_i."));
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
+
+                --Injecting error
+                wdata_v := (8 => '1', others => '0');
+                write_bus(net,axi_handle,28,wdata_v,"0010");
+                write_bus(net,axi_handle,28,wdata_v,"0010");
+
+                --RX completed or error.
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Reading RX DATA IRQ during error."));
+                check_equal(rdata_v(1), '1',result("Reading RX ERROR IRQ during error."));
+                check_equal(rdata_v(8), '0',result("Reading RX DATA IRQ during error."));
+                check_equal(rdata_v(9), '1',result("Reading RX ERROR IRQ during error."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ during error."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ during error."));
+                check_equal(rdata_v(8), '0',result("Clearing RX DATA IRQ during error."));
+                check_equal(rdata_v(9), '0',result("Clearing RX ERROR IRQ during error."));
+
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0001");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '0', result("Test Read: tx_busy_i."));
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '0', result("Test Read: rx_busy_i."));
+
+                --read RXID
+                read_bus(net, axi_handle, 48, rdata_v);
+                check_equal(rdata_v, std_logic_vector'(x"000007FF"), result("Test Read: rx_id."));
+
+                --RX DLC
+                read_bus(net, axi_handle, 44, rdata_v);
+                check_equal(rdata_v(3 downto 0), std_logic_vector'("0001"), result("Test Read: rx_dlc."));
+
+                --RX DATA
+                read_bus(net, axi_handle, 52, rdata_v);
+                check_equal(rdata_v, std_logic_vector'(x"000000FF"), result("Test Read: rx_data."));
+
+                check_passed(result("Inject Error, test retry: Pass."));
+
             elsif run("Force Error, test retry") then
+                --set speed
+                wdata_v := to_std_logic_vector(200, 32);
+                write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
+
+                --set id
+                wdata_v := (10 downto 0 => '1', others => '0');
+                write_bus(net, axi_handle, 36, wdata_v, "1111");
+                write_bus(net, axi_handle, 40, wdata_v, "1111");
+                write_bus(net, axi_handle, 72, wdata_v, "1111");
+
+                --data length
+                wdata_v := to_std_logic_vector(1, 32);
+                write_bus(net, axi_handle, 68, wdata_v, "0001");
+
+                --Setting tx_data
+                wdata_v := (others => '1');
+                write_bus(net, axi_handle, 76, wdata_v, "1111");
+                wdata_v := (others => '1');
+                write_bus(net, axi_handle, 80, wdata_v, "1111");
+
+                --Command to send
+                wdata_v := (1 => '1', others => '0');
+                write_bus(net, axi_handle, 64, wdata_v, "0001");
+
+                set_timeout(runner, now + 1 ms);
+                wait for 100 us;
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: tx_busy_i."));
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
+
+                --Forcing error
+                wait for 20 * data_period_c;
+                force_line <= true;
+                wait for 2 * data_period_c;
+                force_line <= false;
+
+                --RX completed or error.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Reading RX DATA IRQ during error."));
+                check_equal(rdata_v(1), '1',result("Reading RX ERROR IRQ during error."));
+                check_equal(rdata_v(8), '0',result("Reading RX DATA IRQ during error."));
+                check_equal(rdata_v(9), '1',result("Reading RX ERROR IRQ during error."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ during error."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ during error."));
+                check_equal(rdata_v(8), '0',result("Clearing RX DATA IRQ during error."));
+                check_equal(rdata_v(9), '0',result("Clearing RX ERROR IRQ during error."));
+
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ during error."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ during error."));
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ during error."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ during error."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0001");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ during error."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ during error."));
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ during error."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ during error."));
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '0', result("Test Read: tx_busy_i."));
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '0', result("Test Read: rx_busy_i."));
+
+                --read RXID
+                read_bus(net, axi_handle, 48, rdata_v);
+                check_equal(rdata_v, std_logic_vector'(x"000007FF"), result("Test Read: rx_id."));
+
+                --RX DLC
+                read_bus(net, axi_handle, 44, rdata_v);
+                check_equal(rdata_v(3 downto 0), std_logic_vector'("0001"), result("Test Read: rx_dlc."));
+
+                --RX DATA
+                read_bus(net, axi_handle, 52, rdata_v);
+                check_equal(rdata_v, std_logic_vector'(x"000000FF"), result("Test Read: rx_data."));
+
                 check_passed(result("Force Error, test retry: Pass."));
+
+            elsif run("Loop Test, send 0 bytes, short header, all ones") then
+                --set speed
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
+                write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
+                --Turn loop on and damage the channel
+                force_line <= true;
+                wdata_v := (0 => '1', others => '0');
+                write_bus(net,axi_handle,28,wdata_v,"0001");
+
+                --data length
+                wdata_v := to_std_logic_vector(0, 32);
+                write_bus(net, axi_handle, 68, wdata_v, "0001");
+                --Command to send
+                wdata_v(1) := '1';
+                write_bus(net, axi_handle, 64, wdata_v, "0001");
+
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: tx_busy_i."));
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
+
+                --wait for RX completed IRQ.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '1',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0011");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(8), '0',result("Clearing TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Clearing TX ERROR IRQ."));
+                wait for 1 * data_period_c;
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '0', result("Test Read: tx_busy_i."));
+
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '0', result("Test Read: rx_busy_i."));
+
+                --read RXID
+                read_bus(net, axi_handle, 48, rdata_v);
+                check_equal(rdata_v, std_logic_vector'(x"00000000"), result("Test Read: rx_id."));
+
+                --RX DLC
+                read_bus(net, axi_handle, 44, rdata_v);
+                check_equal(rdata_v(3 downto 0), std_logic_vector'("0000"), result("Test Read: rx_dlc."));
+
+                check_passed(result("Loop Test, send 0 bytes, short header, all ones: Pass."));
+
             elsif run("Test TX/RX DATA IRQ MASK") then
+                --set speed
+                wdata_v := to_std_logic_vector(data_rate_c, 32);
+                write_bus(net, axi_handle, 8, wdata_v, "0011");
+
+                --IRQ Mask
+                wdata_v := (others => '0');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
+
+                --data length
+                wdata_v := to_std_logic_vector(0, 32);
+                write_bus(net, axi_handle, 68, wdata_v, "0001");
+                --Command to send
+                wdata_v(1) := '1';
+                write_bus(net, axi_handle, 64, wdata_v, "0001");
+
+                set_timeout(runner, now + 2 ms);
+                wait for 10 * data_period_c;
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: tx_busy_i."));
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
+
+                while rdata_v(8) = '1' loop
+                    read_bus(net, axi_handle, 32, rdata_v);
+                    wait for 10 * data_period_c;
+                end loop;
+
+                --wait for RX completed IRQ.
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '0',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
+
                 check_passed(result("Test TX/RX DATA IRQ MASK: Pass."));
+
+            elsif run("Test TX/RX ERROR IRQ MASK") then
+                --set speed
+                wdata_v := to_std_logic_vector(200, 32);
+                write_bus(net, axi_handle, 8, wdata_v, "0011");
+                --IRQ Mask
+                wdata_v := (16 => '1', 24 => '1', others => '0');
+                write_bus(net,axi_handle,12,wdata_v,"1100");
+
+                --set id
+                wdata_v := (10 downto 0 => '1', others => '0');
+                write_bus(net, axi_handle, 36, wdata_v, "1111");
+                write_bus(net, axi_handle, 40, wdata_v, "1111");
+                write_bus(net, axi_handle, 72, wdata_v, "1111");
+
+                --data length
+                wdata_v := to_std_logic_vector(1, 32);
+                write_bus(net, axi_handle, 68, wdata_v, "0001");
+
+                --Setting tx_data
+                wdata_v := (others => '1');
+                write_bus(net, axi_handle, 76, wdata_v, "1111");
+                wdata_v := (others => '1');
+                write_bus(net, axi_handle, 80, wdata_v, "1111");
+
+                --Command to send
+                wdata_v := (1 => '1', others => '0');
+                write_bus(net, axi_handle, 64, wdata_v, "0001");
+
+                set_timeout(runner, now + 1 ms);
+                wait for 100 us;
+
+                --Testing tx_busy_i
+                read_bus(net, axi_handle, 64, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: tx_busy_i."));
+                --Testing rx_busy_i
+                read_bus(net, axi_handle, 32, rdata_v);
+                check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
+
+                --Forcing error
+                wait for 20 * data_period_c;
+                force_line <= true;
+                wait for 2 * data_period_c;
+                force_line <= false;
+
+                --RX completed.
+                wait until rx_irq_o = '1';
+                wait until tx_irq_o = '1';
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
+                wdata_v := (others => '1');
+                write_bus(net,axi_handle,12,wdata_v,"0001");
+                read_bus(net,axi_handle,12,rdata_v);
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
+                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+
+                check_passed(result("Test TX/RX ERROR IRQ MASK: Pass."));
 
             end if;
         end loop;
@@ -1059,11 +1663,13 @@ begin
     end process;
 
     test_runner_watchdog(runner, 101 us);
+
     --CAN VCI PROCESS
     -- vci_p: process
     -- begin
-    rxi <= txo_o when txo_t = '1' else
-        '1';
+    rxi <= '0'   when force_line  else
+           txo_o when txo_t = '1' else
+           '1';
     --   wait;
     -- end process;
 
