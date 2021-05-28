@@ -46,6 +46,7 @@ entity can_rx is
         rx_crc_error_o : out std_logic;
         send_ack_o     : out std_logic;
         --Signals to PHY
+        ch_ready_i     : in std_logic;
         collision_i    : in std_logic;
         rxdata_i       : in std_logic
     );
@@ -171,6 +172,13 @@ begin
                     when no_ack_slot_st =>
                         frame_cnt := 0;
                         can_mq <= eof_st;
+
+                    when eof_st =>
+                        frame_cnt := 0;
+                        if ch_ready_i = '1' then
+                            can_mq <= idle_st;
+                        end if;
+
 
                     when others        =>
                         frame_cnt := 0;

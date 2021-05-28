@@ -25,6 +25,17 @@
 -- For more information, please refer to <http://unlicense.org/>
 ---------------------------------------------------------------------------------
 
+
+--TODO: add more tests. List:
+--Stuff Violation
+--Test wrond ID
+--Test ID MASK for RX
+--test bad mask selection
+--ID and DATA alternating 0 and 1 (AA)
+--Test Collision
+--test RTR, R0 and R1 bits
+--
+
 library IEEE;
     use IEEE.std_logic_1164.all;
     use IEEE.numeric_std.all;
@@ -88,6 +99,11 @@ architecture simulation of can_aximm_top_tb is
     signal can_h    : std_logic;
 
     signal force_line : boolean := false;
+    signal irq_stability_test_en : std_logic := '0';
+
+    signal tx_irq_n_s : std_logic;
+    signal rx_irq_n_s : std_logic;
+
 
 begin
 
@@ -1555,7 +1571,7 @@ begin
 
                 check_passed(result("Loop Test, send 0 bytes, short header, all ones: Pass."));
 
-            elsif run("Test TX/RX DATA IRQ MASK") then
+            elsif run("Test TX/RX IRQ MASK") then
                 --set speed
                 wdata_v := to_std_logic_vector(data_rate_c, 32);
                 write_bus(net, axi_handle, 8, wdata_v, "0011");
@@ -1563,6 +1579,9 @@ begin
                 --IRQ Mask
                 wdata_v := (others => '0');
                 write_bus(net,axi_handle,12,wdata_v,"1100");
+
+                --stability check start.
+                irq_stability_test_en <= '1';
 
                 --data length
                 wdata_v := to_std_logic_vector(0, 32);
@@ -1581,86 +1600,38 @@ begin
                 read_bus(net, axi_handle, 32, rdata_v);
                 check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
 
+                --Forcing error
+                wait for 10 * data_period_c;
+                force_line <= true;
+                wait for 2 * data_period_c;
+                force_line <= false;
+
                 while rdata_v(8) = '1' loop
-                    read_bus(net, axi_handle, 32, rdata_v);
+                    read_bus(net, axi_handle, 64, rdata_v);
                     wait for 10 * data_period_c;
                 end loop;
 
                 --wait for RX completed IRQ.
                 read_bus(net,axi_handle,12,rdata_v);
-                check_equal(rdata_v(0), '0',result("Reading RX DATA IRQ."));
-                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
-                check_equal(rdata_v(8), '0',result("Reading TX DATA IRQ."));
-                check_equal(rdata_v(9), '0',result("Reading TX ERROR IRQ."));
-
-                check_passed(result("Test TX/RX DATA IRQ MASK: Pass."));
-
-            elsif run("Test TX/RX ERROR IRQ MASK") then
-                --set speed
-                wdata_v := to_std_logic_vector(200, 32);
-                write_bus(net, axi_handle, 8, wdata_v, "0011");
-                --IRQ Mask
-                wdata_v := (16 => '1', 24 => '1', others => '0');
-                write_bus(net,axi_handle,12,wdata_v,"1100");
-
-                --set id
-                wdata_v := (10 downto 0 => '1', others => '0');
-                write_bus(net, axi_handle, 36, wdata_v, "1111");
-                write_bus(net, axi_handle, 40, wdata_v, "1111");
-                write_bus(net, axi_handle, 72, wdata_v, "1111");
-
-                --data length
-                wdata_v := to_std_logic_vector(1, 32);
-                write_bus(net, axi_handle, 68, wdata_v, "0001");
-
-                --Setting tx_data
-                wdata_v := (others => '1');
-                write_bus(net, axi_handle, 76, wdata_v, "1111");
-                wdata_v := (others => '1');
-                write_bus(net, axi_handle, 80, wdata_v, "1111");
-
-                --Command to send
-                wdata_v := (1 => '1', others => '0');
-                write_bus(net, axi_handle, 64, wdata_v, "0001");
-
-                set_timeout(runner, now + 1 ms);
-                wait for 100 us;
-
-                --Testing tx_busy_i
-                read_bus(net, axi_handle, 64, rdata_v);
-                check_equal(rdata_v(8), '1', result("Test Read: tx_busy_i."));
-                --Testing rx_busy_i
-                read_bus(net, axi_handle, 32, rdata_v);
-                check_equal(rdata_v(8), '1', result("Test Read: rx_busy_i."));
-
-                --Forcing error
-                wait for 20 * data_period_c;
-                force_line <= true;
-                wait for 2 * data_period_c;
-                force_line <= false;
-
-                --RX completed.
-                wait until rx_irq_o = '1';
-                wait until tx_irq_o = '1';
-                read_bus(net,axi_handle,12,rdata_v);
                 check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
-                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
-                check_equal(rdata_v(0), '1',result("Reading RX DATA IRQ."));
-                check_equal(rdata_v(1), '0',result("Reading RX ERROR IRQ."));
-                wdata_v := (others => '1');
-                write_bus(net,axi_handle,12,wdata_v,"0001");
-                read_bus(net,axi_handle,12,rdata_v);
-                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
-                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
-                check_equal(rdata_v(0), '0',result("Clearing RX DATA IRQ."));
-                check_equal(rdata_v(1), '0',result("Clearing RX ERROR IRQ."));
+                check_equal(rdata_v(1), '1',result("Reading RX ERROR IRQ."));
+                check_equal(rdata_v(8), '1',result("Reading TX DATA IRQ."));
+                check_equal(rdata_v(9), '1',result("Reading TX ERROR IRQ."));
 
-                check_passed(result("Test TX/RX ERROR IRQ MASK: Pass."));
+                --stability check ends.
+                irq_stability_test_en <= '0';
+
+                check_passed(result("Test TX/RX IRQ MASK: Pass."));
 
             end if;
         end loop;
         test_runner_cleanup(runner); -- Simulation ends here
     end process;
+
+    tx_irq_n_s <= not tx_irq_o;
+    rx_irq_n_s <= not rx_irq_o;
+    rxdata_irq_stability: check(mclk_i, irq_stability_test_en, rx_irq_n_s, "Rogue RX IRQ detected...");
+    txdata_irq_stability: check(mclk_i, irq_stability_test_en, tx_irq_n_s, "Rogue TX IRQ detected...");
 
     test_runner_watchdog(runner, 101 us);
 

@@ -118,6 +118,7 @@ package can_aximm_pkg is
       rx_crc_error_o : out std_logic;
       send_ack_o     : out std_logic;
       --Signals to PHY
+      ch_ready_i  : in std_logic;
       collision_i : in std_logic;
       rxdata_i    : in std_logic
     );

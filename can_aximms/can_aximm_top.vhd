@@ -313,6 +313,7 @@ begin
       busy_o         => rx_busy_s,
       rx_crc_error_o => rx_crc_error_s,
       send_ack_o     => send_ack_s,
+      ch_ready_i     => channel_ready_s,
       collision_i    => collision_s,
       rxdata_i       => rx_serial_data_s
     );
