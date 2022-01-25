@@ -45,6 +45,8 @@ library expert;
     use expert.std_logic_expert.all;
 library std;
     use std.textio.all;
+library stdblocks;
+    use stdblocks.prbs_lib.all;
 library vunit_lib;
     context vunit_lib.vunit_context;
     context vunit_lib.vc_context;
@@ -98,14 +100,15 @@ begin
     mclk_i <= not mclk_i after 5 ns;
 
     main : process
+        variable prbs    : prbs_t;
         variable wdata_v : std_logic_vector(C_S_AXI_DATA_WIDTH - 1 downto 0) := (others => '0');
         variable rdata_v : std_logic_vector(C_S_AXI_DATA_WIDTH - 1 downto 0) := (others => '0');
     begin
         test_runner_setup(runner, runner_cfg);
-        rst_i <= '1';
-        wait until rising_edge(mclk_i);
-        wait until rising_edge(mclk_i);
         rst_i <= '0';
+        wait until rising_edge(mclk_i);
+        wait until rising_edge(mclk_i);
+        rst_i <= '1';
         wait until rising_edge(mclk_i);
         wait until rising_edge(mclk_i);
 
@@ -120,28 +123,44 @@ begin
 
             elsif run("Test Write and Read All Zeroes") then
                 for j in 0 to MAX_ADDR-1 loop
-                --Testing iso_mode_o
                     wdata_v := (others=>'0');
                     write_bus(net, axi_handle, BYTE_NUM*j, wdata_v, "0001");
                     read_bus(net, axi_handle, BYTE_NUM*j, rdata_v);
-                    check_equal(rdata_v(0), wdata_v(0), result("Test Write and Readback All Zeroes"));
+                    check_equal(rdata_v, wdata_v, result("Test Write and Read All Zeroes"));
                 end loop;
-                --final test
                 check_passed(result("Test Write and Read All Zeroes: Pass."));
 
             elsif run("Test Write and Read All Ones") then
                 for j in 0 to MAX_ADDR-1 loop
-                --Testing iso_mode_o
                     wdata_v := (others=>'1');
                     write_bus(net, axi_handle, BYTE_NUM*j, wdata_v, "0001");
                     read_bus(net, axi_handle, BYTE_NUM*j, rdata_v);
-                    check_equal(rdata_v(0), wdata_v(0), result("Test Write and Readback All Ones"));
+                    check_equal(rdata_v, wdata_v, result("Test Write and Read All Ones"));
                 end loop;
-                --final test
                 check_passed(result("Test Write and Read All Ones: Pass."));
 
             elsif run("Test Write and Read Random Values") then
+                for j in 0 to MAX_ADDR-1 loop
+                    wdata_v := prbs.get_data(C_S_AXI_DATA_WIDTH);
+                    write_bus(net, axi_handle, BYTE_NUM*j, wdata_v, "0001");
+                    read_bus(net, axi_handle, BYTE_NUM*j, rdata_v);
+                    check_equal(rdata_v, wdata_v, result("Test Write and Read Random Values"));
+                end loop;
                 check_passed(result("Test Write and Read Random Values: Pass."));
+
+            elsif run("Test Full Write then Full Read Random Values") then
+                for j in 0 to MAX_ADDR-1 loop
+                    wdata_v := prbs.get_data(C_S_AXI_DATA_WIDTH);
+                    write_bus(net, axi_handle, BYTE_NUM*j, wdata_v, "0001");
+                end loop;
+
+                for j in 0 to MAX_ADDR-1 loop
+                    read_bus(net, axi_handle, BYTE_NUM*j, rdata_v);
+                    check_true(prbs.check_data(rdata_v), result("Test Full Write then Full Read Random Values"));
+                end loop;
+
+                check_passed(result("Test Full Write then Full Read Random Values: Pass."));
+
             elsif run("Test Delaying Write Response") then
                 check_passed(result("Test Delaying Write Response: Pass."));
             elsif run("Test Delaying Read Response") then
