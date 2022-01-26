@@ -85,7 +85,7 @@ begin
         AXI_BVALID <= '0';
         AXI_BRESP  <= "01";
         timer_v    := 0;
-      else
+      elsif AXI_BVALID = '1' then
         timer_v    := timer_v + 1;
       end if;
     end if;
@@ -114,7 +114,7 @@ begin
         AXI_RVALID <= '0';
         AXI_RRESP  <= "01";
         timer_v   := 0;
-      else
+      elsif AXI_RVALID = '1' then
         timer_v := timer_v + 1;
       end if;
     end if;

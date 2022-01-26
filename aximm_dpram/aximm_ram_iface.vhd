@@ -18,6 +18,8 @@ library IEEE;
   use IEEE.numeric_std.all;
 library expert;
   use expert.std_logic_expert.all;
+library stdblocks;
+  use stdblocks.scheduler_lib.all;
 
 entity aximm_ram_iface is
   generic (
@@ -46,37 +48,37 @@ entity aximm_ram_iface is
     AXI_RRESP   : out std_logic_vector(1 downto 0);
     AXI_RVALID  : out std_logic;
     AXI_RREADY  : in  std_logic;
-    addr_o : out std_logic_vector(C_S_AXI_ADDR_WIDTH - 1 downto 0);
-    data_i : in  std_logic_vector(C_S_AXI_DATA_WIDTH - 1 downto 0);
-    data_o : out std_logic_vector(C_S_AXI_DATA_WIDTH - 1 downto 0);
-    we_i   : in  std_logic
+    addr_o      : out std_logic_vector(C_S_AXI_ADDR_WIDTH - 1 downto 0);
+    data_i      : in  std_logic_vector(C_S_AXI_DATA_WIDTH - 1 downto 0);
+    data_o      : out std_logic_vector(C_S_AXI_DATA_WIDTH - 1 downto 0);
+    we_o        : out std_logic
   );
 end aximm_ram_iface;
 
 architecture rtl of aximm_ram_iface is
 
-  signal a_rst_s     : std_logic;
-  signal a_request_s : std_logic_vector(2 downto 0);
-  signal ack_s       : std_logic_vector(2 downto 0);
-  signal grant_s     : std_logic_vector(2 downto 0);
+  signal rst_s     : std_logic;
+  signal a_request_s : std_logic_vector(1 downto 0);
+  signal ack_s       : std_logic_vector(1 downto 0);
+  signal grant_s     : std_logic_vector(1 downto 0);
 
 begin
 
-  a_rst_s     <= not A_AXI_ARESETN;
+  rst_s     <= not AXI_ARESETN;
 
   --can only request write if there is no pending BRESP.
-  a_request_s(1) <= A_AXI_AWVALID and (AXI_BREADY or not AXI_BVALID);
+  a_request_s(1) <= AXI_AWVALID and (AXI_BREADY or not AXI_BVALID);
   --can only request read if there is no pending read.
-  a_request_s(0) <= A_AXI_ARVALID and (AXI_RREADY or not AXI_RVALID);
+  a_request_s(0) <= AXI_ARVALID and (AXI_RREADY or not AXI_RVALID);
 
   --RAM Addressing. first, will have to decide between write and read.
   awready_u : fast_queueing
     generic map(
       n_elements => 2
-    );
+    )
     port map (
-      clk_i     => A_AXI_ACLK,
-      rst_i     => a_rst_s,
+      clk_i     => AXI_ACLK,
+      rst_i     => rst_s,
       request_i => a_request_s,
       ack_i     => ack_s,
       grant_o   => grant_s,
@@ -84,64 +86,72 @@ begin
     );
 
   --write
-  ack_s(1)      <= grant_s(1) and A_AXI_WVALID;
-  A_AXI_AWREADY <= grant_s(1) and A_AXI_WVALID;
-  A_AXI_WREADY  <= grant_s(1) and A_AXI_WVALID;
-  we_o          <= grant_s(1) and A_AXI_WVALID;
+  ack_s(1)    <= grant_s(1) and AXI_WVALID;
+  AXI_AWREADY <= grant_s(1) and AXI_WVALID;
+  AXI_WREADY  <= grant_s(1) and AXI_WVALID;
+  we_o        <= grant_s(1) and AXI_WVALID;
+  data_o      <= AXI_WDATA;
 
   --write BRESP
   process(all)
     variable timeout_v : integer;
   begin
-    if a_rst_s = '1' then
-      A_AXI_BVALID = '0';
-      timeout_v := 0;
-    elsif if rising_edge(A_AXI_ACLK) then
+    if rst_s = '1' then
+      AXI_BVALID <= '0';
+      AXI_BRESP  <= "00";
+      timeout_v  := 0;
+    elsif rising_edge(AXI_ACLK) then
       if grant_s(1) then
         timeout_v := 0;
-        A_AXI_BVALID  <= '1';
-        A_AXI_BRESP   <= "00";
-      elsif A_AXI_BREADY = '1' then
-        timeout_v := timeout_v + 1;
-        A_AXI_RVALID <= '0';
-        A_AXI_RRESP   <= "00";
+        AXI_BVALID  <= '1';
+        AXI_BRESP   <= "00";
+      elsif AXI_BREADY = '1' then
+        timeout_v := 0;
+        AXI_BVALID <= '0';
+        AXI_BRESP   <= "00";
       elsif timeout_v = 16 then
         timeout_v := 0;
-        A_AXI_RVALID <= '0';
-        A_AXI_RRESP   <= "01";
+        AXI_BVALID <= '0';
+        AXI_BRESP  <= "01";
+      elsif AXI_BVALID = '1' then
+        timeout_v := timeout_v + 1;
       end if;
     end if;
   end process;
 
   --read
-  ack_s(0)      <= grant_s(0)
-  A_AXI_ARREADY <= grant_s(0);
+  ack_s(0)    <= grant_s(0) and AXI_RREADY and AXI_RVALID;
+  AXI_ARREADY <= grant_s(0);
 
   process(all)
     variable timeout_v : integer;
   begin
-    if a_rst_s = '1' then
-      A_AXI_RVALID = '0';
-      timeout_v := 0;
-    elsif if rising_edge(A_AXI_ACLK) then
-      if grant_s(0) then
-        timeout_v := 0;
-        A_AXI_RVALID  <= '1';
-        A_AXI_RRESP   <= "00";
-      elsif A_AXI_RREADY = '1' then
-        timeout_v := timeout_v + 1;
-        A_AXI_RVALID <= '0';
-        A_AXI_RRESP   <= "00";
+    if rst_s = '1' then
+      AXI_RVALID <= '0';
+      AXI_RRESP  <= "00";
+      timeout_v  := 0;
+    elsif rising_edge(AXI_ACLK) then
+      if AXI_RREADY = '1' then
+        timeout_v  := 0;
+        AXI_RVALID <= '0';
+        AXI_RRESP  <= "00";
+      elsif grant_s(0) then
+        timeout_v  := 0;
+        AXI_RVALID <= '1';
+        AXI_RRESP  <= "00";
       elsif timeout_v = 16 then
-        timeout_v := 0;
-        A_AXI_RVALID <= '0';
-        A_AXI_RRESP   <= "01";
+        timeout_v  := 0;
+        AXI_RVALID <= '0';
+        AXI_RRESP  <= "01";
+      elsif AXI_RVALID = '1' then
+        timeout_v := timeout_v + 1;
       end if;
     end if;
   end process;
 
   --address selection
-  addr_o <= A_AXI_AWADDR when grant_s(1) = '1' else A_AXI_ARADDR;
+  addr_o    <= AXI_AWADDR when grant_s(1) = '1' else AXI_ARADDR;
+  AXI_RDATA <= data_i;
 
 end rtl;
 

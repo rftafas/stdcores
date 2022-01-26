@@ -24,19 +24,6 @@
 --
 -- For more information, please refer to <http://unlicense.org/>
 ---------------------------------------------------------------------------------
-
-
---TODO: add more tests. List:
---Stuff Violation
---Test wrond ID
---Test ID MASK for RX
---test bad mask selection
---Test Collision
---test RTR, R0 and R1 bits
---ID and DATA alternating 0 and 1 (AA)
---test random data
---test multiple transmissions in a row
-
 library IEEE;
     use IEEE.std_logic_1164.all;
     use IEEE.numeric_std.all;
@@ -158,18 +145,7 @@ begin
                     read_bus(net, axi_handle, BYTE_NUM*j, rdata_v);
                     check_true(prbs.check_data(rdata_v), result("Test Full Write then Full Read Random Values"));
                 end loop;
-
                 check_passed(result("Test Full Write then Full Read Random Values: Pass."));
-
-            elsif run("Test Delaying Write Response") then
-                check_passed(result("Test Delaying Write Response: Pass."));
-            elsif run("Test Delaying Read Response") then
-                check_passed(result("Test Delaying Read Response: Pass."));
-            elsif run("Test Write Response Timeout") then
-                check_passed(result("Test Write Response Timeout: Pass."));
-            elsif run("Test Read Response Timeout") then
-                check_passed(result("Test Read Response Timeout: Pass."));
-
 
             end if;
         end loop;
