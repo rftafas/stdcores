@@ -20,22 +20,22 @@ library stdblocks;
   use stdblocks.sync_lib.all;
   use stdblocks.prbs_lib.all;
 library stdcores;
-  use stdcores.i2cs_axim_pkg.all;
+  use stdcores.i2s_aximms_pkg.all;
 library vunit_lib;
   context vunit_lib.vunit_context;
   context vunit_lib.vc_context;
   context vunit_lib.com_context;
 
-  use stdcores.i2cm_vci_pkg.all;
+  use stdcores.i2s_vci_pkg.all;
 
 
-entity i2cs_axim_top_tb is
+entity i2s_axim_top_tb is
   generic (
     runner_cfg : string
   );
-end i2cs_axim_top_tb;
+end i2s_axim_top_tb;
 
-architecture simulation of i2cs_axim_top_tb is
+architecture simulation of i2s_axim_top_tb is
 
   constant slave_addr : std_logic_vector(2 downto 0) := "011";
   constant opcode     : std_logic_vector(3 downto 0) := "1010";
@@ -44,17 +44,6 @@ architecture simulation of i2cs_axim_top_tb is
   constant  ID_VALUE      : integer := 0;
   constant ADDR_BYTE_NUM : integer := 2;
   constant DATA_BYTE_NUM : integer := 4;
-
-  signal rst_i  : std_logic;
-  signal mclk_i : std_logic := '0';
-
-  signal sda : std_logic;
-  signal scl : std_logic;
-
-  signal sda_i_s   : std_logic;
-  signal sda_o_s   : std_logic;
-  signal sda_oen_s : std_logic;
-  signal scl_s     : std_logic;
 
   signal M_AXI_AWID    : std_logic_vector(ID_WIDTH - 1 downto 0);
   signal M_AXI_AWVALID : std_logic;
@@ -82,11 +71,11 @@ architecture simulation of i2cs_axim_top_tb is
   signal M_AXI_RID     : std_logic_vector(ID_WIDTH - 1 downto 0);
   signal M_AXI_RLAST   : std_logic;
 
-  constant frequency_mhz   : real := 10.0000;
-  constant i2c_period      : time := (1.000 / frequency_mhz) * 1 us;
+  constant frequency_mhz  : real := 10.0000;
+  constant i2c_period     : time := (1.000 / frequency_mhz) * 1 us;
 
-  shared variable i2c_controller : i2c_master_t;
-  shared variable prbs           : prbs_t;
+  shared variable i2s_vci : i2s_vci_t;
+  shared variable prbs    : prbs_t;
 
   constant i2c_message_write_c : i2c_message_vector(3 downto 0) := (
     x"AA",
@@ -111,12 +100,12 @@ begin
   mclk_i <= not mclk_i after 10 ns;
 
   main : process
-    variable stat     : axi_statistics_t;
-    variable addr_v   : std_logic_vector(15 downto 0);
-    variable buffer_v       : buffer_t;
-    variable bytes_2_write  : integer := 8;
-    variable bytes_2_read   : integer := 8;
-    variable data_v         : i2c_message_vector(maximum(bytes_2_write,bytes_2_read) downto 0);
+    variable stat          : axi_statistics_t;
+    variable addr_v        : std_logic_vector(15 downto 0);
+    variable buffer_v      : buffer_t;
+    variable bytes_2_write : integer := 8;
+    variable bytes_2_read  : integer := 8;
+    variable data_v        : i2c_message_vector(maximum(bytes_2_write,bytes_2_read) downto 0);
   begin
     test_runner_setup(runner, runner_cfg);
     check_true(bytes_2_write mod 4 = 0,result("Currently only on 32 bits."));
@@ -268,12 +257,6 @@ begin
       rresp   => M_AXI_RRESP,
       rlast   => M_AXI_RLAST
     );
-
-  --Connection between VCI and DUT.
-  --Note that tristate function can be used for device connection to external IO.
-  tri_state(sda_i_s,sda_o_s,sda,sda_oen_s);
-  sda   <= 'H';
-  scl   <= 'H';
 
   --DUT
   i2cs_axim_top_u : i2cs_axim_top

@@ -42,10 +42,9 @@ library expert;
   use expert.std_logic_expert.all;
 library stdblocks;
   use stdblocks.sync_lib.all;
+  use stdblocks.timer_lib.all;
 library stdcores;
-  use stdcores.i2cs_axim_pkg.all;
-library stdblocks;
-  use stdblocks.sync_lib.all;
+  use stdcores.i2s_aximms_pkg.all;
 
 entity i2s_clock is
   generic (
@@ -53,8 +52,8 @@ entity i2s_clock is
     Fref_hz             : real    :=  24.5760e+6;
     use_clock_generator : boolean := true;
     use_adpll           : boolean := true;
-    use_int_divider     : boolean := true;
-  )
+    use_int_divider     : boolean := true
+  );
   port (
     --general
     rst_i           : in  std_logic;
@@ -115,7 +114,7 @@ begin
   --asserts to be included:
   -- message in case of internal clock generation, that it won't consider multiplier/divider
 
-  adpll_gen : if enable_ref_adpll generate
+  adpll_gen : if use_adpll generate
     adpll_u : adpll_fractional
       generic map(
         Fref_hz       => Fmclk_hz,

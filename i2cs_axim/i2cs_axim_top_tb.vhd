@@ -100,7 +100,7 @@ architecture simulation of i2cs_axim_top_tb is
 
   --then, the handlers.
   constant axi_rd_slave : axi_slave_t := new_axi_slave(memory => memory,
-  logger => get_logger("axi_rd_slave"));
+    logger => get_logger("axi_rd_slave"));
 
   constant axi_wr_slave : axi_slave_t := new_axi_slave(memory => memory,
     logger => get_logger("axi_wr_slave"));
@@ -129,12 +129,12 @@ begin
     prbs.set_seed(x"44444444");
     prbs.reset;
     wait for 65 ns;
-    
+
     while test_suite loop
       if run("Sanity check for system.") then
         report "System Sane. Begin tests.";
         check_passed("Sanity check for system.");
-      
+
       elsif run("Basic Write Test") then
         i2c_controller.set_opcode(opcode);
         i2c_controller.set_slave_address(slave_addr);
@@ -144,7 +144,7 @@ begin
         buffer_v := allocate(memory, bytes_2_write, "write buffer", alignment => 4);
         for j in base_address(buffer_v) to last_address(buffer_v) loop
           data_v(j) := prbs.get_data(8);
-          
+
           set_expected_byte(memory, j, to_integer(data_v(j)) );
         end loop;
 
@@ -171,8 +171,8 @@ begin
         --we order the I2C controller VCI to read some data.
         i2c_controller.ram_read(net,addr_v,data_v(bytes_2_read-1 downto 0));
         wait_for_i2c(i2c_controller,100 us);
-        
-        --we get data from buffer with a read function. 
+
+        --we get data from buffer with a read function.
         --same awkard behavior of buffer size.
         for j in base_address(buffer_v) to last_address(buffer_v)-1 loop
           check_true(prbs.check_data(to_std_logic_vector(read_byte(memory,j),8)),result("Read ok."));
@@ -180,7 +180,7 @@ begin
 
         wait for 1 us;
         clear(memory);
-        check_passed("Basic Read Ok.");         
+        check_passed("Basic Read Ok.");
 
       elsif run("Write to Read Test") then
         i2c_controller.set_opcode(opcode);
@@ -204,9 +204,9 @@ begin
         for j in base_address(buffer_v) to last_address(buffer_v)-1 loop
           check_true(prbs.check_data(to_std_logic_vector(read_byte(memory,j),8)),result("Read ok."));
         end loop;
-        
+
         clear(memory);
-        check_passed("Write to Read Ok.");    
+        check_passed("Write to Read Ok.");
 
       end if;
 
@@ -219,7 +219,7 @@ begin
   --VCI
   i2c_master_p: process
   begin
-    i2c_controller.run(net,sda,scl);   
+    i2c_controller.run(net,sda,scl);
   end process i2c_master_p;
 
   aximm_w_slave_u: entity vunit_lib.axi_write_slave

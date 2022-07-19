@@ -26,13 +26,13 @@ entity i2s_core is
         rst_i           : in std_logic;
         mclk_i          : in std_logic;
         --I2S channel
-        blck_i          : in  std_logic;
+        bclk_i          : in  std_logic;
         lrclk_i         : in  std_logic;
         i2s_i           : in  std_logic;
         i2s_o           : out std_logic;
         --Internal AXIS BUS
         audio_enable_o  : out std_logic;
-        audio_data_o    : out std_logic_vector(63 downto 0)
+        audio_data_o    : out std_logic_vector(63 downto 0);
         audio_data_i    : out std_logic_vector(63 downto 0)
     );
 end i2s_core;
@@ -43,7 +43,7 @@ architecture behavioral of i2s_core is
     signal send_sr      : std_logic_vector(63 downto 0);
     signal receive_sr   : std_logic_vector(63 downto 0);
 
-    type i2s_t is (sample_st, left_st, right_st);
+    type i2s_t is (sample_st, left_data_st, right_data_st);
     signal i2s_mq : i2s_t;
 
     signal bclk_up_en_s : std_logic;
@@ -60,9 +60,9 @@ begin
     fsm_p : process(all)
     begin
         if rising_edge(mclk_i) then
-            if blck_en_up_s = '1' then
+            if bclk_up_en_s = '1' then
                 case i2s_mq is
-                    when right_st =>
+                    when right_data_st =>
                         if lrclk_i = '0' then
                             i2s_mq <= sample_st;
                         end if;
@@ -70,7 +70,7 @@ begin
                     when sample_st =>
                         i2s_mq <= left_data_st;
 
-                    when left_st =>
+                    when left_data_st =>
                         if lrclk_i = '1' then
                             i2s_mq <= right_data_st;
                         end if;
@@ -83,13 +83,13 @@ begin
         end if;
     end process;
 
-    sample_en <= blck_en_dn_s when i2s_mq = sample_st else '0';
+    sample_en <= bclk_dn_en_s when i2s_mq = sample_st else '0';
     audio_enable_o <= sample_en;
 
     shiftin_p : process(all)
     begin
         if rising_edge(mclk_i) then
-            if blck_en_up_s = '1' then
+            if bclk_up_en_s = '1' then
                 send_sr    <= send_sr sll 1;
                 send_sr(0) <= i2s_i;
             end if;
@@ -102,13 +102,13 @@ begin
         if rising_edge(mclk_i) then
             if sample_en = '1' then
                 receive_sr <= audio_data_i;
-            elsif blck_en_dn_i = '1' then
+            elsif bclk_dn_en_s = '1' then
                 receive_sr    <= receive_sr sll 1;
                 receive_sr(0) <= '0';
             end if;
         end if;
     end process;
-    i2s_o <= receive_sr(63)
+    i2s_o <= receive_sr(63);
 
 
 end behavioral;
